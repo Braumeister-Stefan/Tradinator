@@ -1,0 +1,8 @@
+[project]
+name = "tradingbot"
+version = "0.1.0"
+description = "A trading bot project"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
