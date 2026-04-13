@@ -15,7 +15,7 @@
 | Minor parameters | Class-level constants at the top of each component class body. |
 | Internal methods | Private (`_`-prefixed). Called only from `run()` or from another private method in the same class. Never called cross-component. |
 | External packages | `requests`, `python-dotenv`. No other third-party packages. Standard library otherwise. |
-| Python version | 3.10+ (for `dict` union syntax and `match` if desired, but neither is required). |
+| Python version | 3.10+ |
 
 ---
 
@@ -623,6 +623,7 @@ IG_API_KEY=your_api_key_here
 IG_USERNAME=your_username_here
 IG_PASSWORD=your_password_here
 IG_ACCOUNT_ID=your_account_id_here
+IG_API_URL=https://demo-api.ig.com/gateway/deal
 ```
 
 The actual `.env` file (with real credentials) must never be committed. It is placed at `secrets/.env`.
