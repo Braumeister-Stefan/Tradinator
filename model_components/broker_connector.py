@@ -86,7 +86,7 @@ class BrokerConnector:
         for attempt in range(1, self.MAX_RETRIES + 1):
             try:
                 ig.create_session(version="2")
-                print(f"Connected to IG {self.ACC_TYPE_DEFAULT}")
+                print(f"Connected to IG {acc_type.upper()}")
                 return ig
             except Exception as exc:
                 last_error = exc
