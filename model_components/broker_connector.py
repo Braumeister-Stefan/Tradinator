@@ -86,15 +86,15 @@ class BrokerConnector:
         for attempt in range(1, self.MAX_RETRIES + 1):
             try:
                 ig.create_session(version="2")
-                print(f"Connected to IG {acc_type.upper()}")
+                print(f"Connected to IG {self.ACC_TYPE_DEFAULT}")
                 return ig
             except Exception as exc:
                 last_error = exc
                 if attempt < self.MAX_RETRIES:
                     wait = 2 ** attempt
                     print(
-                        f"Session creation failed (attempt {attempt}/{self.MAX_RETRIES})"
-                        f", retrying in {wait}s: {exc}"
+                        f"Session creation failed (attempt {attempt}/"
+                        f"{self.MAX_RETRIES}), retrying in {wait}s"
                     )
                     time.sleep(wait)
 
@@ -140,7 +140,7 @@ class BrokerConnector:
 
             bid = float(mkt.get("bid", 0) or 0)
             offer = float(mkt.get("offer", 0) or 0)
-            mid_price = (bid + offer) / 2 if (bid or offer) else 0
+            mid_price = (bid + offer) / 2 if (bid and offer) else 0
 
             open_level = float(pos.get("level", 0) or 0)
             size = float(pos.get("size", 0) or 0)

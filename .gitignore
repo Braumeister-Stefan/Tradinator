@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment / secrets
+.env
+secrets/*
+!secrets/.env.example
+
+# Data output (generated at runtime)
+data/output/*
+!data/output/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
