@@ -25,14 +25,14 @@ class OrderGenerator:
         """Store config for later use by run()."""
         self.config = config
 
-    def run(self, target_portfolio: dict, broker_state: dict) -> dict:
+    def run(self, target_portfolio: dict, broker_state: dict, market_data: dict = None) -> dict:
         """Compute the orders needed to move from current positions to target weights."""
         positions = broker_state.get("positions", [])
         weights = target_portfolio.get("weights", {})
         total_value = target_portfolio.get("total_value", 0.0)
 
         current_holdings = self._get_current_holdings(positions)
-        prices = self._extract_prices(positions)
+        prices = self._extract_prices(positions, market_data)
         target_sizes = self._compute_target_sizes(weights, total_value, prices)
         deltas = self._compute_deltas(target_sizes, current_holdings)
         orders = self._generate_orders(deltas, current_holdings)
@@ -66,13 +66,20 @@ class OrderGenerator:
             holdings[epic] = holdings.get(epic, 0.0) + signed
         return holdings
 
-    def _extract_prices(self, positions: list) -> dict:
-        """Build {epic: level} from positions for weight-to-size conversion."""
+    def _extract_prices(self, positions: list, market_data: dict = None) -> dict:
+        """Build {epic: price} from market data (latest close) and position levels."""
         prices = {}
+        # Use latest close price from market data when available
+        if market_data:
+            for epic, fields in market_data.get("prices", {}).items():
+                closes = fields.get("close", [])
+                if closes and closes[-1] is not None:
+                    prices[epic] = closes[-1]
+        # Fall back to position open level for epics not in market data
         for pos in positions:
             epic = pos.get("epic")
             level = float(pos.get("level", 0))
-            if epic and level > 0:
+            if epic and level > 0 and epic not in prices:
                 prices[epic] = level
         return prices
 

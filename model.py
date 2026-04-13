@@ -51,10 +51,12 @@ class Model:
         )
 
         # Phase 3: EXECUTE
-        orders = self.order_generator.run(target_portfolio, broker_state)
+        orders = self.order_generator.run(target_portfolio, broker_state, market_data)
         execution_log = self.order_executor.run(orders, broker_state)
 
         # Phase 4: RECORD & REPORT
+        # Re-fetch broker state after execution so ledger records post-trade reality.
+        broker_state = self.broker_connector.run()
         ledger_snapshot = self.portfolio_ledger.run(execution_log, broker_state)
         analytics = self.portfolio_analytics.run(ledger_snapshot)
         self.performance_monitoring.run(analytics)

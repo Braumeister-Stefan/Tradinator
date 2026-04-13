@@ -52,6 +52,12 @@ class BrokerConnector:
         api_key = os.environ.get("IG_API_KEY")
         acc_type = os.environ.get("IG_ACC_TYPE", self.ACC_TYPE_DEFAULT)
 
+        if acc_type.upper() != "DEMO":
+            raise RuntimeError(
+                "Tradinator is restricted to paper trading (DEMO) only. "
+                f"IG_ACC_TYPE is set to '{acc_type}'. Set it to 'DEMO' or remove it."
+            )
+
         if not all([username, password, api_key]):
             missing = [
                 name

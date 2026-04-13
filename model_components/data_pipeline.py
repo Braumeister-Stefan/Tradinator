@@ -140,13 +140,25 @@ class DataPipeline:
 
     @staticmethod
     def _forward_fill(values: list) -> list:
-        """Replace None entries with the most recent non-None value."""
+        """Replace None entries with the nearest non-None value.
+
+        Forward-fills first, then back-fills any remaining leading Nones.
+        """
+        # Forward fill
         filled = []
         last = None
         for v in values:
             if v is not None:
                 last = v
             filled.append(last)
+        # Back-fill leading Nones
+        first_valid = None
+        for v in filled:
+            if v is not None:
+                first_valid = v
+                break
+        if first_valid is not None:
+            filled = [first_valid if v is None else v for v in filled]
         return filled
 
     @staticmethod
