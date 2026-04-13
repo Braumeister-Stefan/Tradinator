@@ -16,8 +16,9 @@ import math
 class StrategyEval:
     """Validate trading signals with basic quality and risk checks."""
 
+    VALID_DIRECTIONS = {"BUY", "SELL", "HOLD"}
     MIN_SIGNAL_STRENGTH = 0.01  # minimum strength to pass
-    MAX_SIGNALS_PCT = 1.0       # max fraction of universe that can have active signals
+    MAX_SIGNALS_PCT = 1.0       # max fraction of universe (reserved for Phase 2)
     RISK_FREE_RATE = 0.04       # annual risk-free rate for Sharpe stub
     MIN_DATA_POINTS = 20        # minimum price history length for validation
 
@@ -72,7 +73,9 @@ class StrategyEval:
         direction = signal.get("direction", "HOLD")
         strength = signal.get("strength", 0.0)
 
-        if direction == "HOLD":
+        if direction not in self.VALID_DIRECTIONS:
+            passed = False
+        elif direction == "HOLD":
             passed = True
         else:
             passed = (
