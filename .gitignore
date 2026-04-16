@@ -21,7 +21,9 @@ data/output/*
 Thumbs.db
 
 # IDE
-.vscode/
+!.vscode/
+.vscode/*
+!.vscode/settings.json
 .idea/
 *.swp
 *.swo

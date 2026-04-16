@@ -11,6 +11,27 @@ guidance of any kind. Use at your own risk.
 
 from model import Model
 
+
+def _print_credentials_setup_error(error: RuntimeError) -> None:
+    """Print the required IG credential setup steps for first-time runs."""
+    print("Tradinator could not start because IG credentials are not configured.")
+    print(str(error))
+    print("Next steps:")
+    print("1. Copy secrets/.env.example to secrets/.env")
+    print("2. Fill in IG_USERNAME, IG_PASSWORD, and IG_API_KEY")
+    print("3. Run main.py again")
+
+
+def _print_ig_authentication_error(error: RuntimeError) -> None:
+    """Print actionable guidance for common IG authentication failures."""
+    print("Tradinator could not authenticate with IG.")
+    print(str(error))
+    print("Next steps:")
+    print("1. Verify IG_USERNAME is your IG login identifier, not your account number")
+    print("2. Keep IG_ACC_NUMBER as the account id, for example MERTST...")
+    print("3. Confirm the credentials belong to an IG DEMO account")
+    print("4. Confirm the API key is enabled for the same IG account")
+
 # ---------------------------------------------------------------------------
 # Major parameters — control *what* the engine does each run.
 # ---------------------------------------------------------------------------
@@ -20,11 +41,10 @@ config = {
 
     # Universe -----------------------------------------------------------
     "universe": [                       # IG epics for the equity spot universe
+        "IX.D.DAX.IFD.IP",             # Germany 40 (DAX) - Standard Demo Index
+        "IX.D.FTSE.IFD.IP",            # FTSE 100 - Standard Demo Index
         "CS.D.AAPL.CFD.IP",            # Apple
         "CS.D.MSFT.CFD.IP",            # Microsoft
-        "CS.D.GOOGL.CFD.IP",           # Alphabet
-        "CS.D.AMZN.CFD.IP",            # Amazon
-        "CS.D.TSLA.CFD.IP",            # Tesla
     ],
 
     # Market data --------------------------------------------------------
@@ -41,5 +61,14 @@ config = {
 
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    model = Model(config)
-    model.run()
+    try:
+        model = Model(config)
+        model.run()
+    except RuntimeError as error:
+        if "Missing required IG credentials" not in str(error):
+            if "validation.pattern.invalid.authenticationRequest.identifier" not in str(error):
+                raise
+            _print_ig_authentication_error(error)
+            raise SystemExit(1) from None
+        _print_credentials_setup_error(error)
+        raise SystemExit(1) from None

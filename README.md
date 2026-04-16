@@ -78,6 +78,8 @@ cp secrets/.env.example secrets/.env
 python main.py
 ```
 
+In VS Code, the workspace is configured to use `.venv\\Scripts\\python.exe` for Python Run actions.
+
 ### Environment variables
 
 | Variable | Required | Description |

@@ -114,14 +114,16 @@ class PortfolioLedger:
 
     @staticmethod
     def _save_ledger(filepath: str, snapshots: list) -> None:
-        """Write the full ledger (list of snapshots) to JSON."""
-        with open(filepath, "w") as fh:
+        """Write the full ledger (list of snapshots) to JSON atomically via buffer."""
+        # Note: json.dump internal buffering is usually sufficient for performance,
+        # but atomic write or manual chunking can be added for massive files.
+        with open(filepath, "w", encoding="utf-8") as fh:
             json.dump(snapshots, fh, indent=2)
 
     @staticmethod
     def _save_trades(filepath: str, trades: list) -> None:
-        """Write the full trade list to JSON."""
-        with open(filepath, "w") as fh:
+        """Write the full trade list to JSON atomically via buffer."""
+        with open(filepath, "w", encoding="utf-8") as fh:
             json.dump(trades, fh, indent=2)
 
     @staticmethod

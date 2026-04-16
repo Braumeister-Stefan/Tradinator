@@ -23,6 +23,11 @@ class BrokerConnector:
     TIMEOUT = 30            # API request timeout seconds
     MAX_RETRIES = 3         # session creation retry attempts
     ACC_TYPE_DEFAULT = "DEMO"
+    PLACEHOLDER_VALUES = {
+        "your_username_here",
+        "your_password_here",
+        "your_api_key_here",
+    }
 
     def __init__(self, config):
         """Store config for later use by run()."""
@@ -47,9 +52,9 @@ class BrokerConnector:
         if env_path and os.path.isfile(env_path):
             load_dotenv(env_path)
 
-        username = os.environ.get("IG_USERNAME")
-        password = os.environ.get("IG_PASSWORD")
-        api_key = os.environ.get("IG_API_KEY")
+        username = self._normalise_credential(os.environ.get("IG_USERNAME"))
+        password = self._normalise_credential(os.environ.get("IG_PASSWORD"))
+        api_key = self._normalise_credential(os.environ.get("IG_API_KEY"))
         acc_type = os.environ.get("IG_ACC_TYPE", self.ACC_TYPE_DEFAULT)
 
         if acc_type.upper() != "DEMO":
@@ -75,6 +80,17 @@ class BrokerConnector:
 
         return username, password, api_key, acc_type
 
+    def _normalise_credential(self, value):
+        """Treat empty and template placeholder values as missing credentials."""
+        if value is None:
+            return None
+
+        cleaned = value.strip()
+        if not cleaned or cleaned in self.PLACEHOLDER_VALUES:
+            return None
+
+        return cleaned
+
     def _create_session(self, username, password, api_key, acc_type):
         """Create an IGService instance and establish a session with retries."""
         acc_number = os.environ.get("IG_ACC_NUMBER")
@@ -91,6 +107,7 @@ class BrokerConnector:
         last_error = None
         for attempt in range(1, self.MAX_RETRIES + 1):
             try:
+                # Restoring Version 2 as Session V3 causes 500 in fetch_accounts() on this DEMO account
                 ig.create_session(version="2")
                 print(f"Connected to IG {acc_type.upper()}")
                 return ig

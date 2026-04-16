@@ -51,18 +51,30 @@ class SignalEngine:
 
     def _generate_signal(self, close_prices: list) -> dict:
         """Compute fast/slow MA crossover and return a direction + strength."""
-        slow_ma = self._compute_moving_average(close_prices, self.SLOW_WINDOW)
-        fast_ma = self._compute_moving_average(close_prices, self.FAST_WINDOW)
-
-        if slow_ma is None or fast_ma is None:
+        if len(close_prices) < self.SLOW_WINDOW:
             return {
                 "direction": "HOLD",
                 "strength": 0.0,
                 "strategy": "ma_crossover",
             }
 
+        # Optimization: calculate উভয় sums in a single slice if windows overlap
+        # but for simplicity and clarity, we just take the last N elements once.
+        slow_slice = close_prices[-self.SLOW_WINDOW:]
+        fast_slice = slow_slice[-self.FAST_WINDOW:]
+
+        slow_ma = sum(slow_slice) / self.SLOW_WINDOW
+        fast_ma = sum(fast_slice) / self.FAST_WINDOW
+
         raw_strength = fast_ma - slow_ma
-        strength = self._normalize_strength(raw_strength, close_prices)
+        # Optimization: Use the already calculated fast_slice sum for normalization 
+        # instead of a full pass over close_prices if appropriate, but keeping 
+        # consistency with original logic which used full list average.
+        avg_price = sum(close_prices) / len(close_prices)
+        
+        strength = 0.0
+        if avg_price != 0:
+            strength = min(abs(raw_strength) / avg_price, 1.0)
 
         if strength <= self.SIGNAL_THRESHOLD:
             direction = "HOLD"

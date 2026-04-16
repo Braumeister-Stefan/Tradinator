@@ -10,12 +10,16 @@ guidance of any kind. Use at your own risk.
 """
 
 
+import time
+
+
 class DataPipeline:
     """Fetch and clean historical price data for every instrument in the universe."""
 
     DEFAULT_RESOLUTION = "DAY"
     DEFAULT_LOOKBACK = 50
     FILL_METHOD = "ffill"  # forward-fill for missing values
+    RATE_LIMIT_DELAY = 0.2  # 5 requests per second limit (0.2s delay)
 
     def __init__(self, config: dict):
         """Store config for later use by run()."""
@@ -31,7 +35,11 @@ class DataPipeline:
         prices = {}
         metadata = {}
 
-        for epic in instruments:
+        for i, epic in enumerate(instruments):
+            # Throttle requests to stay within IG's rate limits (approx 5-10/s)
+            if i > 0:
+                time.sleep(self.RATE_LIMIT_DELAY)
+
             print(f"[DataPipeline] Fetching {epic} ({resolution}, {lookback} bars)…")
             try:
                 raw = self._fetch_prices(ig, epic, resolution, lookback)
