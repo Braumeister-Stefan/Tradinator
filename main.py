@@ -154,10 +154,11 @@ if __name__ == "__main__":
         print(f"The selected broker adapter is not yet implemented: {error}")
         raise SystemExit(1) from None
     except RuntimeError as error:
-        if "Missing required IG credentials" not in str(error):
-            if "validation.pattern.invalid.authenticationRequest.identifier" not in str(error):
-                raise
+        msg = str(error)
+        if "Missing required IG credentials" in msg:
+            _print_credentials_setup_error(error)
+        elif "validation.pattern.invalid" in msg:
             _print_ig_authentication_error(error)
-            raise SystemExit(1) from None
-        _print_credentials_setup_error(error)
+        else:
+            print(f"ERROR: {error}")
         raise SystemExit(1) from None
