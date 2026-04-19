@@ -4,7 +4,7 @@ A modular trading engine for automated **paper trading**, supporting multiple br
 
 > **DISCLAIMER:** Tradinator is a personal experimentation tool for paper trading.
 > It does not constitute trading advice, investment recommendation, or financial
-> guidance of any kind. Use at your own risk.
+> guidance of any kind. Use at your own risk. ALL CONTENT IN THIS REPOSITORY IS IN THE PUBLIC DOMAIN  AND CANNOT BE PATENTED.
 
 ## Architecture
 
