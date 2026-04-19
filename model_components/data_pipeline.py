@@ -40,7 +40,6 @@ class DataPipeline:
         lookback = self.config.get("lookback", self.DEFAULT_LOOKBACK)
 
         prices = {}
-        metadata = {}
 
         for i, instrument_id in enumerate(instruments):
             if i > 0:
@@ -61,7 +60,6 @@ class DataPipeline:
                 continue
 
             prices[instrument_id] = parsed
-            metadata[instrument_id] = adapter.fetch_instrument_info(instrument_id)
 
         prices = self._clean_prices(prices)
 
@@ -82,7 +80,7 @@ class DataPipeline:
         print(f"[DataPipeline] Done — {len(prices)} instrument(s) loaded.")
         return {
             "prices": prices,
-            "metadata": metadata,
+            "metadata": {inst: {"instrument_name": inst, "epic": inst} for inst in prices},
             "resolution": resolution,
             "lookback": lookback,
         }
