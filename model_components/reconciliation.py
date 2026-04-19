@@ -56,6 +56,11 @@ class Reconciliation:
         n_working = 0
         now = datetime.datetime.utcnow().isoformat()
 
+        position_deal_ids = {
+            p.get("deal_id") for p in broker_state.get("positions", [])
+            if p.get("deal_id")
+        }
+
         for order in orderbook.get("orders", []):
             if order.get("state") != "WORKING":
                 continue
@@ -67,7 +72,14 @@ class Reconciliation:
             if deal_id in live_deal_ids:
                 n_working += 1
             else:
-                order["state"] = "FILLED"
+                # Order disappeared from working list.  Check positions
+                # to distinguish a fill from a cancellation/expiry.
+                # Note: IG may assign a new deal_id on fill, so this
+                # check is best-effort; the fallback is CANCELLED.
+                if deal_id in position_deal_ids:
+                    order["state"] = "FILLED"
+                else:
+                    order["state"] = "CANCELLED"
                 order["updated_at"] = now
                 n_updated += 1
 

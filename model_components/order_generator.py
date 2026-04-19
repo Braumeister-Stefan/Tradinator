@@ -105,6 +105,8 @@ class OrderGenerator:
         target_sizes = {}
         for epic, weight in weights.items():
             price = prices.get(epic, 1.0)
+            if price == 0:
+                price = 1.0
             target_sizes[epic] = (weight * total_value) / price
         return target_sizes
 
