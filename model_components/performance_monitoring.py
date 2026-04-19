@@ -12,6 +12,8 @@ guidance of any kind. Use at your own risk.
 
 import os
 
+from jinja2 import Environment, FileSystemLoader
+
 
 class PerformanceMonitoring:
     """Format and display a human-readable performance report."""
@@ -29,6 +31,7 @@ class PerformanceMonitoring:
         report = self._build_report(analytics)
         self._print_report(report)
         self._save_report(report)
+        self._save_html_report(analytics)
 
     # ------------------------------------------------------------------
     # Internal methods
@@ -92,7 +95,7 @@ class PerformanceMonitoring:
             "  EXPOSURE",
         ]
 
-        exposure = analytics.get("current_exposure", {})
+        exposure = analytics.get("current_exposure") or {}
         lines += [
             self._format_metric(
                 "Invested", exposure.get("invested_pct"), "%"
@@ -134,6 +137,37 @@ class PerformanceMonitoring:
                 fh.write("\n")
         except OSError as exc:
             print(f"[PerformanceMonitoring] Could not save report: {exc}")
+
+    def _save_html_report(self, analytics: dict) -> None:
+        """Render the Jinja2 HTML dashboard and write it to output_dir."""
+        try:
+            template_dir = os.path.join(os.path.dirname(__file__), "templates")
+            env = Environment(
+                loader=FileSystemLoader(template_dir),
+                autoescape=True,
+            )
+            template = env.get_template("dashboard.html")
+
+            defaults = {
+                "timestamp": "",
+                "total_return_pct": None,
+                "period_return_pct": None,
+                "max_drawdown_pct": None,
+                "sharpe_ratio": None,
+                "volatility_annual_pct": None,
+                "current_exposure": None,
+                "history_length": None,
+            }
+            context = {**defaults, **analytics}
+            html = template.render(**context)
+
+            output_dir = self.config.get("output_dir", ".")
+            os.makedirs(output_dir, exist_ok=True)
+            path = os.path.join(output_dir, "performance_dashboard.html")
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(html)
+        except Exception as exc:
+            print(f"[PerformanceMonitoring] Could not save HTML report: {exc}")
 
     # ------------------------------------------------------------------
     # Helpers

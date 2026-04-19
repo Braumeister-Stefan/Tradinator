@@ -54,7 +54,9 @@ Tradinator/
 │   ├── order_executor.py             # Paper trade execution via IG demo
 │   ├── portfolio_ledger.py           # Position/cash/trade history (JSON)
 │   ├── portfolio_analytics.py        # Return, drawdown, Sharpe calculation
-│   └── performance_monitoring.py     # Formatted performance report
+│   ├── performance_monitoring.py     # Formatted performance report
+│   └── templates/
+│       └── dashboard.html            # Jinja2 HTML dashboard template
 ├── data/
 │   ├── input/                        # Instrument lists, cached data
 │   │   ├── universe_series.xlsx      # Master time series (auto-generated)
@@ -123,7 +125,7 @@ Minor parameters (indicator windows, risk-free rate, display width, etc.) are li
 | **OrderExecutor** | Sends market orders to IG demo, confirms acceptance |
 | **PortfolioLedger** | Append-only JSON record of positions, cash, and trade history |
 | **PortfolioAnalytics** | Computes total return, period return, max drawdown, Sharpe ratio |
-| **PerformanceMonitoring** | Prints formatted report to terminal, saves to text file |
+| **PerformanceMonitoring** | Prints formatted report to terminal, saves text and HTML dashboard |
 
 ## Universe Series
 
