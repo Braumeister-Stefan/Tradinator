@@ -67,6 +67,9 @@ if __name__ == "__main__":
     try:
         model = Model(config)
         model.run()
+    except NotImplementedError as error:
+        print(f"The selected broker adapter is not yet implemented: {error}")
+        raise SystemExit(1) from None
     except RuntimeError as error:
         if "Missing required IG credentials" not in str(error):
             if "validation.pattern.invalid.authenticationRequest.identifier" not in str(error):

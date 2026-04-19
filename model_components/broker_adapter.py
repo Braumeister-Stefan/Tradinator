@@ -133,7 +133,7 @@ class BrokerAdapter(Protocol):
         Returns
         -------
         dict
-            ``{"status": str, "deal_id": str}``
+            ``{"status": str, "deal_id": str | None}``
             where *status* is ``"ACCEPTED"`` or ``"REJECTED"``.
         """
         ...

@@ -41,12 +41,12 @@ class BrokerConnector:
     def run(self) -> dict:
         """Connect to the configured broker and return broker_state."""
         adapter = self._create_adapter()
-        adapter.connect()
+        connection = adapter.connect()
         account_info = adapter.get_account_info()
         positions = adapter.get_positions()
         instruments = list(self.config.get("universe", []))
         return self._build_broker_state(
-            adapter, positions, account_info, instruments
+            adapter, positions, account_info, instruments, connection
         )
 
     # ------------------------------------------------------------------
@@ -66,10 +66,11 @@ class BrokerConnector:
         return adapter_cls(self.config)
 
     @staticmethod
-    def _build_broker_state(adapter, positions, account_info, instruments):
+    def _build_broker_state(adapter, positions, account_info, instruments, connection):
         """Assemble the broker_state dict consumed by downstream components."""
         return {
             "adapter": adapter,
+            "account_id": connection.get("account_id", ""),
             "positions": positions,
             "cash": account_info["cash"],
             "balance": account_info["balance"],
