@@ -25,6 +25,7 @@ class RunLoop:
         self.research_interval = research_interval
         self.execution_interval = execution_interval
         self._latest_research = None
+        self._research_lock = threading.Lock()
 
     def start(self):
         """Dispatch execution based on the configured mode."""
@@ -77,7 +78,8 @@ class RunLoop:
         while True:
             try:
                 result = self.model.run_research()
-                self._latest_research = result
+                with self._research_lock:
+                    self._latest_research = result
             except Exception as exc:
                 print(f"[RunLoop] ⚠ Error in research: {exc}")
             time.sleep(self.research_interval)
@@ -86,7 +88,8 @@ class RunLoop:
         """Loop: read latest research, run execution, sleep."""
         while True:
             try:
-                research = self._latest_research
+                with self._research_lock:
+                    research = self._latest_research
                 if research is None:
                     print("[RunLoop] No research available yet, skipping execution.")
                 else:
