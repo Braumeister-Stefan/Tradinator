@@ -9,10 +9,12 @@ It does not constitute trading advice, investment recommendation, or financial
 guidance of any kind. Use at your own risk.
 """
 
+import argparse
 import json
 import os
 
 from model import Model
+from run_loop import RunLoop
 
 UNIVERSE_PATH = os.path.join("data", "input", "universe.json")
 
@@ -77,6 +79,38 @@ def _print_ig_authentication_error(error: RuntimeError) -> None:
     print("3. Confirm the credentials belong to an IG DEMO account")
     print("4. Confirm the API key is enabled for the same IG account")
 
+
+def _parse_args():
+    """Parse command-line arguments for run mode and scheduling."""
+    parser = argparse.ArgumentParser(description="Tradinator paper trading engine")
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["run_once", "scheduled", "decoupled", "research_only"],
+        default="run_once",
+        help="Execution mode (default: run_once)",
+    )
+    parser.add_argument(
+        "--interval",
+        type=int,
+        default=3600,
+        help="Seconds between runs for scheduled mode (default: 3600)",
+    )
+    parser.add_argument(
+        "--research-interval",
+        type=int,
+        default=14400,
+        help="Seconds between research cycles for decoupled mode (default: 14400)",
+    )
+    parser.add_argument(
+        "--execution-interval",
+        type=int,
+        default=3600,
+        help="Seconds between execution cycles for decoupled mode (default: 3600)",
+    )
+    return parser.parse_args()
+
+
 # ---------------------------------------------------------------------------
 # Major parameters — control *what* the engine does each run.
 # ---------------------------------------------------------------------------
@@ -101,13 +135,22 @@ config = {
 
     # Output -------------------------------------------------------------
     "output_dir": "data/output",        # base directory for all output files
+    "max_handoff_age_seconds": 7200,   # max age of handoff file before considered stale
 }
 
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
+    args = _parse_args()
     try:
         model = Model(config)
-        model.run()
+        run_loop = RunLoop(
+            model,
+            args.mode,
+            interval=args.interval,
+            research_interval=args.research_interval,
+            execution_interval=args.execution_interval,
+        )
+        run_loop.start()
     except NotImplementedError as error:
         print(f"The selected broker adapter is not yet implemented: {error}")
         raise SystemExit(1) from None

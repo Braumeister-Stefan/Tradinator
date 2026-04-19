@@ -20,6 +20,7 @@ class OrderGenerator:
 
     MIN_ORDER_SIZE = 0.01       # minimum order size (fractional shares)
     ROUNDING_PRECISION = 2      # decimal places for order sizes
+    LIMIT_ORDER_THRESHOLD = 0.5 # threshold for LIMIT order eligibility
 
     def __init__(self, config: dict):
         """Store config for later use by run()."""
@@ -30,12 +31,20 @@ class OrderGenerator:
         positions = broker_state.get("positions", [])
         weights = target_portfolio.get("weights", {})
         total_value = target_portfolio.get("total_value", 0.0)
+        metadata = market_data.get("metadata", {}) if market_data else {}
+
+        latest_prices = {}
+        if market_data:
+            for epic, fields in market_data.get("prices", {}).items():
+                closes = fields.get("close", [])
+                if closes and closes[-1] is not None:
+                    latest_prices[epic] = closes[-1]
 
         current_holdings = self._get_current_holdings(positions)
         prices = self._extract_prices(positions, market_data)
         target_sizes = self._compute_target_sizes(weights, total_value, prices)
         deltas = self._compute_deltas(target_sizes, current_holdings)
-        orders = self._generate_orders(deltas, current_holdings)
+        orders, skipped = self._generate_orders(deltas, current_holdings, metadata, latest_prices)
 
         summary = {
             "total_orders": len(orders),
@@ -45,10 +54,11 @@ class OrderGenerator:
 
         print(
             f"[OrderGenerator] Generated {summary['total_orders']} order(s): "
-            f"{summary['buy_orders']} BUY, {summary['sell_orders']} SELL"
+            f"{summary['buy_orders']} BUY, {summary['sell_orders']} SELL, "
+            f"{len(skipped)} skipped"
         )
 
-        return {"orders": orders, "summary": summary}
+        return {"orders": orders, "summary": summary, "skipped": skipped}
 
     # ------------------------------------------------------------------
     # Internal methods
@@ -95,6 +105,8 @@ class OrderGenerator:
         target_sizes = {}
         for instrument_id, weight in weights.items():
             price = prices.get(instrument_id, 1.0)
+            if price == 0:
+                price = 1.0
             target_sizes[instrument_id] = (weight * total_value) / price
         return target_sizes
 
@@ -114,15 +126,35 @@ class OrderGenerator:
             deltas[instrument_id] = target - current
         return deltas
 
-    def _generate_orders(self, deltas: dict, current_holdings: dict) -> list:
-        """Convert deltas into order dicts, filtering below MIN_ORDER_SIZE."""
+    def _generate_orders(self, deltas: dict, current_holdings: dict, metadata=None, latest_prices=None) -> tuple:
+        """Convert deltas into order dicts, filtering by per-instrument constraints."""
+        if metadata is None:
+            metadata = {}
+        if latest_prices is None:
+            latest_prices = {}
+        skipped = []
         orders = []
         for instrument_id, delta in deltas.items():
             abs_delta = abs(delta)
-            if abs_delta < self.MIN_ORDER_SIZE:
+
+            epic_meta = metadata.get(epic, {})
+            min_deal_size = epic_meta.get("min_deal_size", self.MIN_ORDER_SIZE)
+            lot_size = epic_meta.get("lot_size", 1.0)
+
+            if lot_size > 0:
+                size = int(abs_delta / lot_size) * lot_size
+            else:
+                size = abs_delta
+
+            if size < min_deal_size:
+                if size == 0:
+                    reason_text = f"rounds to 0 at lot_size {lot_size}"
+                else:
+                    reason_text = f"size {size:.4f} below min {min_deal_size}"
+                skipped.append({"epic": epic, "reason": reason_text})
+                print(f"[OrderGenerator] ⚠ Skipped {epic}: {reason_text}")
                 continue
 
-            size = round(abs_delta, self.ROUNDING_PRECISION)
             direction = "BUY" if delta > 0 else "SELL"
             current = current_holdings.get(instrument_id, 0.0)
             reason = self._classify_reason(current, delta)
@@ -133,10 +165,12 @@ class OrderGenerator:
                     "direction": direction,
                     "size": size,
                     "order_type": "MARKET",
+                    "limit_level": None,
+                    "time_in_force": "FILL_OR_KILL",
                     "reason": reason,
                 }
             )
-        return orders
+        return (orders, skipped)
 
     @staticmethod
     def _classify_reason(current: float, delta: float) -> str:
