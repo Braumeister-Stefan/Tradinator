@@ -11,6 +11,7 @@ guidance of any kind. Use at your own risk.
 """
 
 import os
+import webbrowser
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -166,6 +167,9 @@ class PerformanceMonitoring:
             path = os.path.join(output_dir, "performance_dashboard.html")
             with open(path, "w", encoding="utf-8") as fh:
                 fh.write(html)
+            abs_path = os.path.abspath(path)
+            webbrowser.open(f"file:///{abs_path}")
+            print(f"[PerformanceMonitoring] Dashboard opened in browser: {abs_path}")
         except Exception as exc:
             print(f"[PerformanceMonitoring] Could not save HTML report: {exc}")
 

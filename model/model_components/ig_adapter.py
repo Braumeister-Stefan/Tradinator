@@ -29,7 +29,7 @@ class IGBrokerAdapter:
         "your_api_key_here",
     }
 
-    RATE_LIMIT_DELAY = 0.2          # seconds between API calls
+    RATE_LIMIT_DELAY = 1.0          # seconds between API calls
     EXPIRY = "-"                    # DFB / no expiry for CFDs
     DEFAULT_CURRENCY_CODE = "USD"
 
@@ -45,7 +45,7 @@ class IGBrokerAdapter:
         """Authenticate with IG and return the active account id."""
         username, password, api_key, acc_type = self._load_credentials()
         self._ig = self._create_session(username, password, api_key, acc_type)
-        acc_number = os.environ.get("IG_ACC_NUMBER", "")
+        acc_number = os.environ.get("IG_ACC_NUMBER", "") or None
         return {"account_id": acc_number}
 
     def get_account_info(self) -> dict:
@@ -286,7 +286,7 @@ class IGBrokerAdapter:
 
         Uses exponential backoff: wait = 2^attempt seconds (2s, 4s, 8s …).
         """
-        acc_number = os.environ.get("IG_ACC_NUMBER")
+        acc_number = os.environ.get("IG_ACC_NUMBER") or None
         ig = IGService(
             username,
             password,
@@ -305,6 +305,12 @@ class IGBrokerAdapter:
                 return ig
             except Exception as exc:
                 last_error = exc
+                exc_name = type(exc).__name__
+                if "Exceeded" in exc_name or "RateLimit" in exc_name:
+                    raise RuntimeError(
+                        f"IG API rate limit hit ({exc_name}). "
+                        "Wait a few minutes before retrying."
+                    ) from exc
                 if attempt < self.MAX_RETRIES:
                     wait = 2 ** attempt
                     print(

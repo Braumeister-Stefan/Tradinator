@@ -23,7 +23,7 @@ class DataPipeline:
     DEFAULT_RESOLUTION = "DAY"
     DEFAULT_LOOKBACK = 50
     FILL_METHOD = "ffill"  # forward-fill for missing values
-    RATE_LIMIT_DELAY = 0.2  # seconds between API calls
+    RATE_LIMIT_DELAY = 1.0  # seconds between API calls
     SERIES_FILE = "data/input/universe_series.xlsx"  # master file path
     HISTORIC_DIR = "data/input/historic_series"  # historic ingest folder
     SHEET_NAMES = ("mid_close", "bid_close", "mid_open")  # the three sheet names
