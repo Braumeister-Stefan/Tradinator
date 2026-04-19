@@ -8,17 +8,18 @@ A modular trading engine for automated **paper trading**, supporting multiple br
 
 ## Architecture
 
-Tradinator follows a strict linear pipeline. Each run is a complete cycle: **connect → decide → execute → record → report**. The orchestrator (`model.py`) calls ten components in fixed order; data flows forward only.
+Tradinator follows a strict linear pipeline. Each run is a complete cycle: **connect → decide → execute → record → report**. The orchestrator (`model/model.py`) calls eleven components in fixed order; data flows forward only. A `RunLoop` controls *when* the pipeline runs (single pass, scheduled, or decoupled research/execution cycles).
 
 A **BrokerAdapter** protocol decouples the pipeline from any specific brokerage. The `BrokerConnector` selects the adapter named in `config["broker"]` (default `"ig"`), and all downstream components call normalised adapter methods — the raw broker client never leaks into the pipeline.
 
 ```mermaid
 flowchart TD
-    A[main.py<br/>Config & entry point] --> B[model.py — Orchestrator]
+    A[main.py<br/>Config · RunLoop · entry point] --> B[Model — Orchestrator]
 
     subgraph GATHER
         B --> C[BrokerConnector<br/>Selects adapter · positions · cash]
-        C --> D[DataPipeline<br/>Historical prices · cleaning]
+        C --> R[Reconciliation<br/>Syncs local orders with broker]
+        R --> D[DataPipeline<br/>Historical prices · cleaning]
     end
 
     subgraph DECIDE
@@ -48,30 +49,37 @@ flowchart TD
 
 ```
 Tradinator/
-├── main.py                           # Entry point: config + Model(config).run()
-├── model.py                          # Orchestrator
-├── model_components/
-│   ├── __init__.py                   # Exports all component classes
-│   ├── broker_adapter.py             # BrokerAdapter Protocol (interface)
-│   ├── ig_adapter.py                 # IG implementation of BrokerAdapter
-│   ├── ibkr_adapter.py              # IBKR placeholder (NotImplementedError)
-│   ├── broker_connector.py           # Adapter selection & broker_state assembly
-│   ├── data_pipeline.py              # Market data acquisition & cleaning
-│   ├── signal_engine.py              # Buy/sell signal generation (MA crossover)
-│   ├── strategy_eval.py              # Pre-trade signal validation
-│   ├── portfolio_constructor.py      # Signal → target weight conversion
-│   ├── order_generator.py            # Target weight → order translation
-│   ├── order_executor.py             # Paper trade execution via adapter
-│   ├── portfolio_ledger.py           # Position/cash/trade history (JSON)
-│   ├── portfolio_analytics.py        # Return, drawdown, Sharpe calculation
-│   ├── performance_monitoring.py     # Formatted performance report
-│   └── templates/
-│       └── dashboard.html            # Jinja2 HTML dashboard template
+├── main.py                           # Entry point: config, RunLoop, Model
+├── model/
+│   ├── __init__.py                   # Re-exports Model, RunLoop, Handoff
+│   ├── model.py                      # Orchestrator — instantiates and runs all components
+│   ├── run_loop.py                   # Scheduling: run_once / scheduled / decoupled / research_only
+│   ├── handoff.py                    # JSON bridge between research and execution in decoupled mode
+│   └── model_components/
+│       ├── __init__.py               # Exports all component classes
+│       ├── broker_adapter.py         # BrokerAdapter Protocol (interface)
+│       ├── ig_adapter.py             # IG implementation of BrokerAdapter
+│       ├── ibkr_adapter.py           # IBKR placeholder (NotImplementedError)
+│       ├── broker_connector.py       # Adapter selection & broker_state assembly
+│       ├── reconciliation.py         # Syncs local order book with broker state
+│       ├── data_pipeline.py          # Market data acquisition & cleaning
+│       ├── signal_engine.py          # Buy/sell signal generation (MA crossover)
+│       ├── strategy_eval.py          # Pre-trade signal validation
+│       ├── portfolio_constructor.py  # Signal → target weight conversion
+│       ├── order_generator.py        # Target weight → order translation
+│       ├── order_executor.py         # Paper trade execution via adapter
+│       ├── portfolio_ledger.py       # Position/cash/trade history (JSON)
+│       ├── portfolio_analytics.py    # Return, drawdown, Sharpe calculation
+│       ├── performance_monitoring.py # Formatted performance report
+│       └── templates/
+│           └── dashboard.html        # Jinja2 HTML dashboard template
 ├── data/
-│   ├── input/                        # Instrument lists, cached data
+│   ├── input/
+│   │   ├── universe.json             # Instrument universe (IG epics)
+│   │   ├── discover_universe.py      # Standalone utility: validate & expand universe
 │   │   ├── universe_series.xlsx      # Master time series (auto-generated)
 │   │   └── historic_series/          # Drop-in folder for historic xlsx files
-│   └── output/                       # Ledger, trades, reports
+│   └── output/                       # Ledger, trades, reports, handoff
 ├── secrets/
 │   └── .env.example                  # Credential template (IG + IBKR stubs)
 ├── requirements.txt
@@ -88,8 +96,13 @@ pip install -r requirements.txt
 cp secrets/.env.example secrets/.env
 # Edit secrets/.env with your IG demo account details
 
-# 3. Run
+# 3. Run (default: single pass)
 python main.py
+
+# Or choose a run mode
+python main.py --mode scheduled --interval 3600
+python main.py --mode decoupled --research-interval 14400 --execution-interval 3600
+python main.py --mode research_only
 ```
 
 In VS Code, the workspace is configured to use `.venv\\Scripts\\python.exe` for Python Run actions.
@@ -120,14 +133,16 @@ Major parameters are set in `main.py`:
 
 ```python
 config = {
-    "broker": "ig",                    # "ig" or "ibkr"
+    "broker": "ig",                    # "ig" or "ibkr" (ibkr is placeholder)
     "env_path": "secrets/.env",
-    "universe": ["CS.D.AAPL.CFD.IP", "CS.D.MSFT.CFD.IP", ...],
+    "universe_path": "data/input/universe.json",
+    "universe": [...],                 # loaded from universe.json at startup
     "resolution": "DAY",
     "lookback": 50,
     "max_position_pct": 0.25,
     "cash_reserve_pct": 0.05,
     "output_dir": "data/output",
+    "max_handoff_age_seconds": 7200,   # staleness limit for decoupled mode
 }
 ```
 
@@ -135,7 +150,7 @@ Minor parameters (indicator windows, risk-free rate, display width, etc.) are li
 
 ## Broker Abstraction
 
-The `BrokerAdapter` protocol (`model_components/broker_adapter.py`) defines eight methods that every adapter must implement:
+The `BrokerAdapter` protocol (`model/model_components/broker_adapter.py`) defines eight methods that every adapter must implement:
 
 | Method | Purpose |
 |---|---|
@@ -150,9 +165,9 @@ The `BrokerAdapter` protocol (`model_components/broker_adapter.py`) defines eigh
 
 ### Adding a new broker
 
-1. Create `model_components/mybroker_adapter.py` implementing the `BrokerAdapter` protocol
-2. Import it in `model_components/__init__.py`
-3. Register it in `broker_connector.py` `_ADAPTER_REGISTRY`
+1. Create `model/model_components/mybroker_adapter.py` implementing the `BrokerAdapter` protocol
+2. Import it in `model/model_components/__init__.py`
+3. Register it in `model/model_components/broker_connector.py` `_ADAPTER_REGISTRY`
 4. Set `"broker": "mybroker"` in `main.py` config
 
 ## Components
@@ -163,6 +178,7 @@ The `BrokerAdapter` protocol (`model_components/broker_adapter.py`) defines eigh
 | **IGBrokerAdapter** | IG implementation (trading_ig library) |
 | **IBKRBrokerAdapter** | IBKR placeholder (not yet implemented) |
 | **BrokerConnector** | Selects adapter, connects, builds broker_state |
+| **Reconciliation** | Synchronises local order book with broker working orders |
 | **DataPipeline** | Fetches historical OHLCV prices via adapter, cleans with forward/back-fill, persists a master xlsx time series, and can ingest historic data files |
 | **SignalEngine** | Dual moving-average crossover → BUY / SELL / HOLD signals |
 | **StrategyEval** | Pre-trade quality gate: data quality, Sharpe estimate, volatility stubs |
@@ -200,7 +216,7 @@ To backfill or supplement the master file with external data:
 Historic ingestion runs automatically during every pipeline run. It can also be invoked standalone:
 
 ```python
-from model_components import DataPipeline
+from model.model_components import DataPipeline
 DataPipeline(config={}).ingest_historic()
 ```
 
@@ -216,9 +232,9 @@ This is a **structural skeleton** with placeholder logic where appropriate:
 
 ## Adding a new component
 
-1. Create `model_components/mycomponent.py` with a class and a `run()` method
-2. Import and export it in `model_components/__init__.py`
-3. Instantiate it in `model.py` and call `self.mycomponent.run(...)` inside `Model.run()`
+1. Create `model/model_components/mycomponent.py` with a class and a `run()` method
+2. Import and export it in `model/model_components/__init__.py`
+3. Instantiate it in `model/model.py` and call `self.mycomponent.run(...)` inside `Model.run()`
 
 ## License
 
