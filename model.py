@@ -36,9 +36,8 @@ class Model:
         self.portfolio_analytics = PortfolioAnalytics(config)
         self.performance_monitoring = PerformanceMonitoring(config)
 
-    def run(self):
-        """Execute the full pipeline: Gather → Decide → Execute → Report."""
-
+    def run_research(self):
+        """Execute the research pipeline: Gather → Decide."""
         # Phase 1: GATHER
         broker_state = self.broker_connector.run()
         market_data = self.data_pipeline.run(broker_state)
@@ -50,6 +49,20 @@ class Model:
             validated_signals, broker_state
         )
 
+        return {
+            "broker_state": broker_state,
+            "market_data": market_data,
+            "signals": signals,
+            "validated_signals": validated_signals,
+            "target_portfolio": target_portfolio,
+        }
+
+    def run_execution(self, research_output):
+        """Execute the trading pipeline: Execute → Record → Report."""
+        broker_state = research_output["broker_state"]
+        market_data = research_output["market_data"]
+        target_portfolio = research_output["target_portfolio"]
+
         # Phase 3: EXECUTE
         orders = self.order_generator.run(target_portfolio, broker_state, market_data)
         execution_log = self.order_executor.run(orders, broker_state, market_data)
@@ -60,3 +73,8 @@ class Model:
         ledger_snapshot = self.portfolio_ledger.run(execution_log, broker_state)
         analytics = self.portfolio_analytics.run(ledger_snapshot)
         self.performance_monitoring.run(analytics)
+
+    def run(self):
+        """Execute the full pipeline: Gather → Decide → Execute → Report."""
+        research_output = self.run_research()
+        self.run_execution(research_output)
