@@ -226,7 +226,6 @@ class DataPipeline:
                 # Excel does not support timezone-aware datetimes; strip tz
                 # before writing. _load_series_file restores UTC on read.
                 if sorted_df.index.tz is not None:
-                    sorted_df = sorted_df.copy()
                     sorted_df.index = sorted_df.index.tz_localize(None)
                 sorted_df.to_excel(writer, sheet_name=name)
 
