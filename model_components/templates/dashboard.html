@@ -53,6 +53,7 @@
             border: 1px solid #1e2d3d;
             border-radius: 8px;
             padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
         }
 
         .panel-title {
@@ -71,8 +72,10 @@
             text-transform: uppercase;
             letter-spacing: 0.08em;
             color: #4a90d9;
-            margin-top: 16px;
+            margin-top: 18px;
             margin-bottom: 8px;
+            padding-left: 10px;
+            border-left: 2px solid #4a90d9;
         }
 
         .section-label:first-of-type {
@@ -82,9 +85,20 @@
         .metric-row {
             display: flex;
             justify-content: space-between;
-            padding: 5px 0;
+            align-items: center;
+            padding: 7px 8px;
             border-bottom: 1px dotted #1e2d3d;
             font-size: 0.9rem;
+            border-radius: 4px;
+            transition: background-color 0.15s ease;
+        }
+
+        .metric-row:hover {
+            background-color: rgba(74, 144, 217, 0.06);
+        }
+
+        .metric-row:last-of-type {
+            border-bottom: none;
         }
 
         .metric-label {
@@ -94,6 +108,7 @@
         .metric-value {
             font-weight: 600;
             color: #e2e8f0;
+            font-variant-numeric: tabular-nums;
         }
 
         .metric-value.na {
@@ -101,16 +116,44 @@
             font-style: italic;
         }
 
+        /* --- Semantic colour for financial values --- */
+        .metric-value.positive {
+            color: #34d399;
+        }
+
+        .metric-value.negative {
+            color: #f87171;
+        }
+
+        .metric-value.caution {
+            color: #fbbf24;
+        }
+
         /* --- Placeholder panels (Quadrants 2–4) --- */
         .placeholder {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 200px;
+            border-style: dashed;
+            background: repeating-linear-gradient(
+                135deg,
+                transparent,
+                transparent 20px,
+                rgba(30, 45, 61, 0.20) 20px,
+                rgba(30, 45, 61, 0.20) 21px
+            ), #162029;
+        }
+
+        .placeholder-icon {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            opacity: 0.3;
         }
 
         .placeholder-text {
-            font-size: 1rem;
+            font-size: 0.85rem;
             color: #3a4a5a;
             font-style: italic;
         }
@@ -144,16 +187,20 @@
                 <span class="metric-label">Total Return</span>
                 {% if total_return_pct is none %}
                 <span class="metric-value na">N/A</span>
+                {% elif total_return_pct >= 0 %}
+                <span class="metric-value positive">+{{ "%.2f"|format(total_return_pct) }}%</span>
                 {% else %}
-                <span class="metric-value">{{ "%.2f"|format(total_return_pct) }}%</span>
+                <span class="metric-value negative">{{ "%.2f"|format(total_return_pct) }}%</span>
                 {% endif %}
             </div>
             <div class="metric-row">
                 <span class="metric-label">Period Return</span>
                 {% if period_return_pct is none %}
                 <span class="metric-value na">N/A</span>
+                {% elif period_return_pct >= 0 %}
+                <span class="metric-value positive">+{{ "%.2f"|format(period_return_pct) }}%</span>
                 {% else %}
-                <span class="metric-value">{{ "%.2f"|format(period_return_pct) }}%</span>
+                <span class="metric-value negative">{{ "%.2f"|format(period_return_pct) }}%</span>
                 {% endif %}
             </div>
 
@@ -163,15 +210,17 @@
                 {% if max_drawdown_pct is none %}
                 <span class="metric-value na">N/A</span>
                 {% else %}
-                <span class="metric-value">-{{ "%.2f"|format(max_drawdown_pct | abs) }}%</span>
+                <span class="metric-value negative">-{{ "%.2f"|format(max_drawdown_pct | abs) }}%</span>
                 {% endif %}
             </div>
             <div class="metric-row">
                 <span class="metric-label">Sharpe Ratio</span>
                 {% if sharpe_ratio is none %}
                 <span class="metric-value na">N/A</span>
+                {% elif sharpe_ratio >= 1.0 %}
+                <span class="metric-value positive">{{ "%.2f"|format(sharpe_ratio) }}</span>
                 {% else %}
-                <span class="metric-value">{{ "%.2f"|format(sharpe_ratio) }}</span>
+                <span class="metric-value caution">{{ "%.2f"|format(sharpe_ratio) }}</span>
                 {% endif %}
             </div>
             <div class="metric-row">
@@ -179,7 +228,7 @@
                 {% if volatility_annual_pct is none %}
                 <span class="metric-value na">N/A</span>
                 {% else %}
-                <span class="metric-value">{{ "%.2f"|format(volatility_annual_pct) }}%</span>
+                <span class="metric-value caution">{{ "%.2f"|format(volatility_annual_pct) }}%</span>
                 {% endif %}
             </div>
 
@@ -223,16 +272,19 @@
 
         <!-- Quadrant 2 (top-right): Reserved -->
         <div class="panel placeholder">
+            <div class="placeholder-icon">&#x1F4C8;</div>
             <span class="placeholder-text">Reserved &mdash; Panel 2</span>
         </div>
 
         <!-- Quadrant 3 (bottom-left): Reserved -->
         <div class="panel placeholder">
+            <div class="placeholder-icon">&#x1F4CA;</div>
             <span class="placeholder-text">Reserved &mdash; Panel 3</span>
         </div>
 
         <!-- Quadrant 4 (bottom-right): Reserved -->
         <div class="panel placeholder">
+            <div class="placeholder-icon">&#x1F4CB;</div>
             <span class="placeholder-text">Reserved &mdash; Panel 4</span>
         </div>
 
