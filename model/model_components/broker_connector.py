@@ -14,7 +14,7 @@ It does not constitute trading advice, investment recommendation, or financial
 guidance of any kind. Use at your own risk.
 """
 
-from model_components.ig_adapter import IGBrokerAdapter
+from .ig_adapter import IGBrokerAdapter
 
 
 # Registry of supported brokers — add new adapters here.
@@ -25,7 +25,7 @@ _ADAPTER_REGISTRY = {
 # Lazy import guard for optional IBKR adapter so that ``ib_async`` is not
 # required unless the user explicitly selects the ``ibkr`` broker.
 try:
-    from model_components.ibkr_adapter import IBKRBrokerAdapter  # noqa: F401
+    from .ibkr_adapter import IBKRBrokerAdapter  # noqa: F401
     _ADAPTER_REGISTRY["ibkr"] = IBKRBrokerAdapter
 except ImportError:
     pass

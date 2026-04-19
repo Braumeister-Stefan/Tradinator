@@ -6,8 +6,8 @@ This is the only place where components are aware of each other's existence.
 Data flows strictly forward through the pipeline: steps 1 → 10.
 """
 
-from handoff import Handoff
-from model_components import (
+from .handoff import Handoff
+from .model_components import (
     BrokerConnector,
     DataPipeline,
     SignalEngine,
