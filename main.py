@@ -60,12 +60,12 @@ def _load_universe(path: str) -> list[str]:
 
 
 def _print_credentials_setup_error(error: RuntimeError) -> None:
-    """Print the required IG credential setup steps for first-time runs."""
-    print("Tradinator could not start because IG credentials are not configured.")
+    """Print the required credential setup steps for first-time runs."""
+    print("Tradinator could not start because broker credentials are not configured.")
     print(str(error))
     print("Next steps:")
     print("1. Copy secrets/.env.example to secrets/.env")
-    print("2. Fill in IG_USERNAME, IG_PASSWORD, and IG_API_KEY")
+    print("2. Fill in the required credentials for your broker (default: IG)")
     print("3. Run main.py again")
 
 
@@ -115,8 +115,11 @@ def _parse_args():
 # Major parameters — control *what* the engine does each run.
 # ---------------------------------------------------------------------------
 config = {
+    # Broker --------------------------------------------------------------
+    "broker": "ig",                     # "ig" or "ibkr" (ibkr is placeholder)
+
     # Credentials --------------------------------------------------------
-    "env_path": "secrets/.env",        # path to .env file with IG creds
+    "env_path": "secrets/.env",        # path to .env file with broker creds
 
     # Universe -----------------------------------------------------------
     "universe_path": UNIVERSE_PATH,     # path to universe JSON file
@@ -148,6 +151,9 @@ if __name__ == "__main__":
             execution_interval=args.execution_interval,
         )
         run_loop.start()
+    except NotImplementedError as error:
+        print(f"The selected broker adapter is not yet implemented: {error}")
+        raise SystemExit(1) from None
     except RuntimeError as error:
         if "Missing required IG credentials" not in str(error):
             if "validation.pattern.invalid.authenticationRequest.identifier" not in str(error):

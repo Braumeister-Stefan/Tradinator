@@ -1,9 +1,9 @@
 """
 Tradinator — Data Pipeline.
 
-Downloads historical market data for each instrument via the IG API and
-performs basic cleaning (mid-price calculation, forward-fill).
-Persists consolidated series to an xlsx master file as a side effect.
+Downloads historical market data for each instrument via the broker adapter
+and performs basic cleaning (forward-fill).  Persists consolidated series to
+an xlsx master file as a side effect.
 
 DISCLAIMER: Tradinator is a personal experimentation tool for paper trading.
 It does not constitute trading advice, investment recommendation, or financial
@@ -23,7 +23,7 @@ class DataPipeline:
     DEFAULT_RESOLUTION = "DAY"
     DEFAULT_LOOKBACK = 50
     FILL_METHOD = "ffill"  # forward-fill for missing values
-    RATE_LIMIT_DELAY = 0.2  # 5 requests per second limit (0.2s delay)
+    RATE_LIMIT_DELAY = 0.2  # seconds between API calls
     SERIES_FILE = "data/input/universe_series.xlsx"  # master file path
     HISTORIC_DIR = "data/input/historic_series"  # historic ingest folder
     SHEET_NAMES = ("mid_close", "bid_close", "mid_open")  # the three sheet names
@@ -34,31 +34,32 @@ class DataPipeline:
 
     def run(self, broker_state: dict) -> dict:
         """Download prices for each instrument, clean them, and return market_data."""
-        ig = broker_state["session"]
+        adapter = broker_state["adapter"]
         instruments = broker_state["instruments"]
         resolution = self.config.get("resolution", self.DEFAULT_RESOLUTION)
         lookback = self.config.get("lookback", self.DEFAULT_LOOKBACK)
 
         prices = {}
 
-        for i, epic in enumerate(instruments):
-            # Throttle requests to stay within IG's rate limits (approx 5-10/s)
+        for i, instrument_id in enumerate(instruments):
             if i > 0:
                 time.sleep(self.RATE_LIMIT_DELAY)
 
-            print(f"[DataPipeline] Fetching {epic} ({resolution}, {lookback} bars)…")
+            print(f"[DataPipeline] Fetching {instrument_id} ({resolution}, {lookback} bars)…")
             try:
-                raw = self._fetch_prices(ig, epic, resolution, lookback)
+                bars = adapter.fetch_historical_prices(
+                    instrument_id, resolution, lookback
+                )
             except Exception as exc:
-                print(f"[DataPipeline] WARNING: skipping {epic} — {exc}")
+                print(f"[DataPipeline] WARNING: skipping {instrument_id} — {exc}")
                 continue
 
-            parsed = self._parse_prices(raw, epic)
+            parsed = self._bars_to_columns(bars)
             if parsed is None:
-                print(f"[DataPipeline] WARNING: no usable data for {epic}, skipping.")
+                print(f"[DataPipeline] WARNING: no usable data for {instrument_id}, skipping.")
                 continue
 
-            prices[epic] = parsed
+            prices[instrument_id] = parsed
 
         prices = self._clean_prices(prices)
 
@@ -79,7 +80,7 @@ class DataPipeline:
         print(f"[DataPipeline] Done — {len(prices)} instrument(s) loaded.")
         return {
             "prices": prices,
-            "metadata": {epic: {"instrument_name": epic, "epic": epic} for epic in prices},
+            "metadata": {inst: {"instrument_name": inst, "epic": inst} for inst in prices},
             "resolution": resolution,
             "lookback": lookback,
         }
@@ -98,39 +99,24 @@ class DataPipeline:
     # Internal methods
     # ------------------------------------------------------------------
 
-    def _fetch_prices(self, ig, epic: str, resolution: str, lookback: int) -> dict:
-        """Call the IG API for historical price bars."""
-        return ig.fetch_historical_prices_by_epic_and_num_points(
-            epic, resolution, lookback
-        )
-
-    def _parse_prices(self, raw_response: dict, epic: str) -> dict | None:
-        """Convert IG price bars into {close, high, low, open, volume, bid_close, timestamps} lists."""
-        bars = raw_response.get("prices", [])
+    @staticmethod
+    def _bars_to_columns(bars: list[dict]) -> dict | None:
+        """Convert adapter price bars into column-oriented {field: [values]} dict."""
         if not bars:
             return None
 
         close, high, low, opn, volume = [], [], [], [], []
-        bid_close = []
-        timestamps = []
+        bid_close: list = []
+        timestamps: list = []
 
         for bar in bars:
-            close.append(self._mid(bar.get("closePrice")))
-            high.append(self._mid(bar.get("highPrice")))
-            low.append(self._mid(bar.get("lowPrice")))
-            opn.append(self._mid(bar.get("openPrice")))
-            volume.append(bar.get("lastTradedVolume"))
-
-            # Extract bid component only of closePrice
-            close_price = bar.get("closePrice")
-            if close_price is not None:
-                bid_close.append(close_price.get("bid"))
-            else:
-                bid_close.append(None)
-
-            # Extract timestamp string
-            ts = bar.get("snapshotTimeUTC") or bar.get("snapshotTime")
-            timestamps.append(ts)
+            close.append(bar.get("close"))
+            high.append(bar.get("high"))
+            low.append(bar.get("low"))
+            opn.append(bar.get("open"))
+            volume.append(bar.get("volume"))
+            bid_close.append(bar.get("bid_close"))
+            timestamps.append(bar.get("timestamp"))
 
         return {
             "close": close,
@@ -145,11 +131,11 @@ class DataPipeline:
     def _clean_prices(self, prices: dict) -> dict:
         """Forward-fill None gaps and drop instruments that are entirely None."""
         cleaned = {}
-        for epic, fields in prices.items():
+        for instrument_id, fields in prices.items():
             if self._all_none(fields):
-                print(f"[DataPipeline] Dropping {epic} — all values are None.")
+                print(f"[DataPipeline] Dropping {instrument_id} — all values are None.")
                 continue
-            cleaned[epic] = {
+            cleaned[instrument_id] = {
                 key: (values if key == "timestamps" else self._forward_fill(values))
                 for key, values in fields.items()
             }
@@ -185,7 +171,7 @@ class DataPipeline:
     # ------------------------------------------------------------------
 
     def _build_dataframes(self, prices: dict) -> dict:
-        """Convert per-epic price lists into dict of three DataFrames."""
+        """Convert per-instrument price lists into dict of three DataFrames."""
         sheet_mapping = {
             "mid_close": "close",
             "bid_close": "bid_close",
@@ -194,11 +180,11 @@ class DataPipeline:
         frames = {}
         for sheet_name, field_key in sheet_mapping.items():
             series_dict = {}
-            for epic, fields in prices.items():
+            for instrument_id, fields in prices.items():
                 ts = fields.get("timestamps", [])
                 vals = fields.get(field_key, [])
                 index = pd.to_datetime(ts, utc=True, errors="coerce")
-                series_dict[epic] = pd.Series(vals, index=index, dtype=float)
+                series_dict[instrument_id] = pd.Series(vals, index=index, dtype=float)
             if series_dict:
                 frames[sheet_name] = pd.DataFrame(series_dict)
             else:
@@ -325,17 +311,6 @@ class DataPipeline:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
-
-    @staticmethod
-    def _mid(price_field) -> float | None:
-        """Compute mid price as (bid + ask) / 2, or None if data is missing."""
-        if price_field is None:
-            return None
-        bid = price_field.get("bid")
-        ask = price_field.get("ask")
-        if bid is None or ask is None:
-            return None
-        return (bid + ask) / 2
 
     @staticmethod
     def _forward_fill(values: list) -> list:

@@ -65,32 +65,32 @@ class OrderGenerator:
     # ------------------------------------------------------------------
 
     def _get_current_holdings(self, positions: list) -> dict:
-        """Convert the positions list into {epic: signed_size}; BUY=positive, SELL=negative."""
+        """Convert the positions list into {instrument_id: signed_size}; BUY=positive, SELL=negative."""
         holdings = {}
         for pos in positions:
-            epic = pos.get("epic")
+            instrument_id = pos.get("instrument_id")
             size = float(pos.get("size", 0))
             direction = pos.get("direction")
             signed = size if direction == "BUY" else -size
-            # Accumulate in case multiple positions share an epic.
-            holdings[epic] = holdings.get(epic, 0.0) + signed
+            # Accumulate in case multiple positions share an instrument.
+            holdings[instrument_id] = holdings.get(instrument_id, 0.0) + signed
         return holdings
 
     def _extract_prices(self, positions: list, market_data: dict = None) -> dict:
-        """Build {epic: price} from market data (latest close) and position levels."""
+        """Build {instrument_id: price} from market data (latest close) and position levels."""
         prices = {}
         # Use latest close price from market data when available
         if market_data:
-            for epic, fields in market_data.get("prices", {}).items():
+            for instrument_id, fields in market_data.get("prices", {}).items():
                 closes = fields.get("close", [])
                 if closes and closes[-1] is not None:
-                    prices[epic] = closes[-1]
-        # Fall back to position open level for epics not in market data
+                    prices[instrument_id] = closes[-1]
+        # Fall back to position open level for instruments not in market data
         for pos in positions:
-            epic = pos.get("epic")
+            instrument_id = pos.get("instrument_id")
             level = float(pos.get("level", 0))
-            if epic and level > 0 and epic not in prices:
-                prices[epic] = level
+            if instrument_id and level > 0 and instrument_id not in prices:
+                prices[instrument_id] = level
         return prices
 
     def _compute_target_sizes(
@@ -103,27 +103,27 @@ class OrderGenerator:
         target_size equal to notional value.
         """
         target_sizes = {}
-        for epic, weight in weights.items():
-            price = prices.get(epic, 1.0)
+        for instrument_id, weight in weights.items():
+            price = prices.get(instrument_id, 1.0)
             if price == 0:
                 price = 1.0
-            target_sizes[epic] = (weight * total_value) / price
+            target_sizes[instrument_id] = (weight * total_value) / price
         return target_sizes
 
     def _compute_deltas(self, target_sizes: dict, current_holdings: dict) -> dict:
-        """Compute per-epic delta (target − current).
+        """Compute per-instrument delta (target − current).
 
         Covers three cases:
-        1. Epic in targets only  → full buy.
-        2. Epic in both          → partial adjustment.
-        3. Epic in holdings only → full close.
+        1. Instrument in targets only  → full buy.
+        2. Instrument in both          → partial adjustment.
+        3. Instrument in holdings only → full close.
         """
-        all_epics = set(target_sizes) | set(current_holdings)
+        all_instruments = set(target_sizes) | set(current_holdings)
         deltas = {}
-        for epic in all_epics:
-            target = target_sizes.get(epic, 0.0)
-            current = current_holdings.get(epic, 0.0)
-            deltas[epic] = target - current
+        for instrument_id in all_instruments:
+            target = target_sizes.get(instrument_id, 0.0)
+            current = current_holdings.get(instrument_id, 0.0)
+            deltas[instrument_id] = target - current
         return deltas
 
     def _generate_orders(self, deltas: dict, current_holdings: dict, metadata=None, latest_prices=None) -> tuple:
@@ -134,7 +134,7 @@ class OrderGenerator:
             latest_prices = {}
         skipped = []
         orders = []
-        for epic, delta in deltas.items():
+        for instrument_id, delta in deltas.items():
             abs_delta = abs(delta)
 
             epic_meta = metadata.get(epic, {})
@@ -156,12 +156,12 @@ class OrderGenerator:
                 continue
 
             direction = "BUY" if delta > 0 else "SELL"
-            current = current_holdings.get(epic, 0.0)
+            current = current_holdings.get(instrument_id, 0.0)
             reason = self._classify_reason(current, delta)
 
             orders.append(
                 {
-                    "epic": epic,
+                    "instrument_id": instrument_id,
                     "direction": direction,
                     "size": size,
                     "order_type": "MARKET",
