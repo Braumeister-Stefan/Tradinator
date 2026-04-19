@@ -31,7 +31,7 @@ class IGBrokerAdapter:
 
     RATE_LIMIT_DELAY = 1.0          # seconds between API calls
     EXPIRY = "-"                    # DFB / no expiry for CFDs
-    DEFAULT_CURRENCY_CODE = "USD"
+    DEFAULT_CURRENCY_CODE = "GBP"
 
     def __init__(self, config: dict):
         self.config = config
@@ -141,22 +141,37 @@ class IGBrokerAdapter:
         return result
 
     def fetch_instrument_info(self, instrument_id: str) -> dict:
-        """Fetch instrument name and currency from IG."""
+        """Fetch instrument name, currency, and dealing rules from IG."""
         ig = self._require_session()
         defaults = {
             "instrument_name": instrument_id,
             "instrument_id": instrument_id,
             "currency": "Unknown",
+            "min_deal_size": 0.01,
+            "max_deal_size": None,
+            "min_size_increment": 1.0,
+            "scaling_factor": 1,
         }
         try:
             market = ig.fetch_market_by_epic(instrument_id)
             instrument = market.get("instrument", {})
+            dealing_rules = market.get("dealingRules", {})
+            snapshot = market.get("snapshot", {})
+            min_deal_size = float(dealing_rules.get("minDealSize", {}).get("value", 0.01))
+            max_deal_raw = dealing_rules.get("maxDealSize", {})
+            max_deal_size = float(max_deal_raw["value"]) if "value" in max_deal_raw else None
+            min_size_increment = float(dealing_rules.get("minSizeIncrement", {}).get("value", 1.0))
+            scaling_factor = float(snapshot.get("scalingFactor", 1))
             return {
                 "instrument_name": instrument.get("name", instrument_id),
                 "instrument_id": instrument_id,
                 "currency": instrument.get("currencies", [{}])[0].get(
                     "code", "Unknown"
                 ),
+                "min_deal_size": min_deal_size,
+                "max_deal_size": max_deal_size,
+                "min_size_increment": min_size_increment,
+                "scaling_factor": scaling_factor,
             }
         except Exception as exc:
             print(
@@ -224,6 +239,7 @@ class IGBrokerAdapter:
         return {
             "status": confirmation.get("dealStatus", "REJECTED"),
             "deal_id": confirmation.get("dealId"),
+            "reason": confirmation.get("reason", ""),
         }
 
     # ------------------------------------------------------------------

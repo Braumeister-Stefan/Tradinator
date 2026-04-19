@@ -19,7 +19,7 @@ class OrderExecutor:
     """Send orders via the broker adapter and record acceptance/rejection."""
 
     EXECUTION_DELAY = 0.5   # seconds to wait between orders
-    CURRENCY_CODE = "USD"   # default currency for orders
+    CURRENCY_CODE = "GBP"   # default currency for orders
     EXPIRY = "-"            # DFB (daily funded bet) / no expiry for CFDs
     ORDERBOOK_FILENAME = "orderbook.json"
 
@@ -55,10 +55,16 @@ class OrderExecutor:
         execution_log = self._build_execution_log(executions)
 
         summary = execution_log["summary"]
+        rejection_reasons = {}
+        for e in executions:
+            if e["status"] == "REJECTED" and e.get("rejection_reason"):
+                r = e["rejection_reason"]
+                rejection_reasons[r] = rejection_reasons.get(r, 0) + 1
+        reject_breakdown = ", ".join(f"{v} {k}" for k, v in rejection_reasons.items())
+        reject_suffix = f" ({reject_breakdown})" if reject_breakdown else ""
         print(
-            f"[OrderExecutor] Done — {summary['total']} order(s): "
-            f"{summary['accepted']} accepted, {summary['rejected']} rejected, "
-            f"{summary['errors']} error(s)"
+            f"[OrderExecutor] Executed {summary['total']} order(s): "
+            f"{summary['accepted']} FILLED, {summary['rejected']} REJECTED{reject_suffix}"
         )
         self._save_orderbook(orderbook)
 
@@ -72,6 +78,7 @@ class OrderExecutor:
         """Send a single order via the adapter and return an execution dict."""
         reason = order.get("reason", "")
         is_close = reason in ("close", "decrease")
+        currency = metadata.get(order["instrument_id"], {}).get("currency", "GBP") if metadata else "GBP"
 
         try:
             if is_close:
@@ -93,7 +100,7 @@ class OrderExecutor:
                     direction=order["direction"],
                     size=order["size"],
                     order_type="LIMIT",
-                    currency_code=self.CURRENCY_CODE,
+                    currency_code=currency,
                 )
             else:
                 resp = adapter.open_position(
@@ -101,7 +108,7 @@ class OrderExecutor:
                     direction=order["direction"],
                     size=order["size"],
                     order_type="MARKET",
-                    currency_code=self.CURRENCY_CODE,
+                    currency_code=currency,
                 )
 
             deal_reference = resp["deal_reference"]

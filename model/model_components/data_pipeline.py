@@ -63,6 +63,25 @@ class DataPipeline:
 
         prices = self._clean_prices(prices)
 
+        # --- Fetch instrument metadata with dealing rules (REQ-3) ---
+        instrument_metadata = {}
+        for i, instrument_id in enumerate(prices):
+            if i > 0:
+                time.sleep(self.RATE_LIMIT_DELAY)
+            try:
+                instrument_metadata[instrument_id] = adapter.fetch_instrument_info(instrument_id)
+            except Exception as exc:
+                print(f"[DataPipeline] WARNING: metadata fetch failed for {instrument_id} — {exc}")
+                instrument_metadata[instrument_id] = {
+                    "instrument_name": instrument_id,
+                    "instrument_id": instrument_id,
+                    "currency": "Unknown",
+                    "min_deal_size": 0.01,
+                    "max_deal_size": None,
+                    "min_size_increment": 1.0,
+                    "scaling_factor": 1,
+                }
+
         # --- Persistence side effect (R11) ---
         try:
             live_frames = self._build_dataframes(prices)
@@ -80,7 +99,7 @@ class DataPipeline:
         print(f"[DataPipeline] Done — {len(prices)} instrument(s) loaded.")
         return {
             "prices": prices,
-            "metadata": {inst: {"instrument_name": inst, "epic": inst} for inst in prices},
+            "metadata": instrument_metadata,
             "resolution": resolution,
             "lookback": lookback,
         }

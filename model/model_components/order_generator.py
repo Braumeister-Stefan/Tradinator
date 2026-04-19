@@ -41,8 +41,7 @@ class OrderGenerator:
                     latest_prices[epic] = closes[-1]
 
         current_holdings = self._get_current_holdings(positions)
-        prices = self._extract_prices(positions, market_data)
-        target_sizes = self._compute_target_sizes(weights, total_value, prices)
+        target_sizes = self._compute_target_sizes(weights, total_value, latest_prices, metadata)
         deltas = self._compute_deltas(target_sizes, current_holdings)
         orders, skipped = self._generate_orders(deltas, current_holdings, metadata, latest_prices)
 
@@ -52,10 +51,17 @@ class OrderGenerator:
             "sell_orders": sum(1 for o in orders if o["direction"] == "SELL"),
         }
 
+        skip_reasons = {}
+        for s in skipped:
+            r = s.get("reason", "unknown")
+            skip_reasons[r] = skip_reasons.get(r, 0) + 1
+        skip_breakdown = ", ".join(f"{v} {k}" for k, v in skip_reasons.items())
+        skip_suffix = f" ({skip_breakdown})" if skip_breakdown else ""
+
         print(
             f"[OrderGenerator] Generated {summary['total_orders']} order(s): "
             f"{summary['buy_orders']} BUY, {summary['sell_orders']} SELL, "
-            f"{len(skipped)} skipped"
+            f"{len(skipped)} skipped{skip_suffix}"
         )
 
         return {"orders": orders, "summary": summary, "skipped": skipped}
@@ -76,38 +82,31 @@ class OrderGenerator:
             holdings[instrument_id] = holdings.get(instrument_id, 0.0) + signed
         return holdings
 
-    def _extract_prices(self, positions: list, market_data: dict = None) -> dict:
-        """Build {instrument_id: price} from market data (latest close) and position levels."""
-        prices = {}
-        # Use latest close price from market data when available
-        if market_data:
-            for instrument_id, fields in market_data.get("prices", {}).items():
-                closes = fields.get("close", [])
-                if closes and closes[-1] is not None:
-                    prices[instrument_id] = closes[-1]
-        # Fall back to position open level for instruments not in market data
-        for pos in positions:
-            instrument_id = pos.get("instrument_id")
-            level = float(pos.get("level", 0))
-            if instrument_id and level > 0 and instrument_id not in prices:
-                prices[instrument_id] = level
-        return prices
-
     def _compute_target_sizes(
-        self, weights: dict, total_value: float, prices: dict
+        self, weights: dict, total_value: float,
+        latest_prices: dict | None = None, metadata: dict | None = None,
     ) -> dict:
-        """Convert weights to target sizes.
+        """Convert weights to target sizes in contract units.
 
-        Phase 1 placeholder: target_size = weight * total_value / price.
-        If no price is available the divisor defaults to 1.0, making
-        target_size equal to notional value.
+        target_size = (weight * total_value) / (latest_price * scaling_factor).
+        The scaling_factor converts mid-prices to the IG "points" price
+        (e.g. EURUSD 1.1350 → 11350 with scalingFactor=10000).
+        Falls back to notional value when no price is available.
         """
+        if latest_prices is None:
+            latest_prices = {}
+        if metadata is None:
+            metadata = {}
         target_sizes = {}
         for instrument_id, weight in weights.items():
-            price = prices.get(instrument_id, 1.0)
-            if price == 0:
-                price = 1.0
-            target_sizes[instrument_id] = (weight * total_value) / price
+            notional = weight * total_value
+            price = latest_prices.get(instrument_id)
+            scaling = metadata.get(instrument_id, {}).get("scaling_factor", 1)
+            effective_price = price * scaling if price and price > 0 else 0
+            if effective_price > 0:
+                target_sizes[instrument_id] = notional / effective_price
+            else:
+                target_sizes[instrument_id] = notional
         return target_sizes
 
     def _compute_deltas(self, target_sizes: dict, current_holdings: dict) -> dict:
@@ -135,24 +134,32 @@ class OrderGenerator:
         skipped = []
         orders = []
         for instrument_id, delta in deltas.items():
+            if instrument_id not in latest_prices:
+                skipped.append({"instrument_id": instrument_id, "reason": "no price data"})
+                print(f"[OrderGenerator] ⚠ Skipped {instrument_id}: no price data")
+                continue
+
             abs_delta = abs(delta)
 
             instrument_meta = metadata.get(instrument_id, {})
             min_deal_size = instrument_meta.get("min_deal_size", self.MIN_ORDER_SIZE)
-            lot_size = instrument_meta.get("lot_size", 1.0)
 
-            if lot_size > 0:
-                size = int(abs_delta / lot_size) * lot_size
-            else:
-                size = abs_delta
+            increment = instrument_meta.get("min_size_increment", 1.0) or 1.0
+            size = round(abs_delta / increment) * increment
+            size = round(size, 8)  # float artefact guard
+
+            max_deal_size = instrument_meta.get("max_deal_size")
+            if max_deal_size is not None:
+                size = min(size, max_deal_size)
+
+            if size == 0:
+                skipped.append({"instrument_id": instrument_id, "reason": "rounds to zero"})
+                print(f"[OrderGenerator] ⚠ Skipped {instrument_id}: rounds to zero")
+                continue
 
             if size < min_deal_size:
-                if size == 0:
-                    reason_text = f"rounds to 0 at lot_size {lot_size}"
-                else:
-                    reason_text = f"size {size:.4f} below min {min_deal_size}"
-                skipped.append({"instrument_id": instrument_id, "reason": reason_text})
-                print(f"[OrderGenerator] ⚠ Skipped {instrument_id}: {reason_text}")
+                skipped.append({"instrument_id": instrument_id, "reason": "below min size"})
+                print(f"[OrderGenerator] ⚠ Skipped {instrument_id}: below min size")
                 continue
 
             direction = "BUY" if delta > 0 else "SELL"
