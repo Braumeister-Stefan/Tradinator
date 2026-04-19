@@ -20,20 +20,39 @@ UNIVERSE_PATH = os.path.join("data", "input", "universe.json")
 def _load_universe(path: str) -> list[str]:
     """Load the instrument universe from a JSON file.
 
-    Returns a list of IG epic strings. Only instruments with status
-    'verified' are included when status information is present.
+    Returns a deduplicated list of IG epic strings.  When both
+    ``.DAILY.IP`` and ``.IFD.IP`` (or ``.CASH.IP``) variants exist for
+    the same underlying market, only the first encountered variant is
+    kept so the pipeline does not fetch redundant price series.
     """
-    with open(path) as f:
-        data = json.load(f)
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        print(f"ERROR: Universe file not found: {path}")
+        print("Create data/input/universe.json or run data/input/discover_universe.py")
+        raise SystemExit(1) from None
+    except json.JSONDecodeError as exc:
+        print(f"ERROR: Universe file contains invalid JSON: {path}")
+        print(f"  {exc}")
+        raise SystemExit(1) from None
 
     instruments = data.get("instruments", [])
-    epics = []
+    if not instruments:
+        print(f"WARNING: No instruments found in {path} — pipeline will run with an empty universe.")
+
+    seen_bases: set[str] = set()
+    epics: list[str] = []
     for inst in instruments:
         epic = inst.get("epic", "")
         if not epic:
             continue
-        # Include all instruments — the DataPipeline already skips those
-        # that fail to return data, so unverified candidates are safe.
+        # Base = first three dot-segments, e.g. "IX.D.FTSE" from
+        # "IX.D.FTSE.DAILY.IP" — identical for DAILY / IFD / CASH variants.
+        base = ".".join(epic.split(".")[:3])
+        if base in seen_bases:
+            continue
+        seen_bases.add(base)
         epics.append(epic)
     return epics
 

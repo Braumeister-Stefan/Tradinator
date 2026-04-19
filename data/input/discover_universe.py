@@ -55,6 +55,13 @@ def _connect() -> "IGService":
     acc_type = os.environ.get("IG_ACC_TYPE", "DEMO")
     acc_number = os.environ.get("IG_ACC_NUMBER")
 
+    if acc_type.upper() != "DEMO":
+        print(
+            "ERROR: Tradinator is restricted to paper trading (DEMO) only. "
+            f"IG_ACC_TYPE is set to '{acc_type}'. Set it to 'DEMO' or remove it."
+        )
+        raise SystemExit(1)
+
     if not all([username, password, api_key]):
         print("ERROR: Missing IG credentials. Set IG_USERNAME, IG_PASSWORD, IG_API_KEY.")
         raise SystemExit(1)
@@ -101,6 +108,7 @@ def _save_universe(data: dict) -> None:
     """Write the updated universe.json."""
     with open(UNIVERSE_PATH, "w") as f:
         json.dump(data, f, indent=2)
+        f.write("\n")
     print(f"\nSaved {len(data['instruments'])} instruments to {UNIVERSE_PATH}")
 
 
@@ -142,7 +150,10 @@ def main() -> None:
     print("\n=== Phase 1: Validating existing candidates ===")
     verified = []
     for inst in instruments:
-        epic = inst["epic"]
+        epic = inst.get("epic", "")
+        if not epic:
+            print("  ✗ (skipped entry with missing epic)")
+            continue
         time.sleep(RATE_LIMIT_DELAY)
         ok, detail = _test_epic(ig, epic)
         symbol = "✓" if ok else "✗"
@@ -154,7 +165,7 @@ def main() -> None:
     print(f"\n{len(verified)}/{len(instruments)} candidates verified.")
 
     # --- Phase 2: discover additional epics if < 20 verified ---
-    known_epics = {inst["epic"] for inst in verified}
+    known_epics = {inst.get("epic", "") for inst in verified}
     if len(verified) < 20:
         print(f"\n=== Phase 2: Discovering additional markets (need {20 - len(verified)} more) ===")
         discovered = _discover_via_search(ig, known_epics)
