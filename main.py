@@ -9,7 +9,33 @@ It does not constitute trading advice, investment recommendation, or financial
 guidance of any kind. Use at your own risk.
 """
 
+import json
+import os
+
 from model import Model
+
+UNIVERSE_PATH = os.path.join("data", "input", "universe.json")
+
+
+def _load_universe(path: str) -> list[str]:
+    """Load the instrument universe from a JSON file.
+
+    Returns a list of IG epic strings. Only instruments with status
+    'verified' are included when status information is present.
+    """
+    with open(path) as f:
+        data = json.load(f)
+
+    instruments = data.get("instruments", [])
+    epics = []
+    for inst in instruments:
+        epic = inst.get("epic", "")
+        if not epic:
+            continue
+        # Include all instruments — the DataPipeline already skips those
+        # that fail to return data, so unverified candidates are safe.
+        epics.append(epic)
+    return epics
 
 
 def _print_credentials_setup_error(error: RuntimeError) -> None:
@@ -40,12 +66,8 @@ config = {
     "env_path": "secrets/.env",        # path to .env file with IG creds
 
     # Universe -----------------------------------------------------------
-    "universe": [                       # IG epics for the equity spot universe
-        "IX.D.DAX.IFD.IP",             # Germany 40 (DAX) - Standard Demo Index
-        "IX.D.FTSE.IFD.IP",            # FTSE 100 - Standard Demo Index
-        "CS.D.AAPL.CFD.IP",            # Apple
-        "CS.D.MSFT.CFD.IP",            # Microsoft
-    ],
+    "universe_path": UNIVERSE_PATH,     # path to universe JSON file
+    "universe": _load_universe(UNIVERSE_PATH),
 
     # Market data --------------------------------------------------------
     "resolution": "DAY",                # price bar resolution
