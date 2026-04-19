@@ -14,7 +14,7 @@ It does not constitute trading advice, investment recommendation, or financial
 guidance of any kind. Use at your own risk.
 """
 
-from model_components.ig_adapter import IGBrokerAdapter
+from .ig_adapter import IGBrokerAdapter
 
 
 # Registry of supported brokers — add new adapters here.

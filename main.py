@@ -13,8 +13,7 @@ import argparse
 import json
 import os
 
-from model import Model
-from run_loop import RunLoop
+from model import Model, RunLoop
 
 UNIVERSE_PATH = os.path.join("data", "input", "universe.json")
 
