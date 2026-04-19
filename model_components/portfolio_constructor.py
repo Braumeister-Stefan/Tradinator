@@ -51,21 +51,21 @@ class PortfolioConstructor:
         signals = validated_signals.get("signals", {})
         actionable = {}
 
-        for epic, signal in signals.items():
+        for instrument_id, signal in signals.items():
             validation = signal.get("validation", {})
             if not validation.get("passed", False):
                 continue
             if signal.get("direction") not in ("BUY", "SELL"):
                 continue
-            actionable[epic] = signal
+            actionable[instrument_id] = signal
 
         return actionable
 
     def _compute_raw_weights(self, actionable_signals: dict) -> dict:
         """Compute unnormalized weights from actionable signals."""
         buy_signals = {
-            epic: sig
-            for epic, sig in actionable_signals.items()
+            instrument_id: sig
+            for instrument_id, sig in actionable_signals.items()
             if sig.get("direction") == "BUY"
         }
 
@@ -75,12 +75,12 @@ class PortfolioConstructor:
         raw_weights = {}
 
         if self.WEIGHTING_METHOD == "equal":
-            for epic in buy_signals:
-                raw_weights[epic] = 1.0
+            for instrument_id in buy_signals:
+                raw_weights[instrument_id] = 1.0
         else:
             # signal_strength: weight proportional to strength
-            for epic, sig in buy_signals.items():
-                raw_weights[epic] = max(sig.get("strength", 0.0), 0.0)
+            for instrument_id, sig in buy_signals.items():
+                raw_weights[instrument_id] = max(sig.get("strength", 0.0), 0.0)
 
         return raw_weights
 
@@ -98,11 +98,12 @@ class PortfolioConstructor:
         total_raw = sum(raw_weights.values())
 
         if total_raw == 0:
-            return {epic: 0.0 for epic in raw_weights}
+            return {instrument_id: 0.0 for instrument_id in raw_weights}
 
         # First pass: scale so sum equals investable budget.
         weights = {
-            epic: (w / total_raw) * investable for epic, w in raw_weights.items()
+            instrument_id: (w / total_raw) * investable
+            for instrument_id, w in raw_weights.items()
         }
 
         # Iteratively cap at max_position_pct and redistribute excess.
@@ -111,12 +112,12 @@ class PortfolioConstructor:
             excess = 0.0
             uncapped_total = 0.0
 
-            for epic, w in weights.items():
+            for instrument_id, w in weights.items():
                 if w > max_position_pct:
-                    capped[epic] = max_position_pct
+                    capped[instrument_id] = max_position_pct
                     excess += w - max_position_pct
                 else:
-                    capped[epic] = w
+                    capped[instrument_id] = w
                     uncapped_total += w
 
             if excess == 0:
@@ -128,11 +129,11 @@ class PortfolioConstructor:
                 break
 
             weights = {}
-            for epic, w in capped.items():
+            for instrument_id, w in capped.items():
                 if w < max_position_pct:
-                    weights[epic] = w + excess * (w / uncapped_total)
+                    weights[instrument_id] = w + excess * (w / uncapped_total)
                 else:
-                    weights[epic] = w
+                    weights[instrument_id] = w
 
         return weights
 

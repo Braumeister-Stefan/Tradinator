@@ -1,8 +1,8 @@
 """
 Tradinator — Order Executor.
 
-Sends paper orders to the IG demo environment via the broker session and
-records whether each order was accepted or rejected.
+Sends paper orders via the broker adapter and records whether each order
+was accepted or rejected.
 
 DISCLAIMER: Tradinator is a personal experimentation tool for paper trading.
 It does not constitute trading advice, investment recommendation, or financial
@@ -14,11 +14,10 @@ import time
 
 
 class OrderExecutor:
-    """Send orders to IG and record acceptance/rejection for each."""
+    """Send orders via the broker adapter and record acceptance/rejection."""
 
     EXECUTION_DELAY = 0.5   # seconds to wait between orders
     CURRENCY_CODE = "USD"   # default currency for orders
-    EXPIRY = "-"            # DFB (daily funded bet) / no expiry for CFDs
 
     def __init__(self, config: dict):
         """Store config for later use by run()."""
@@ -26,16 +25,16 @@ class OrderExecutor:
 
     def run(self, orders: dict, broker_state: dict) -> dict:
         """Execute every order in the list and return an execution log."""
-        ig = broker_state["session"]
+        adapter = broker_state["adapter"]
         positions = broker_state.get("positions", [])
         order_list = orders.get("orders", [])
 
         executions = []
         for i, order in enumerate(order_list):
-            result = self._execute_order(ig, order, positions)
+            result = self._execute_order(adapter, order, positions)
             executions.append(result)
             print(
-                f"[OrderExecutor] {result['direction']} {result['epic']} "
+                f"[OrderExecutor] {result['direction']} {result['instrument_id']} "
                 f"x{result['size']} → {result['status']}"
             )
             if i < len(order_list) - 1:
@@ -56,20 +55,38 @@ class OrderExecutor:
     # Internal methods
     # ------------------------------------------------------------------
 
-    def _execute_order(self, ig, order: dict, positions: list) -> dict:
-        """Send a single order to IG and return an execution dict."""
+    def _execute_order(self, adapter, order: dict, positions: list) -> dict:
+        """Send a single order via the adapter and return an execution dict."""
         reason = order.get("reason", "")
         is_close = reason in ("close", "decrease")
 
         try:
             if is_close:
-                deal_reference = self._close_position(ig, order, positions)
+                deal_id = self._find_deal_id(order["instrument_id"], positions)
+                original_direction = self._find_position_direction(
+                    order["instrument_id"], positions
+                )
+                close_direction = "SELL" if original_direction == "BUY" else "BUY"
+                resp = adapter.close_position(
+                    deal_id=deal_id,
+                    direction=close_direction,
+                    instrument_id=order["instrument_id"],
+                    size=order["size"],
+                    order_type="MARKET",
+                )
             else:
-                deal_reference = self._open_position(ig, order)
+                resp = adapter.open_position(
+                    instrument_id=order["instrument_id"],
+                    direction=order["direction"],
+                    size=order["size"],
+                    order_type="MARKET",
+                    currency_code=self.CURRENCY_CODE,
+                )
 
-            confirmation = self._confirm_deal(ig, deal_reference)
+            deal_reference = resp["deal_reference"]
+            confirmation = adapter.confirm_deal(deal_reference)
             return {
-                "epic": order["epic"],
+                "instrument_id": order["instrument_id"],
                 "direction": order["direction"],
                 "size": order["size"],
                 "status": confirmation["status"],
@@ -80,7 +97,7 @@ class OrderExecutor:
             }
         except Exception as exc:
             return {
-                "epic": order["epic"],
+                "instrument_id": order["instrument_id"],
                 "direction": order["direction"],
                 "size": order["size"],
                 "status": "ERROR",
@@ -89,56 +106,6 @@ class OrderExecutor:
                 "reason": str(exc),
                 "timestamp": datetime.datetime.utcnow().isoformat(),
             }
-
-    def _open_position(self, ig, order: dict) -> str:
-        """Open a new position via the IG API and return the deal reference."""
-        response = ig.create_open_position(
-            currency_code=self.CURRENCY_CODE,
-            direction=order["direction"],
-            epic=order["epic"],
-            expiry=self.EXPIRY,
-            force_open=True,
-            guaranteed_stop=False,
-            level=None,
-            limit_distance=None,
-            limit_level=None,
-            order_type="MARKET",
-            quote_id=None,
-            size=order["size"],
-            stop_distance=None,
-            stop_level=None,
-            trailing_stop=False,
-            trailing_stop_increment=None,
-        )
-        return response["dealReference"]
-
-    def _close_position(self, ig, order: dict, positions: list) -> str:
-        """Close (fully or partially) an existing position and return the deal reference."""
-        deal_id = self._find_deal_id(order["epic"], positions)
-        original_direction = self._find_position_direction(
-            order["epic"], positions
-        )
-        close_direction = "SELL" if original_direction == "BUY" else "BUY"
-
-        response = ig.close_open_position(
-            deal_id=deal_id,
-            direction=close_direction,
-            epic=order["epic"],
-            expiry=self.EXPIRY,
-            level=None,
-            order_type="MARKET",
-            quote_id=None,
-            size=order["size"],
-        )
-        return response["dealReference"]
-
-    def _confirm_deal(self, ig, deal_reference: str) -> dict:
-        """Fetch deal confirmation and return status and deal_id."""
-        confirmation = ig.fetch_deal_by_deal_reference(deal_reference)
-        return {
-            "status": confirmation.get("dealStatus", "REJECTED"),
-            "deal_id": confirmation.get("dealId"),
-        }
 
     def _build_execution_log(self, executions: list) -> dict:
         """Assemble the execution log with per-order results and a summary."""
@@ -156,17 +123,17 @@ class OrderExecutor:
         }
 
     @staticmethod
-    def _find_deal_id(epic: str, positions: list) -> str:
-        """Look up the deal_id for an epic in the current positions list."""
+    def _find_deal_id(instrument_id: str, positions: list) -> str:
+        """Look up the deal_id for an instrument in the current positions list."""
         for pos in positions:
-            if pos.get("epic") == epic:
+            if pos.get("instrument_id") == instrument_id:
                 return pos["deal_id"]
-        raise ValueError(f"No open position found for epic {epic}")
+        raise ValueError(f"No open position found for instrument {instrument_id}")
 
     @staticmethod
-    def _find_position_direction(epic: str, positions: list) -> str:
-        """Look up the direction of the existing position for an epic."""
+    def _find_position_direction(instrument_id: str, positions: list) -> str:
+        """Look up the direction of the existing position for an instrument."""
         for pos in positions:
-            if pos.get("epic") == epic:
+            if pos.get("instrument_id") == instrument_id:
                 return pos["direction"]
-        raise ValueError(f"No open position found for epic {epic}")
+        raise ValueError(f"No open position found for instrument {instrument_id}")
