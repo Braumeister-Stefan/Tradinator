@@ -8,7 +8,7 @@ A modular trading engine for automated **paper trading**, supporting multiple br
 
 ## Architecture
 
-Tradinator runs eleven pipeline components across four phases: **GATHER → DECIDE → EXECUTE → RECORD/REPORT**. The orchestrator (`model.py`) exposes three entry points — `run_research()` (GATHER + DECIDE), `run_execution()` (EXECUTE + RECORD/REPORT), and `run()` (all four phases in sequence). A `RunLoop` (`run_loop.py`) controls *when* each entry point fires, supporting four run modes including a decoupled mode where research and execution run on independent schedules connected by a `Handoff` file.
+Eleven components run across four phases (**GATHER → DECIDE → EXECUTE → RECORD/REPORT**). The orchestrator (`model/model.py`) exposes three entry points — `run_research()` (GATHER + DECIDE), `run_execution()` (EXECUTE + RECORD/REPORT), and `run()` (all four phases). A `RunLoop` (`model/run_loop.py`) controls *when* each entry point fires, supporting four run modes including a decoupled mode where research and execution run on independent schedules connected by a `Handoff` file.
 
 A **BrokerAdapter** protocol decouples the pipeline from any specific brokerage. The `BrokerConnector` selects the adapter named in `config["broker"]` (default `"ig"`), and all downstream components call normalised adapter methods — the raw broker client never leaks into the pipeline.
 
@@ -60,29 +60,31 @@ flowchart TD
 ```
 Tradinator/
 ├── main.py                           # Entry point: config, CLI args, launches RunLoop
-├── model.py                          # Orchestrator (run_research / run_execution / run)
-├── run_loop.py                       # Scheduling: run_once, scheduled, decoupled, research_only
-├── handoff.py                        # JSON bridge between research and execution in decoupled mode
-├── model_components/
-│   ├── __init__.py                   # Exports all component classes
-│   ├── broker_adapter.py             # BrokerAdapter Protocol (interface)
-│   ├── ig_adapter.py                 # IG implementation of BrokerAdapter
-│   ├── ibkr_adapter.py              # IBKR placeholder (NotImplementedError)
-│   ├── broker_connector.py           # Adapter selection & broker_state assembly
-│   ├── reconciliation.py             # Sync local orderbook with broker working orders
-│   ├── data_pipeline.py              # Market data acquisition & cleaning
-│   ├── signal_engine.py              # Buy/sell signal generation (MA crossover)
-│   ├── strategy_eval.py              # Pre-trade signal validation
-│   ├── portfolio_constructor.py      # Signal → target weight conversion
-│   ├── order_generator.py            # Target weight → order translation
-│   ├── order_executor.py             # Paper trade execution via adapter, orderbook persistence
-│   ├── portfolio_ledger.py           # Position/cash/trade history (JSON)
-│   ├── portfolio_analytics.py        # Return, drawdown, Sharpe calculation
-│   ├── performance_monitoring.py     # Formatted performance report
-│   └── templates/
-│       └── dashboard.html            # Jinja2 HTML dashboard template
+├── model/
+│   ├── __init__.py                   # Re-exports Model, RunLoop, Handoff
+│   ├── model.py                      # Orchestrator (run_research / run_execution / run)
+│   ├── run_loop.py                   # Scheduling: run_once, scheduled, decoupled, research_only
+│   ├── handoff.py                    # JSON bridge between research and execution (decoupled mode)
+│   └── model_components/
+│       ├── __init__.py               # Exports all component classes
+│       ├── broker_adapter.py         # BrokerAdapter Protocol (interface)
+│       ├── ig_adapter.py             # IG implementation of BrokerAdapter
+│       ├── ibkr_adapter.py           # IBKR placeholder (NotImplementedError)
+│       ├── broker_connector.py       # Adapter selection & broker_state assembly
+│       ├── reconciliation.py         # Sync local orderbook with broker working orders
+│       ├── data_pipeline.py          # Market data acquisition & cleaning
+│       ├── signal_engine.py          # Buy/sell signal generation (MA crossover)
+│       ├── strategy_eval.py          # Pre-trade signal validation
+│       ├── portfolio_constructor.py  # Signal → target weight conversion
+│       ├── order_generator.py        # Target weight → order translation
+│       ├── order_executor.py         # Paper trade execution via adapter, orderbook persistence
+│       ├── portfolio_ledger.py       # Position/cash/trade history (JSON)
+│       ├── portfolio_analytics.py    # Return, drawdown, Sharpe calculation
+│       ├── performance_monitoring.py # Formatted performance report
+│       └── templates/
+│           └── dashboard.html        # Jinja2 HTML dashboard template
 ├── data/
-│   ├── input/                        # Instrument lists, cached data
+│   ├── input/
 │   │   ├── universe.json             # Instrument universe (epic list + metadata)
 │   │   ├── discover_universe.py      # Validates epics against IG API
 │   │   ├── universe_series.xlsx      # Master time series (auto-generated)
@@ -108,10 +110,9 @@ cp secrets/.env.example secrets/.env
 python main.py
 
 # Run in a specific mode
-python main.py --mode run_once            # full pipeline, once (default)
 python main.py --mode research_only       # research phase only, once
-python main.py --mode scheduled           # full pipeline on interval
-python main.py --mode decoupled           # research + execution on independent schedules
+python main.py --mode scheduled --interval 3600
+python main.py --mode decoupled --research-interval 14400 --execution-interval 3600
 ```
 
 In VS Code, the workspace is configured to use `.venv\\Scripts\\python.exe` for Python Run actions.
@@ -170,7 +171,7 @@ Minor parameters (indicator windows, risk-free rate, display width, etc.) are li
 
 ## Broker Abstraction
 
-The `BrokerAdapter` protocol (`model_components/broker_adapter.py`) defines eight methods that every adapter must implement:
+The `BrokerAdapter` protocol (`model/model_components/broker_adapter.py`) defines eight methods that every adapter must implement:
 
 | Method | Purpose |
 |---|---|
@@ -185,9 +186,9 @@ The `BrokerAdapter` protocol (`model_components/broker_adapter.py`) defines eigh
 
 ### Adding a new broker
 
-1. Create `model_components/mybroker_adapter.py` implementing the `BrokerAdapter` protocol
-2. Import it in `model_components/__init__.py`
-3. Register it in `broker_connector.py` `_ADAPTER_REGISTRY`
+1. Create `model/model_components/mybroker_adapter.py` implementing the `BrokerAdapter` protocol
+2. Import it in `model/model_components/__init__.py`
+3. Register it in `model/model_components/broker_connector.py` `_ADAPTER_REGISTRY`
 4. Set `"broker": "mybroker"` in `main.py` config
 
 ## Components
@@ -236,7 +237,7 @@ To backfill or supplement the master file with external data:
 Historic ingestion runs automatically during every pipeline run. It can also be invoked standalone:
 
 ```python
-from model_components import DataPipeline
+from model.model_components import DataPipeline
 DataPipeline(config={}).ingest_historic()
 ```
 
@@ -252,9 +253,9 @@ This is a **structural skeleton** with placeholder logic where appropriate:
 
 ## Adding a new component
 
-1. Create `model_components/mycomponent.py` with a class and a `run()` method
-2. Import and export it in `model_components/__init__.py`
-3. Instantiate it in `model.py` and call it inside `run_research()` or `run_execution()` depending on which phase it belongs to
+1. Create `model/model_components/mycomponent.py` with a class and a `run()` method
+2. Import and export it in `model/model_components/__init__.py`
+3. Instantiate it in `model/model.py` and call it inside `run_research()` or `run_execution()` depending on which phase it belongs to
 
 ## License
 

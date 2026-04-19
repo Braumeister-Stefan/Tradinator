@@ -12,7 +12,7 @@ guidance of any kind. Use at your own risk.
 import threading
 import time
 
-from handoff import Handoff
+from .handoff import Handoff
 
 
 class RunLoop:
