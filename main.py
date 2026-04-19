@@ -13,12 +13,12 @@ from model import Model
 
 
 def _print_credentials_setup_error(error: RuntimeError) -> None:
-    """Print the required IG credential setup steps for first-time runs."""
-    print("Tradinator could not start because IG credentials are not configured.")
+    """Print the required credential setup steps for first-time runs."""
+    print("Tradinator could not start because broker credentials are not configured.")
     print(str(error))
     print("Next steps:")
     print("1. Copy secrets/.env.example to secrets/.env")
-    print("2. Fill in IG_USERNAME, IG_PASSWORD, and IG_API_KEY")
+    print("2. Fill in the required credentials for your broker (default: IG)")
     print("3. Run main.py again")
 
 
@@ -36,11 +36,14 @@ def _print_ig_authentication_error(error: RuntimeError) -> None:
 # Major parameters — control *what* the engine does each run.
 # ---------------------------------------------------------------------------
 config = {
+    # Broker --------------------------------------------------------------
+    "broker": "ig",                     # "ig" or "ibkr" (ibkr is placeholder)
+
     # Credentials --------------------------------------------------------
-    "env_path": "secrets/.env",        # path to .env file with IG creds
+    "env_path": "secrets/.env",        # path to .env file with broker creds
 
     # Universe -----------------------------------------------------------
-    "universe": [                       # IG epics for the equity spot universe
+    "universe": [                       # instrument IDs (IG epics for IG broker)
         "IX.D.DAX.IFD.IP",             # Germany 40 (DAX) - Standard Demo Index
         "IX.D.FTSE.IFD.IP",            # FTSE 100 - Standard Demo Index
         "CS.D.AAPL.CFD.IP",            # Apple

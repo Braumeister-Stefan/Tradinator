@@ -92,7 +92,7 @@ class PortfolioLedger:
         positions = []
         for pos in broker_state.get("positions", []):
             positions.append({
-                "epic": pos.get("epic"),
+                "instrument_id": pos.get("instrument_id"),
                 "direction": pos.get("direction"),
                 "size": pos.get("size"),
                 "deal_id": pos.get("deal_id"),
