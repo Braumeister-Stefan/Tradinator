@@ -59,6 +59,8 @@ Tradinator/
 │       └── dashboard.html            # Jinja2 HTML dashboard template
 ├── data/
 │   ├── input/                        # Instrument lists, cached data
+│   │   ├── universe_series.xlsx      # Master time series (auto-generated)
+│   │   └── historic_series/          # Drop-in folder for historic xlsx files
 │   └── output/                       # Ledger, trades, reports
 ├── secrets/
 │   └── .env.example                  # IG credential template
@@ -115,7 +117,7 @@ Minor parameters (indicator windows, risk-free rate, display width, etc.) are li
 | Component | Purpose |
 |---|---|
 | **BrokerConnector** | Connects to IG demo, reads positions, cash, account balance |
-| **DataPipeline** | Fetches historical OHLCV prices via IG, cleans with forward/back-fill |
+| **DataPipeline** | Fetches historical OHLCV prices via IG, cleans with forward/back-fill, persists a master xlsx time series, and can ingest historic data files |
 | **SignalEngine** | Dual moving-average crossover → BUY / SELL / HOLD signals |
 | **StrategyEval** | Pre-trade quality gate: data quality, Sharpe estimate, volatility stubs |
 | **PortfolioConstructor** | Converts validated BUY signals into target weights with position caps |
@@ -124,6 +126,37 @@ Minor parameters (indicator windows, risk-free rate, display width, etc.) are li
 | **PortfolioLedger** | Append-only JSON record of positions, cash, and trade history |
 | **PortfolioAnalytics** | Computes total return, period return, max drawdown, Sharpe ratio |
 | **PerformanceMonitoring** | Prints formatted report to terminal, saves text and HTML dashboard |
+
+## Universe Series
+
+`DataPipeline` maintains a master time series file at `data/input/universe_series.xlsx`. The file is updated automatically on every pipeline run as a non-blocking side effect — a write failure will not interrupt the pipeline.
+
+### File layout
+
+The xlsx file contains three sheets:
+
+| Sheet | Content |
+|---|---|
+| `mid_close` | Mid-price close (bid + ask) / 2 |
+| `bid_close` | Bid close |
+| `mid_open` | Mid-price open (bid + ask) / 2 |
+
+Each sheet has a datetime index (rows sorted ascending, oldest at top) and one column per epic in the universe.
+
+### Historic data ingestion
+
+To backfill or supplement the master file with external data:
+
+1. Place `.xlsx` files in `data/input/historic_series/`. Each file must follow the same schema: three sheets (`mid_close`, `bid_close`, `mid_open`), datetime index, numeric values, one column per epic.
+2. Files are validated on load — any file that fails schema checks is skipped with a warning.
+3. On merge, existing master values take precedence over historic values where timestamps and epics overlap.
+
+Historic ingestion runs automatically during every pipeline run. It can also be invoked standalone:
+
+```python
+from model_components import DataPipeline
+DataPipeline(config={}).ingest_historic()
+```
 
 ## Phase 1 scope
 
