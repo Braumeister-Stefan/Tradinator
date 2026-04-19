@@ -58,7 +58,7 @@ class SignalEngine:
                 "strategy": "ma_crossover",
             }
 
-        # Optimization: calculate উভয় sums in a single slice if windows overlap
+        # Optimization: calculate both sums in a single slice if windows overlap
         # but for simplicity and clarity, we just take the last N elements once.
         slow_slice = close_prices[-self.SLOW_WINDOW:]
         fast_slice = slow_slice[-self.FAST_WINDOW:]
@@ -88,24 +88,3 @@ class SignalEngine:
             "strength": strength,
             "strategy": "ma_crossover",
         }
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _compute_moving_average(prices: list, window: int) -> float | None:
-        """Return the simple moving average of the last *window* prices."""
-        if len(prices) < window:
-            return None
-        return sum(prices[-window:]) / window
-
-    @staticmethod
-    def _normalize_strength(raw_strength: float, close_prices: list) -> float:
-        """Normalize the raw MA gap to a 0.0–1.0 range using average price level."""
-        if not close_prices:
-            return 0.0
-        avg_price = sum(close_prices) / len(close_prices)
-        if avg_price == 0:
-            return 0.0
-        return min(abs(raw_strength) / avg_price, 1.0)
