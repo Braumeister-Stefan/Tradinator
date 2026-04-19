@@ -223,6 +223,11 @@ class DataPipeline:
         with pd.ExcelWriter(path, engine="openpyxl") as writer:
             for name, df in series.items():
                 sorted_df = df.sort_index(ascending=True)
+                # Excel does not support timezone-aware datetimes; strip tz
+                # before writing. _load_series_file restores UTC on read.
+                if sorted_df.index.tz is not None:
+                    sorted_df = sorted_df.copy()
+                    sorted_df.index = sorted_df.index.tz_localize(None)
                 sorted_df.to_excel(writer, sheet_name=name)
 
     def _validate_series_schema(self, series: dict) -> bool:
@@ -242,8 +247,8 @@ class DataPipeline:
         for name in self.SHEET_NAMES:
             df = series[name]
 
-            # (2) Index is datetime-typed
-            if not pd.api.types.is_datetime64_any_dtype(df.index):
+            # (2) Index is datetime-typed (empty DataFrames are exempt)
+            if not df.empty and not pd.api.types.is_datetime64_any_dtype(df.index):
                 print(f"[DataPipeline] VALIDATION: sheet '{name}' index is not datetime.")
                 valid = False
 
