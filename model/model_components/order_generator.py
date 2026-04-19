@@ -137,9 +137,9 @@ class OrderGenerator:
         for instrument_id, delta in deltas.items():
             abs_delta = abs(delta)
 
-            epic_meta = metadata.get(instrument_id, {})
-            min_deal_size = epic_meta.get("min_deal_size", self.MIN_ORDER_SIZE)
-            lot_size = epic_meta.get("lot_size", 1.0)
+            instrument_meta = metadata.get(instrument_id, {})
+            min_deal_size = instrument_meta.get("min_deal_size", self.MIN_ORDER_SIZE)
+            lot_size = instrument_meta.get("lot_size", 1.0)
 
             if lot_size > 0:
                 size = int(abs_delta / lot_size) * lot_size
@@ -151,7 +151,7 @@ class OrderGenerator:
                     reason_text = f"rounds to 0 at lot_size {lot_size}"
                 else:
                     reason_text = f"size {size:.4f} below min {min_deal_size}"
-                skipped.append({"epic": instrument_id, "reason": reason_text})
+                skipped.append({"instrument_id": instrument_id, "reason": reason_text})
                 print(f"[OrderGenerator] ⚠ Skipped {instrument_id}: {reason_text}")
                 continue
 
