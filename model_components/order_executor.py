@@ -24,20 +24,26 @@ class OrderExecutor:
         """Store config for later use by run()."""
         self.config = config
 
-    def run(self, orders: dict, broker_state: dict) -> dict:
+    def run(self, orders: dict, broker_state: dict, market_data: dict = None) -> dict:
         """Execute every order in the list and return an execution log."""
         ig = broker_state["session"]
         positions = broker_state.get("positions", [])
         order_list = orders.get("orders", [])
+        metadata = market_data.get("metadata", {}) if market_data else {}
 
         executions = []
         for i, order in enumerate(order_list):
-            result = self._execute_order(ig, order, positions)
+            result = self._execute_order(ig, order, positions, metadata)
             executions.append(result)
             print(
                 f"[OrderExecutor] {result['direction']} {result['epic']} "
                 f"x{result['size']} → {result['status']}"
             )
+            if result.get("rejection_reason"):
+                print(
+                    f"[OrderExecutor] ⚠ REJECTED {result['epic']}: "
+                    f"{result['rejection_reason']}"
+                )
             if i < len(order_list) - 1:
                 time.sleep(self.EXECUTION_DELAY)
 
@@ -56,7 +62,7 @@ class OrderExecutor:
     # Internal methods
     # ------------------------------------------------------------------
 
-    def _execute_order(self, ig, order: dict, positions: list) -> dict:
+    def _execute_order(self, ig, order: dict, positions: list, metadata: dict = None) -> dict:
         """Send a single order to IG and return an execution dict."""
         reason = order.get("reason", "")
         is_close = reason in ("close", "decrease")
@@ -65,17 +71,21 @@ class OrderExecutor:
             if is_close:
                 deal_reference = self._close_position(ig, order, positions)
             else:
-                deal_reference = self._open_position(ig, order)
+                deal_reference = self._open_position(ig, order, metadata or {})
 
             confirmation = self._confirm_deal(ig, deal_reference)
+            broker_reason = confirmation.get("reason", "")
+            status = confirmation["status"]
+            rejection_reason = broker_reason if status == "REJECTED" else ""
             return {
                 "epic": order["epic"],
                 "direction": order["direction"],
                 "size": order["size"],
-                "status": confirmation["status"],
+                "status": status,
                 "deal_reference": deal_reference,
                 "deal_id": confirmation["deal_id"],
-                "reason": reason,
+                "reason": broker_reason if status == "REJECTED" else reason,
+                "rejection_reason": rejection_reason,
                 "timestamp": datetime.datetime.utcnow().isoformat(),
             }
         except Exception as exc:
@@ -87,13 +97,18 @@ class OrderExecutor:
                 "deal_reference": None,
                 "deal_id": None,
                 "reason": str(exc),
+                "rejection_reason": "",
                 "timestamp": datetime.datetime.utcnow().isoformat(),
             }
 
-    def _open_position(self, ig, order: dict) -> str:
+    def _open_position(self, ig, order: dict, metadata: dict = None) -> str:
         """Open a new position via the IG API and return the deal reference."""
+        meta = (metadata or {}).get(order["epic"], {})
+        currency = meta.get("currency", self.CURRENCY_CODE)
+        if currency == "Unknown":
+            currency = self.CURRENCY_CODE
         response = ig.create_open_position(
-            currency_code=self.CURRENCY_CODE,
+            currency_code=currency,
             direction=order["direction"],
             epic=order["epic"],
             expiry=self.EXPIRY,
@@ -138,6 +153,7 @@ class OrderExecutor:
         return {
             "status": confirmation.get("dealStatus", "REJECTED"),
             "deal_id": confirmation.get("dealId"),
+            "reason": confirmation.get("reason", ""),
         }
 
     def _build_execution_log(self, executions: list) -> dict:

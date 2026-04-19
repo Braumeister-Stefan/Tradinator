@@ -116,6 +116,8 @@ class DataPipeline:
             "instrument_name": epic,
             "epic": epic,
             "currency": "Unknown",
+            "min_deal_size": 0.01,
+            "lot_size": 1.0,
         }
         try:
             market = ig.fetch_market_by_epic(epic)
@@ -126,6 +128,8 @@ class DataPipeline:
                 "currency": instrument.get("currencies", [{}])[0].get(
                     "code", "Unknown"
                 ),
+                "min_deal_size": float(market.get("dealingRules", {}).get("minDealSize", {}).get("value", 0.01)),
+                "lot_size": float(market.get("instrument", {}).get("lotSize", 1.0)),
             }
         except Exception as exc:
             print(f"[DataPipeline] WARNING: metadata fetch failed for {epic} — {exc}")
