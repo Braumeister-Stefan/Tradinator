@@ -8,36 +8,46 @@ A modular trading engine for automated **paper trading**, supporting multiple br
 
 ## Architecture
 
-Tradinator follows a strict linear pipeline. Each run is a complete cycle: **connect → decide → execute → record → report**. The orchestrator (`model/model.py`) calls eleven components in fixed order; data flows forward only. A `RunLoop` controls *when* the pipeline runs (single pass, scheduled, or decoupled research/execution cycles).
+Eleven components run across four phases (**GATHER → DECIDE → EXECUTE → RECORD/REPORT**). The orchestrator (`model/model.py`) exposes three entry points — `run_research()` (GATHER + DECIDE), `run_execution()` (EXECUTE + RECORD/REPORT), and `run()` (all four phases). A `RunLoop` (`model/run_loop.py`) controls *when* each entry point fires, supporting four run modes including a decoupled mode where research and execution run on independent schedules connected by a `Handoff` file.
 
 A **BrokerAdapter** protocol decouples the pipeline from any specific brokerage. The `BrokerConnector` selects the adapter named in `config["broker"]` (default `"ig"`), and all downstream components call normalised adapter methods — the raw broker client never leaks into the pipeline.
 
 ```mermaid
 flowchart TD
-    A[main.py<br/>Config · RunLoop · entry point] --> B[Model — Orchestrator]
+    A[main.py<br/>Config & CLI args] --> RL[model/run_loop.py<br/>run_once · scheduled · decoupled · research_only]
+    RL --> B[model/model.py — Orchestrator<br/>run_research · run_execution · run]
 
-    subgraph GATHER
-        B --> C[BrokerConnector<br/>Selects adapter · positions · cash]
-        C --> R[Reconciliation<br/>Syncs local orders with broker]
-        R --> D[DataPipeline<br/>Historical prices · cleaning]
+    subgraph "run_research()"
+        subgraph GATHER
+            B --> C[BrokerConnector<br/>Selects adapter · positions · cash]
+            C --> R[Reconciliation<br/>Sync local orderbook with broker]
+            R --> D[DataPipeline<br/>Historical prices · cleaning]
+        end
+
+        subgraph DECIDE
+            D --> E[SignalEngine<br/>MA crossover signals]
+            E --> F[StrategyEval<br/>Validation & risk stubs]
+            F --> G[PortfolioConstructor<br/>Target weights]
+        end
     end
 
-    subgraph DECIDE
-        D --> E[SignalEngine<br/>MA crossover signals]
-        E --> F[StrategyEval<br/>Validation & risk stubs]
-        F --> G[PortfolioConstructor<br/>Target weights]
+    G -.->|"decoupled mode"| HO[Handoff<br/>handoff.json]
+    HO -.->|"decoupled mode"| H
+
+    subgraph "run_execution()"
+        subgraph EXECUTE
+            H[OrderGenerator<br/>Weight → order conversion]
+            H --> I[OrderExecutor<br/>Paper orders via adapter · orderbook.json]
+        end
+
+        subgraph RECORD & REPORT
+            I --> J[PortfolioLedger<br/>Append-only JSON ledger]
+            J --> K[PortfolioAnalytics<br/>Return · drawdown · Sharpe]
+            K --> L[PerformanceMonitoring<br/>Terminal report & HTML dashboard]
+        end
     end
 
-    subgraph EXECUTE
-        G --> H[OrderGenerator<br/>Weight → order conversion]
-        H --> I[OrderExecutor<br/>Paper orders via adapter]
-    end
-
-    subgraph RECORD & REPORT
-        I --> J[PortfolioLedger<br/>Append-only JSON ledger]
-        J --> K[PortfolioAnalytics<br/>Return · drawdown · Sharpe]
-        K --> L[PerformanceMonitoring<br/>Terminal report]
-    end
+    G -->|"run() — full pipeline"| H
 
     subgraph BROKER ADAPTERS
         C -.-> M[IGBrokerAdapter<br/>trading_ig]
@@ -49,25 +59,25 @@ flowchart TD
 
 ```
 Tradinator/
-├── main.py                           # Entry point: config, RunLoop, Model
+├── main.py                           # Entry point: config, CLI args, launches RunLoop
 ├── model/
 │   ├── __init__.py                   # Re-exports Model, RunLoop, Handoff
-│   ├── model.py                      # Orchestrator — instantiates and runs all components
-│   ├── run_loop.py                   # Scheduling: run_once / scheduled / decoupled / research_only
-│   ├── handoff.py                    # JSON bridge between research and execution in decoupled mode
+│   ├── model.py                      # Orchestrator (run_research / run_execution / run)
+│   ├── run_loop.py                   # Scheduling: run_once, scheduled, decoupled, research_only
+│   ├── handoff.py                    # JSON bridge between research and execution (decoupled mode)
 │   └── model_components/
 │       ├── __init__.py               # Exports all component classes
 │       ├── broker_adapter.py         # BrokerAdapter Protocol (interface)
 │       ├── ig_adapter.py             # IG implementation of BrokerAdapter
 │       ├── ibkr_adapter.py           # IBKR placeholder (NotImplementedError)
 │       ├── broker_connector.py       # Adapter selection & broker_state assembly
-│       ├── reconciliation.py         # Syncs local order book with broker state
+│       ├── reconciliation.py         # Sync local orderbook with broker working orders
 │       ├── data_pipeline.py          # Market data acquisition & cleaning
 │       ├── signal_engine.py          # Buy/sell signal generation (MA crossover)
 │       ├── strategy_eval.py          # Pre-trade signal validation
 │       ├── portfolio_constructor.py  # Signal → target weight conversion
 │       ├── order_generator.py        # Target weight → order translation
-│       ├── order_executor.py         # Paper trade execution via adapter
+│       ├── order_executor.py         # Paper trade execution via adapter, orderbook persistence
 │       ├── portfolio_ledger.py       # Position/cash/trade history (JSON)
 │       ├── portfolio_analytics.py    # Return, drawdown, Sharpe calculation
 │       ├── performance_monitoring.py # Formatted performance report
@@ -75,11 +85,11 @@ Tradinator/
 │           └── dashboard.html        # Jinja2 HTML dashboard template
 ├── data/
 │   ├── input/
-│   │   ├── universe.json             # Instrument universe (IG epics)
-│   │   ├── discover_universe.py      # Standalone utility: validate & expand universe
+│   │   ├── universe.json             # Instrument universe (epic list + metadata)
+│   │   ├── discover_universe.py      # Validates epics against IG API
 │   │   ├── universe_series.xlsx      # Master time series (auto-generated)
 │   │   └── historic_series/          # Drop-in folder for historic xlsx files
-│   └── output/                       # Ledger, trades, reports, handoff
+│   └── output/                       # Ledger, trades, orderbook, reports
 ├── secrets/
 │   └── .env.example                  # Credential template (IG + IBKR stubs)
 ├── requirements.txt
@@ -96,16 +106,23 @@ pip install -r requirements.txt
 cp secrets/.env.example secrets/.env
 # Edit secrets/.env with your IG demo account details
 
-# 3. Run (default: single pass)
+# 3. Run (default: single full pipeline run)
 python main.py
 
-# Or choose a run mode
+# Run in a specific mode
+python main.py --mode research_only       # research phase only, once
 python main.py --mode scheduled --interval 3600
 python main.py --mode decoupled --research-interval 14400 --execution-interval 3600
-python main.py --mode research_only
 ```
 
-In VS Code, the workspace is configured to use `.venv\\Scripts\\python.exe` for Python Run actions.
+### Command-line arguments
+
+| Argument | Default | Description |
+|---|---|---|
+| `--mode` | `run_once` | `run_once`, `scheduled`, `decoupled`, or `research_only` |
+| `--interval` | `3600` | Seconds between runs in `scheduled` mode |
+| `--research-interval` | `14400` | Seconds between research cycles in `decoupled` mode |
+| `--execution-interval` | `3600` | Seconds between execution cycles in `decoupled` mode |
 
 ### Environment variables
 
@@ -119,7 +136,7 @@ In VS Code, the workspace is configured to use `.venv\\Scripts\\python.exe` for 
 | `IG_ACC_TYPE` | No | Must be `DEMO` (default) |
 | `IG_ACC_NUMBER` | No | Specific account number |
 
-#### IBKR (placeholder — not yet implemented)
+#### IBKR (not yet implemented)
 
 | Variable | Required | Description |
 |---|---|---|
@@ -142,9 +159,11 @@ config = {
     "max_position_pct": 0.25,
     "cash_reserve_pct": 0.05,
     "output_dir": "data/output",
-    "max_handoff_age_seconds": 7200,   # staleness limit for decoupled mode
+    "max_handoff_age_seconds": 7200,   # staleness threshold for decoupled handoff
 }
 ```
+
+The instrument universe is loaded from `data/input/universe.json` at startup. Duplicate epic variants (e.g. `.DAILY.IP` and `.IFD.IP` for the same base) are deduplicated automatically. Run `data/input/discover_universe.py` to validate epics against the IG API.
 
 Minor parameters (indicator windows, risk-free rate, display width, etc.) are listed at the top of each component class.
 
@@ -178,13 +197,13 @@ The `BrokerAdapter` protocol (`model/model_components/broker_adapter.py`) define
 | **IGBrokerAdapter** | IG implementation (trading_ig library) |
 | **IBKRBrokerAdapter** | IBKR placeholder (not yet implemented) |
 | **BrokerConnector** | Selects adapter, connects, builds broker_state |
-| **Reconciliation** | Synchronises local order book with broker working orders |
+| **Reconciliation** | Syncs local orderbook against broker working orders; detects fills, cancellations, and expirations |
 | **DataPipeline** | Fetches historical OHLCV prices via adapter, cleans with forward/back-fill, persists a master xlsx time series, and can ingest historic data files |
 | **SignalEngine** | Dual moving-average crossover → BUY / SELL / HOLD signals |
 | **StrategyEval** | Pre-trade quality gate: data quality, Sharpe estimate, volatility stubs |
 | **PortfolioConstructor** | Converts validated BUY signals into target weights with position caps |
-| **OrderGenerator** | Computes delta between target and current portfolio → order list |
-| **OrderExecutor** | Sends market orders via adapter, confirms acceptance |
+| **OrderGenerator** | Computes delta between target and current portfolio → order list; respects per-instrument `min_deal_size` and `lot_size` from metadata |
+| **OrderExecutor** | Sends MARKET and LIMIT orders via adapter, confirms acceptance, persists an `orderbook.json` with order states |
 | **PortfolioLedger** | Append-only JSON record of positions, cash, and trade history |
 | **PortfolioAnalytics** | Computes total return, period return, max drawdown, Sharpe ratio |
 | **PerformanceMonitoring** | Prints formatted report to terminal, saves text and HTML dashboard |
@@ -234,7 +253,7 @@ This is a **structural skeleton** with placeholder logic where appropriate:
 
 1. Create `model/model_components/mycomponent.py` with a class and a `run()` method
 2. Import and export it in `model/model_components/__init__.py`
-3. Instantiate it in `model/model.py` and call `self.mycomponent.run(...)` inside `Model.run()`
+3. Instantiate it in `model/model.py` and call it inside `run_research()` or `run_execution()` depending on which phase it belongs to
 
 ## License
 
