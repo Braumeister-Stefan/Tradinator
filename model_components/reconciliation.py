@@ -37,9 +37,17 @@ class Reconciliation:
             print("[Reconciliation] No working orders to reconcile.")
             return broker_state
 
-        ig = broker_state.get("session")
+        adapter = broker_state.get("adapter")
+        if adapter is None:
+            print("[Reconciliation] ⚠ No broker adapter, skipping reconciliation.")
+            return broker_state
+
+        # Access the raw broker session for working-order queries.
+        # This is IG-specific; other adapters will skip reconciliation
+        # until their adapter exposes equivalent functionality.
+        ig = getattr(adapter, "_ig", None)
         if ig is None:
-            print("[Reconciliation] ⚠ No broker session, skipping reconciliation.")
+            print("[Reconciliation] ⚠ No broker session available, skipping reconciliation.")
             return broker_state
 
         try:

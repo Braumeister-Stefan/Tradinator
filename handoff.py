@@ -32,9 +32,9 @@ class Handoff:
         """
         data = copy.deepcopy(research_output)
 
-        # Remove non-serializable IGService session object
-        if "broker_state" in data and "session" in data["broker_state"]:
-            del data["broker_state"]["session"]
+        # Remove non-serializable broker adapter object
+        if "broker_state" in data and "adapter" in data["broker_state"]:
+            del data["broker_state"]["adapter"]
 
         data["written_at"] = datetime.datetime.utcnow().isoformat()
 
