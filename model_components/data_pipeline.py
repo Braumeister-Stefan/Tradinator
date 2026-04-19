@@ -40,7 +40,6 @@ class DataPipeline:
         lookback = self.config.get("lookback", self.DEFAULT_LOOKBACK)
 
         prices = {}
-        metadata = {}
 
         for i, epic in enumerate(instruments):
             # Throttle requests to stay within IG's rate limits (approx 5-10/s)
@@ -60,7 +59,6 @@ class DataPipeline:
                 continue
 
             prices[epic] = parsed
-            metadata[epic] = self._build_metadata(ig, epic)
 
         prices = self._clean_prices(prices)
 
@@ -81,7 +79,7 @@ class DataPipeline:
         print(f"[DataPipeline] Done — {len(prices)} instrument(s) loaded.")
         return {
             "prices": prices,
-            "metadata": metadata,
+            "metadata": {epic: {"instrument_name": epic, "epic": epic} for epic in prices},
             "resolution": resolution,
             "lookback": lookback,
         }
@@ -156,27 +154,6 @@ class DataPipeline:
                 for key, values in fields.items()
             }
         return cleaned
-
-    def _build_metadata(self, ig, epic: str) -> dict:
-        """Fetch instrument name and currency from the IG market endpoint."""
-        defaults = {
-            "instrument_name": epic,
-            "epic": epic,
-            "currency": "Unknown",
-        }
-        try:
-            market = ig.fetch_market_by_epic(epic)
-            instrument = market.get("instrument", {})
-            return {
-                "instrument_name": instrument.get("name", epic),
-                "epic": epic,
-                "currency": instrument.get("currencies", [{}])[0].get(
-                    "code", "Unknown"
-                ),
-            }
-        except Exception as exc:
-            print(f"[DataPipeline] WARNING: metadata fetch failed for {epic} — {exc}")
-            return defaults
 
     # ------------------------------------------------------------------
     # DataFrame / xlsx methods

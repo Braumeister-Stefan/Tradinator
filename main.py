@@ -9,7 +9,52 @@ It does not constitute trading advice, investment recommendation, or financial
 guidance of any kind. Use at your own risk.
 """
 
+import json
+import os
+
 from model import Model
+
+UNIVERSE_PATH = os.path.join("data", "input", "universe.json")
+
+
+def _load_universe(path: str) -> list[str]:
+    """Load the instrument universe from a JSON file.
+
+    Returns a deduplicated list of IG epic strings.  When both
+    ``.DAILY.IP`` and ``.IFD.IP`` (or ``.CASH.IP``) variants exist for
+    the same underlying market, only the first encountered variant is
+    kept so the pipeline does not fetch redundant price series.
+    """
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        print(f"ERROR: Universe file not found: {path}")
+        print("Create data/input/universe.json or run data/input/discover_universe.py")
+        raise SystemExit(1) from None
+    except json.JSONDecodeError as exc:
+        print(f"ERROR: Universe file contains invalid JSON: {path}")
+        print(f"  {exc}")
+        raise SystemExit(1) from None
+
+    instruments = data.get("instruments", [])
+    if not instruments:
+        print(f"WARNING: No instruments found in {path} — pipeline will run with an empty universe.")
+
+    seen_bases: set[str] = set()
+    epics: list[str] = []
+    for inst in instruments:
+        epic = inst.get("epic", "")
+        if not epic:
+            continue
+        # Base = first three dot-segments, e.g. "IX.D.FTSE" from
+        # "IX.D.FTSE.DAILY.IP" — identical for DAILY / IFD / CASH variants.
+        base = ".".join(epic.split(".")[:3])
+        if base in seen_bases:
+            continue
+        seen_bases.add(base)
+        epics.append(epic)
+    return epics
 
 
 def _print_credentials_setup_error(error: RuntimeError) -> None:
@@ -40,12 +85,8 @@ config = {
     "env_path": "secrets/.env",        # path to .env file with IG creds
 
     # Universe -----------------------------------------------------------
-    "universe": [                       # IG epics for the equity spot universe
-        "IX.D.DAX.IFD.IP",             # Germany 40 (DAX) - Standard Demo Index
-        "IX.D.FTSE.IFD.IP",            # FTSE 100 - Standard Demo Index
-        "CS.D.AAPL.CFD.IP",            # Apple
-        "CS.D.MSFT.CFD.IP",            # Microsoft
-    ],
+    "universe_path": UNIVERSE_PATH,     # path to universe JSON file
+    "universe": _load_universe(UNIVERSE_PATH),
 
     # Market data --------------------------------------------------------
     "resolution": "DAY",                # price bar resolution
