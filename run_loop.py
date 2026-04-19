@@ -12,6 +12,8 @@ guidance of any kind. Use at your own risk.
 import threading
 import time
 
+from handoff import Handoff
+
 
 class RunLoop:
     """Schedule and dispatch pipeline execution based on the chosen mode."""
@@ -24,8 +26,6 @@ class RunLoop:
         self.interval = interval
         self.research_interval = research_interval
         self.execution_interval = execution_interval
-        self._latest_research = None
-        self._research_lock = threading.Lock()
 
     def start(self):
         """Dispatch execution based on the configured mode."""
@@ -74,26 +74,21 @@ class RunLoop:
         threading.Event().wait()
 
     def _research_loop(self):
-        """Loop: run research, store result, sleep."""
+        """Loop: run research, persist via Handoff, sleep."""
         while True:
             try:
                 result = self.model.run_research()
-                with self._research_lock:
-                    self._latest_research = result
+                output_dir = self.model.config.get("output_dir", "data/output")
+                Handoff.write(result, output_dir)
             except Exception as exc:
                 print(f"[RunLoop] ⚠ Error in research: {exc}")
             time.sleep(self.research_interval)
 
     def _execution_loop(self):
-        """Loop: read latest research, run execution, sleep."""
+        """Loop: run execution from handoff file, sleep."""
         while True:
             try:
-                with self._research_lock:
-                    research = self._latest_research
-                if research is None:
-                    print("[RunLoop] No research available yet, skipping execution.")
-                else:
-                    self.model.run_execution(research)
+                self.model.run_execution()
             except Exception as exc:
                 print(f"[RunLoop] ⚠ Error in execution: {exc}")
             time.sleep(self.execution_interval)

@@ -92,6 +92,7 @@ config = {
 
     # Output -------------------------------------------------------------
     "output_dir": "data/output",        # base directory for all output files
+    "max_handoff_age_seconds": 7200,   # max age of handoff file before considered stale
 }
 
 # ---------------------------------------------------------------------------

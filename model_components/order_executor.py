@@ -10,6 +10,8 @@ guidance of any kind. Use at your own risk.
 """
 
 import datetime
+import json
+import os
 import time
 
 
@@ -19,6 +21,7 @@ class OrderExecutor:
     EXECUTION_DELAY = 0.5   # seconds to wait between orders
     CURRENCY_CODE = "USD"   # default currency for orders
     EXPIRY = "-"            # DFB (daily funded bet) / no expiry for CFDs
+    ORDERBOOK_FILENAME = "orderbook.json"
 
     def __init__(self, config: dict):
         """Store config for later use by run()."""
@@ -30,11 +33,13 @@ class OrderExecutor:
         positions = broker_state.get("positions", [])
         order_list = orders.get("orders", [])
         metadata = market_data.get("metadata", {}) if market_data else {}
+        orderbook = self._load_orderbook()
 
         executions = []
         for i, order in enumerate(order_list):
             result = self._execute_order(ig, order, positions, metadata)
             executions.append(result)
+            self._record_to_orderbook(orderbook, order, result)
             print(
                 f"[OrderExecutor] {result['direction']} {result['epic']} "
                 f"x{result['size']} → {result['status']}"
@@ -55,6 +60,7 @@ class OrderExecutor:
             f"{summary['accepted']} accepted, {summary['rejected']} rejected, "
             f"{summary['errors']} error(s)"
         )
+        self._save_orderbook(orderbook)
 
         return execution_log
 
@@ -70,6 +76,8 @@ class OrderExecutor:
         try:
             if is_close:
                 deal_reference = self._close_position(ig, order, positions)
+            elif order.get("order_type") == "LIMIT":
+                deal_reference = self._create_working_order(ig, order, metadata or {})
             else:
                 deal_reference = self._open_position(ig, order, metadata or {})
 
@@ -100,6 +108,30 @@ class OrderExecutor:
                 "rejection_reason": "",
                 "timestamp": datetime.datetime.utcnow().isoformat(),
             }
+
+    def _create_working_order(self, ig, order: dict, metadata: dict = None) -> str:
+        """Create a working (LIMIT) order via the IG API and return the deal reference."""
+        meta = (metadata or {}).get(order["epic"], {})
+        currency = meta.get("currency", self.CURRENCY_CODE)
+        if currency == "Unknown":
+            currency = self.CURRENCY_CODE
+        response = ig.create_working_order(
+            currency_code=currency,
+            direction=order["direction"],
+            epic=order["epic"],
+            expiry=self.EXPIRY,
+            guaranteed_stop=False,
+            level=order["limit_level"],
+            limit_distance=None,
+            limit_level=None,
+            order_type="LIMIT",
+            size=order["size"],
+            stop_distance=None,
+            stop_level=None,
+            time_in_force=order.get("time_in_force", "GOOD_TILL_CANCELLED"),
+            force_open=True,
+        )
+        return response["dealReference"]
 
     def _open_position(self, ig, order: dict, metadata: dict = None) -> str:
         """Open a new position via the IG API and return the deal reference."""
@@ -170,6 +202,57 @@ class OrderExecutor:
                 "errors": errors,
             },
         }
+
+    def _load_orderbook(self) -> dict:
+        """Load the order book from disk, or return an empty one."""
+        output_dir = self.config.get("output_dir", "data/output")
+        path = os.path.join(output_dir, self.ORDERBOOK_FILENAME)
+        if not os.path.isfile(path):
+            return {"orders": [], "last_reconciled_at": None}
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                return json.load(fh)
+        except (json.JSONDecodeError, OSError):
+            return {"orders": [], "last_reconciled_at": None}
+
+    def _save_orderbook(self, orderbook: dict) -> None:
+        """Persist the order book to disk."""
+        output_dir = self.config.get("output_dir", "data/output")
+        os.makedirs(output_dir, exist_ok=True)
+        path = os.path.join(output_dir, self.ORDERBOOK_FILENAME)
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(orderbook, fh, indent=2)
+
+    def _record_to_orderbook(self, orderbook: dict, order: dict, result: dict) -> None:
+        """Append an order record to the in-memory order book."""
+        status = result.get("status", "ERROR")
+        order_type = order.get("order_type", "MARKET")
+
+        if status == "ACCEPTED" and order_type == "LIMIT":
+            state = "WORKING"
+        elif status == "ACCEPTED":
+            state = "FILLED"
+        elif status == "REJECTED":
+            state = "CANCELLED"
+        else:
+            state = "CANCELLED"
+
+        now = datetime.datetime.utcnow().isoformat()
+        orderbook["orders"].append({
+            "order_id": result.get("deal_reference") or now,
+            "epic": order.get("epic", ""),
+            "direction": order.get("direction", ""),
+            "size": order.get("size", 0),
+            "order_type": order_type,
+            "limit_level": order.get("limit_level"),
+            "time_in_force": order.get("time_in_force", "FILL_OR_KILL"),
+            "state": state,
+            "deal_reference": result.get("deal_reference"),
+            "deal_id": result.get("deal_id"),
+            "reason": result.get("reason", ""),
+            "created_at": now,
+            "updated_at": now,
+        })
 
     @staticmethod
     def _find_deal_id(epic: str, positions: list) -> str:

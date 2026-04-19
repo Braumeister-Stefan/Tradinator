@@ -6,6 +6,7 @@ This is the only place where components are aware of each other's existence.
 Data flows strictly forward through the pipeline: steps 1 → 10.
 """
 
+from handoff import Handoff
 from model_components import (
     BrokerConnector,
     DataPipeline,
@@ -17,6 +18,7 @@ from model_components import (
     PortfolioLedger,
     PortfolioAnalytics,
     PerformanceMonitoring,
+    Reconciliation,
 )
 
 
@@ -26,6 +28,7 @@ class Model:
     def __init__(self, config):
         self.config = config
         self.broker_connector = BrokerConnector(config)
+        self.reconciliation = Reconciliation(config)
         self.data_pipeline = DataPipeline(config)
         self.signal_engine = SignalEngine(config)
         self.strategy_eval = StrategyEval(config)
@@ -40,6 +43,7 @@ class Model:
         """Execute the research pipeline: Gather → Decide."""
         # Phase 1: GATHER
         broker_state = self.broker_connector.run()
+        broker_state = self.reconciliation.run(broker_state)
         market_data = self.data_pipeline.run(broker_state)
 
         # Phase 2: DECIDE
@@ -57,8 +61,19 @@ class Model:
             "target_portfolio": target_portfolio,
         }
 
-    def run_execution(self, research_output):
+    def run_execution(self, research_output=None):
         """Execute the trading pipeline: Execute → Record → Report."""
+        if research_output is None:
+            research_output = Handoff.read(
+                self.config.get("output_dir", "data/output"),
+                self.config.get("max_handoff_age_seconds", 7200),
+            )
+            if research_output is None:
+                print("[Model] No valid research available, skipping execution.")
+                return
+            broker_state = self.broker_connector.run()
+            research_output["broker_state"] = broker_state
+
         broker_state = research_output["broker_state"]
         market_data = research_output["market_data"]
         target_portfolio = research_output["target_portfolio"]
@@ -70,6 +85,7 @@ class Model:
         # Phase 4: RECORD & REPORT
         # Re-fetch broker state after execution so ledger records post-trade reality.
         broker_state = self.broker_connector.run()
+        broker_state = self.reconciliation.run(broker_state)
         ledger_snapshot = self.portfolio_ledger.run(execution_log, broker_state)
         analytics = self.portfolio_analytics.run(ledger_snapshot)
         self.performance_monitoring.run(analytics)

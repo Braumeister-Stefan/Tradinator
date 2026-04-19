@@ -20,6 +20,7 @@ class OrderGenerator:
 
     MIN_ORDER_SIZE = 0.01       # minimum order size (fractional shares)
     ROUNDING_PRECISION = 2      # decimal places for order sizes
+    LIMIT_ORDER_THRESHOLD = 0.5 # threshold for LIMIT order eligibility
 
     def __init__(self, config: dict):
         """Store config for later use by run()."""
@@ -32,11 +33,18 @@ class OrderGenerator:
         total_value = target_portfolio.get("total_value", 0.0)
         metadata = market_data.get("metadata", {}) if market_data else {}
 
+        latest_prices = {}
+        if market_data:
+            for epic, fields in market_data.get("prices", {}).items():
+                closes = fields.get("close", [])
+                if closes and closes[-1] is not None:
+                    latest_prices[epic] = closes[-1]
+
         current_holdings = self._get_current_holdings(positions)
         prices = self._extract_prices(positions, market_data)
         target_sizes = self._compute_target_sizes(weights, total_value, prices)
         deltas = self._compute_deltas(target_sizes, current_holdings)
-        orders, skipped = self._generate_orders(deltas, current_holdings, metadata)
+        orders, skipped = self._generate_orders(deltas, current_holdings, metadata, latest_prices)
 
         summary = {
             "total_orders": len(orders),
@@ -116,10 +124,12 @@ class OrderGenerator:
             deltas[epic] = target - current
         return deltas
 
-    def _generate_orders(self, deltas: dict, current_holdings: dict, metadata=None) -> tuple:
+    def _generate_orders(self, deltas: dict, current_holdings: dict, metadata=None, latest_prices=None) -> tuple:
         """Convert deltas into order dicts, filtering by per-instrument constraints."""
         if metadata is None:
             metadata = {}
+        if latest_prices is None:
+            latest_prices = {}
         skipped = []
         orders = []
         for epic, delta in deltas.items():
@@ -153,6 +163,8 @@ class OrderGenerator:
                     "direction": direction,
                     "size": size,
                     "order_type": "MARKET",
+                    "limit_level": None,
+                    "time_in_force": "FILL_OR_KILL",
                     "reason": reason,
                 }
             )
