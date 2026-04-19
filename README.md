@@ -14,8 +14,8 @@ A **BrokerAdapter** protocol decouples the pipeline from any specific brokerage.
 
 ```mermaid
 flowchart TD
-    A[main.py<br/>Config & CLI args] --> RL[run_loop.py<br/>run_once · scheduled · decoupled · research_only]
-    RL --> B[model.py — Orchestrator<br/>run_research · run_execution · run]
+    A[main.py<br/>Config & CLI args] --> RL[model/run_loop.py<br/>run_once · scheduled · decoupled · research_only]
+    RL --> B[model/model.py — Orchestrator<br/>run_research · run_execution · run]
 
     subgraph "run_research()"
         subgraph GATHER
@@ -115,8 +115,6 @@ python main.py --mode scheduled --interval 3600
 python main.py --mode decoupled --research-interval 14400 --execution-interval 3600
 ```
 
-In VS Code, the workspace is configured to use `.venv\\Scripts\\python.exe` for Python Run actions.
-
 ### Command-line arguments
 
 | Argument | Default | Description |
@@ -138,7 +136,7 @@ In VS Code, the workspace is configured to use `.venv\\Scripts\\python.exe` for 
 | `IG_ACC_TYPE` | No | Must be `DEMO` (default) |
 | `IG_ACC_NUMBER` | No | Specific account number |
 
-#### IBKR (placeholder — not yet implemented)
+#### IBKR (not yet implemented)
 
 | Variable | Required | Description |
 |---|---|---|
