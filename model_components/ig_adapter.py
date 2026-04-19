@@ -54,7 +54,7 @@ class IGBrokerAdapter:
         data = ig.fetch_accounts()
         accounts = data.get("accounts", [])
         if not accounts:
-            raise RuntimeError("No accounts returned by IG API")
+            raise RuntimeError("IGBrokerAdapter: No accounts returned by IG API")
 
         acc_number = os.environ.get("IG_ACC_NUMBER")
         if acc_number:
@@ -282,7 +282,10 @@ class IGBrokerAdapter:
         return cleaned
 
     def _create_session(self, username, password, api_key, acc_type):
-        """Create an IGService instance and establish a session with retries."""
+        """Create an IGService instance and establish a session with retries.
+
+        Uses exponential backoff: wait = 2^attempt seconds (2s, 4s, 8s …).
+        """
         acc_number = os.environ.get("IG_ACC_NUMBER")
         ig = IGService(
             username,
@@ -310,8 +313,12 @@ class IGBrokerAdapter:
                     )
                     time.sleep(wait)
 
+        # Sanitise: use only the exception type name to avoid leaking
+        # credentials that IG's library may embed in error messages.
+        error_type = type(last_error).__name__ if last_error else "Unknown"
         raise RuntimeError(
-            f"Failed to connect to IG after {self.MAX_RETRIES} attempts: {last_error}"
+            f"Failed to connect to IG after {self.MAX_RETRIES} attempts "
+            f"({error_type}). Check credentials and network connectivity."
         )
 
     @staticmethod
