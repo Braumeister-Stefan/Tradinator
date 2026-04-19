@@ -163,7 +163,7 @@
                 {% if max_drawdown_pct is none %}
                 <span class="metric-value na">N/A</span>
                 {% else %}
-                <span class="metric-value">{{ "%.2f"|format(max_drawdown_pct | abs * -1) }}%</span>
+                <span class="metric-value">-{{ "%.2f"|format(max_drawdown_pct | abs) }}%</span>
                 {% endif %}
             </div>
             <div class="metric-row">
