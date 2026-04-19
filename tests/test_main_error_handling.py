@@ -5,9 +5,13 @@ stripping strings that main.py relies on for pattern matching — causing
 an unhandled traceback at line 152 (run_loop.start()).
 """
 
+import os
 import subprocess
 import sys
 import unittest
+
+# Repository root: two levels up from this test file.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class TestMainErrorHandling(unittest.TestCase):
@@ -88,7 +92,7 @@ class TestMainErrorHandling(unittest.TestCase):
             capture_output=True,
             text=True,
             timeout=10,
-            cwd="/home/runner/work/Tradinator/Tradinator",
+            cwd=REPO_ROOT,
         )
 
         combined_output = result.stdout + result.stderr
