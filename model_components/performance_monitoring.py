@@ -95,7 +95,7 @@ class PerformanceMonitoring:
             "  EXPOSURE",
         ]
 
-        exposure = analytics.get("current_exposure", {})
+        exposure = analytics.get("current_exposure") or {}
         lines += [
             self._format_metric(
                 "Invested", exposure.get("invested_pct"), "%"
@@ -142,9 +142,24 @@ class PerformanceMonitoring:
         """Render the Jinja2 HTML dashboard and write it to output_dir."""
         try:
             template_dir = os.path.join(os.path.dirname(__file__), "templates")
-            env = Environment(loader=FileSystemLoader(template_dir))
+            env = Environment(
+                loader=FileSystemLoader(template_dir),
+                autoescape=True,
+            )
             template = env.get_template("dashboard.html")
-            html = template.render(**analytics)
+
+            defaults = {
+                "timestamp": "",
+                "total_return_pct": None,
+                "period_return_pct": None,
+                "max_drawdown_pct": None,
+                "sharpe_ratio": None,
+                "volatility_annual_pct": None,
+                "current_exposure": None,
+                "history_length": None,
+            }
+            context = {**defaults, **analytics}
+            html = template.render(**context)
 
             output_dir = self.config.get("output_dir", ".")
             os.makedirs(output_dir, exist_ok=True)
