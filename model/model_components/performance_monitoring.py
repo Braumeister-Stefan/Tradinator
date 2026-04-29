@@ -340,17 +340,13 @@ class PerformanceMonitoring:
         try:
             if not os.path.exists(sentinel_path):
                 webbrowser.open(url)
-                # Write sentinel only after a successful open() to avoid permanently
-                # suppressing the browser launch if open() raises on headless hosts.
                 with open(sentinel_path, "w", encoding="utf-8") as fh:
                     fh.write("")
-                print(f"[PerformanceMonitoring] Dashboard opened at {url}")
-            else:
-                print(f"[PerformanceMonitoring] Dashboard updated at {url}")
+            print(f"[PerformanceMonitoring] Dashboard at {url} — press Ctrl+C to stop")
+            thread.join()
+        except KeyboardInterrupt:
+            pass
         finally:
-            # Always linger so the browser can complete its initial HTTP fetch,
-            # then shut the server down cleanly regardless of any exception above.
-            time.sleep(self.DASHBOARD_SERVER_LINGER_SECONDS)
             server.shutdown()
 
     @staticmethod
