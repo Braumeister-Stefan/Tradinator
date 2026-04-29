@@ -297,7 +297,7 @@
 <script>
 (function () {
   var POLL_INTERVAL_MS = 60000;
-  var DATA_URL = "dashboard_data.json";
+  var DATA_URL = "{{ dashboard_data_filename }}";
 
   function fmt(val, decimals, suffix) {
     if (val === null || val === undefined) return "N/A";
@@ -313,28 +313,50 @@
     }
   }
 
-  function cssForValue(val) {
+  function cssForReturn(val) {
     if (val === null || val === undefined) return "na";
     if (val > 0) return "positive";
     if (val < 0) return "negative";
     return "caution";
   }
 
+  function fmtReturn(val) {
+    if (val === null || val === undefined) return "N/A";
+    var s = parseFloat(val).toFixed(2) + "%";
+    return val > 0 ? "+" + s : s;
+  }
+
   function applyData(d) {
     patch("dash-timestamp", d.timestamp || "");
-    patch("dash-total-return",   fmt(d.total_return_pct, 2, "%"),   cssForValue(d.total_return_pct));
-    patch("dash-period-return",  fmt(d.period_return_pct, 2, "%"),  cssForValue(d.period_return_pct));
+    patch("dash-total-return",   fmtReturn(d.total_return_pct),   cssForReturn(d.total_return_pct));
+    patch("dash-period-return",  fmtReturn(d.period_return_pct),  cssForReturn(d.period_return_pct));
     var dd = d.max_drawdown_pct;
     patch("dash-max-drawdown",
       dd === null || dd === undefined ? "N/A" : "-" + Math.abs(parseFloat(dd)).toFixed(2) + "%",
       dd === null || dd === undefined ? "na" : "negative");
-    patch("dash-sharpe",      fmt(d.sharpe_ratio, 2),              cssForValue(d.sharpe_ratio));
-    patch("dash-volatility",  fmt(d.volatility_annual_pct, 2, "%"), "caution");
+    var sr = d.sharpe_ratio;
+    patch("dash-sharpe",
+      sr === null || sr === undefined ? "N/A" : parseFloat(sr).toFixed(2),
+      sr === null || sr === undefined ? "na" : (parseFloat(sr) >= 1.0 ? "positive" : "caution"));
+    var vp = d.volatility_annual_pct;
+    patch("dash-volatility",
+      vp === null || vp === undefined ? "N/A" : parseFloat(vp).toFixed(2) + "%",
+      vp === null || vp === undefined ? "na" : "caution");
     var exp = d.current_exposure || {};
-    patch("dash-invested",   fmt(exp.invested_pct, 1, "%"),  cssForValue(exp.invested_pct));
-    patch("dash-cash",       fmt(exp.cash_pct, 1, "%"),      "na");
-    patch("dash-positions",  exp.position_count !== undefined && exp.position_count !== null ? String(exp.position_count) : "N/A", "na");
-    patch("dash-history-length", d.history_length !== undefined && d.history_length !== null ? String(d.history_length) : "N/A", "na");
+    var inv = exp.invested_pct;
+    patch("dash-invested",
+      inv === null || inv === undefined ? "N/A" : parseFloat(inv).toFixed(2) + "%",
+      inv === null || inv === undefined ? "na" : "");
+    var cash = exp.cash_pct;
+    patch("dash-cash",
+      cash === null || cash === undefined ? "N/A" : parseFloat(cash).toFixed(2) + "%",
+      cash === null || cash === undefined ? "na" : "");
+    patch("dash-positions",
+      exp.position_count !== undefined && exp.position_count !== null ? String(exp.position_count) : "N/A",
+      exp.position_count !== undefined && exp.position_count !== null ? "" : "na");
+    patch("dash-history-length",
+      d.history_length !== undefined && d.history_length !== null ? String(d.history_length) : "N/A",
+      d.history_length !== undefined && d.history_length !== null ? "" : "na");
   }
 
   function poll() {

@@ -12,7 +12,6 @@ guidance of any kind. Use at your own risk.
 
 import json
 import os
-import socket
 import threading
 import time
 import webbrowser
@@ -168,6 +167,7 @@ class PerformanceMonitoring:
                 "volatility_annual_pct": None,
                 "current_exposure": None,
                 "history_length": None,
+                "dashboard_data_filename": self.DASHBOARD_DATA_FILENAME,
             }
             context = {**defaults, **analytics}
             # NOTE: max_drawdown_pct is a positive float in the analytics dict.
@@ -187,6 +187,11 @@ class PerformanceMonitoring:
 
         try:
             self._write_dashboard_json(analytics, output_dir)
+        except Exception as exc:
+            print(f"[PerformanceMonitoring] Could not write dashboard JSON: {exc}")
+            return
+
+        try:
             self._deliver_dashboard(html, abs_path, output_dir)
         except Exception as exc:
             print(f"[PerformanceMonitoring] Could not deliver dashboard: {exc}")
@@ -203,7 +208,11 @@ class PerformanceMonitoring:
             json.dump(analytics, fh, default=str)
 
     def _deliver_dashboard(self, html: str, local_path: str, output_dir: str) -> None:
-        """Start an ephemeral HTTP server for this run and open the dashboard on first run."""
+        """Start an ephemeral HTTP server for this run and open the dashboard on first run.
+
+        ``HTTPServer.allow_reuse_address = 1`` (set by the stdlib) ensures SO_REUSEADDR
+        is applied before bind(), so the port is reusable across back-to-back scheduler runs.
+        """
         serve_dir = os.path.abspath(output_dir)
 
         class _Handler(SimpleHTTPRequestHandler):
@@ -214,22 +223,26 @@ class PerformanceMonitoring:
                 pass  # suppress per-request logging
 
         server = HTTPServer(("", self.DASHBOARD_HTTP_PORT), _Handler)
-        server.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
 
         url = f"http://localhost:{self.DASHBOARD_HTTP_PORT}/{self.DASHBOARD_FILENAME}"
         sentinel_path = os.path.join(output_dir, self.DASHBOARD_SENTINEL_FILENAME)
-        if not os.path.exists(sentinel_path):
-            with open(sentinel_path, "w", encoding="utf-8") as fh:
-                fh.write("")
-            webbrowser.open(url)
-            print(f"[PerformanceMonitoring] Dashboard opened at {url}")
-        else:
-            print(f"[PerformanceMonitoring] Dashboard updated at {url}")
-
-        time.sleep(self.DASHBOARD_SERVER_LINGER_SECONDS)
-        server.shutdown()
+        try:
+            if not os.path.exists(sentinel_path):
+                webbrowser.open(url)
+                # Write sentinel only after a successful open() to avoid permanently
+                # suppressing the browser launch if open() raises on headless hosts.
+                with open(sentinel_path, "w", encoding="utf-8") as fh:
+                    fh.write("")
+                print(f"[PerformanceMonitoring] Dashboard opened at {url}")
+            else:
+                print(f"[PerformanceMonitoring] Dashboard updated at {url}")
+        finally:
+            # Always linger so the browser can complete its initial HTTP fetch,
+            # then shut the server down cleanly regardless of any exception above.
+            time.sleep(self.DASHBOARD_SERVER_LINGER_SECONDS)
+            server.shutdown()
 
     @staticmethod
     def _negate_drawdown(value) -> float | None:
