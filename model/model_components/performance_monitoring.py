@@ -20,6 +20,39 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from jinja2 import Environment, FileSystemLoader
 
 
+# ---------------------------------------------------------------------------
+# Metrics configuration
+# ---------------------------------------------------------------------------
+# Each group key is the section heading shown in Panel 1 of the dashboard.
+# Within each group, add/remove metric dicts freely.
+# Set "enabled" to True to display the metric, False to hide it.
+# "key"     – matches the key in the analytics dict (or current_exposure sub-dict
+#             when "source" is set to "exposure").
+# "label"   – human-readable name shown in the dashboard.
+# "suffix"  – appended to the value (e.g. "%" or "").
+# "color"   – rendering hint: "signed" | "drawdown" | "sharpe" | "caution" | "integer" | "neutral"
+# ---------------------------------------------------------------------------
+METRICS_CONFIG = {
+    "Returns": [
+        {"key": "total_return_pct",     "label": "Total Return",        "enabled": True,  "suffix": "%", "color": "signed"},
+        {"key": "period_return_pct",    "label": "Period Return",        "enabled": True,  "suffix": "%", "color": "signed"},
+    ],
+    "Risk": [
+        {"key": "max_drawdown_pct",     "label": "Max Drawdown",         "enabled": True,  "suffix": "%", "color": "drawdown"},
+        {"key": "sharpe_ratio",         "label": "Sharpe Ratio",         "enabled": True,  "suffix": "",  "color": "sharpe"},
+        {"key": "volatility_annual_pct","label": "Annual Volatility",    "enabled": True,  "suffix": "%", "color": "caution"},
+    ],
+    "Exposure": [
+        {"key": "invested_pct",         "label": "Invested",             "enabled": True,  "suffix": "%", "color": "neutral", "source": "exposure"},
+        {"key": "cash_pct",             "label": "Cash",                 "enabled": True,  "suffix": "%", "color": "neutral", "source": "exposure"},
+        {"key": "position_count",       "label": "Open Positions",       "enabled": True,  "suffix": "",  "color": "integer", "source": "exposure"},
+    ],
+    "History": [
+        {"key": "history_length",       "label": "Snapshots Available",  "enabled": True,  "suffix": "",  "color": "integer"},
+    ],
+}
+
+
 class PerformanceMonitoring:
     """Format and display a human-readable performance report."""
 
@@ -31,6 +64,9 @@ class PerformanceMonitoring:
     DASHBOARD_SENTINEL_FILENAME = ".dashboard_opened"
     DASHBOARD_HTTP_PORT = 8742
     DASHBOARD_SERVER_LINGER_SECONDS = 4
+
+    # Color palette used for the positions pie chart slices (top-3 + others).
+    PIE_COLORS = ["#4a90d9", "#34d399", "#fbbf24", "#6b7a8d"]
 
     def __init__(self, config: dict):
         """Store config for later use by run()."""
@@ -148,6 +184,76 @@ class PerformanceMonitoring:
         except OSError as exc:
             print(f"[PerformanceMonitoring] Could not save report: {exc}")
 
+    def _build_pie_chart_data(self, analytics: dict) -> list[dict]:
+        """Compute pie chart slices for the positions panel.
+
+        Returns a list of dicts with keys: label, pct, color.
+        Cash is excluded.  The top-3 positions by notional value are shown
+        individually; all remaining positions are combined as ``Others``.
+        """
+        positions = analytics.get("positions") or []
+        valued = []
+        for pos in positions:
+            level = float(pos.get("level") or 0)
+            size = abs(float(pos.get("size") or 0))
+            value = size * level
+            if value > 0:
+                # Use the third dot-segment of the epic as a compact label
+                # (e.g. "FTSE" from "IX.D.FTSE.DAILY.IP"), falling back to
+                # the full instrument_id when the format does not match.
+                raw_id = pos.get("instrument_id") or "Unknown"
+                parts = raw_id.split(".")
+                label = parts[2] if len(parts) >= 3 else raw_id
+                valued.append({"label": label, "value": value})
+
+        if not valued:
+            return []
+
+        valued.sort(key=lambda x: x["value"], reverse=True)
+        total = sum(p["value"] for p in valued)
+        top = valued[:3]
+        others_value = sum(p["value"] for p in valued[3:])
+
+        slices = []
+        for i, pos in enumerate(top):
+            pct = round(pos["value"] / total * 100, 1)
+            slices.append({"label": pos["label"], "pct": pct, "color": self.PIE_COLORS[i]})
+
+        if others_value > 0:
+            pct = round(others_value / total * 100, 1)
+            slices.append({"label": "Others", "pct": pct, "color": self.PIE_COLORS[3]})
+
+        return slices
+
+    def _build_rendered_groups(self, analytics: dict) -> list[dict]:
+        """Resolve metric values from analytics and return template-ready groups.
+
+        Iterates METRICS_CONFIG, skips disabled metrics, resolves each value
+        from the analytics dict (or the current_exposure sub-dict for metrics
+        with ``"source": "exposure"``), and returns a list of group dicts.
+        """
+        exposure = analytics.get("current_exposure") or {}
+        rendered_groups = []
+        for group_name, metrics in METRICS_CONFIG.items():
+            rendered_metrics = []
+            for m in metrics:
+                if not m.get("enabled", True):
+                    continue
+                if m.get("source") == "exposure":
+                    value = exposure.get(m["key"])
+                else:
+                    value = analytics.get(m["key"])
+                rendered_metrics.append({
+                    "label": m["label"],
+                    "value": value,
+                    "suffix": m.get("suffix", ""),
+                    "color": m.get("color", "neutral"),
+                    "dash_id": "dash-" + m["key"].replace("_", "-"),
+                })
+            if rendered_metrics:
+                rendered_groups.append({"name": group_name, "metrics": rendered_metrics})
+        return rendered_groups
+
     def _save_html_report(self, analytics: dict) -> None:
         """Render the Jinja2 HTML dashboard and write it to output_dir."""
         try:
@@ -167,9 +273,12 @@ class PerformanceMonitoring:
                 "volatility_annual_pct": None,
                 "current_exposure": None,
                 "history_length": None,
+                "positions": [],
                 "dashboard_data_filename": self.DASHBOARD_DATA_FILENAME,
             }
             context = {**defaults, **analytics}
+            context["rendered_groups"] = self._build_rendered_groups(analytics)
+            context["pie_chart_data_json"] = json.dumps(self._build_pie_chart_data(analytics))
             # NOTE: max_drawdown_pct is a positive float in the analytics dict.
             # The template applies |abs and prepends a literal '-' for display.
             # Any new consumer of this dict must apply its own sign treatment.
@@ -257,3 +366,4 @@ class PerformanceMonitoring:
         if value is None:
             return None
         return str(int(value))
+

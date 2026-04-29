@@ -49,6 +49,7 @@ class PortfolioAnalytics:
             "current_exposure": exposure,
             "history_length": len(history),
             "timestamp": timestamp,
+            "positions": positions,
         }
 
         self._print_summary(analytics)
