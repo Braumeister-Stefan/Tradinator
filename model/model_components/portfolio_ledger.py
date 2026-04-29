@@ -95,7 +95,9 @@ class PortfolioLedger:
                 "instrument_id": pos.get("instrument_id"),
                 "direction": pos.get("direction"),
                 "size": pos.get("size"),
+                "level": pos.get("level"),
                 "deal_id": pos.get("deal_id"),
+                "profit_loss": pos.get("profit_loss"),
             })
 
         accepted = sum(
