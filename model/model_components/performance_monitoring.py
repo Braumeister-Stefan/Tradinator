@@ -12,7 +12,10 @@ guidance of any kind. Use at your own risk.
 
 import json
 import os
+import threading
+import time
 import webbrowser
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -56,6 +59,11 @@ class PerformanceMonitoring:
     DISPLAY_WIDTH = 60
     SAVE_REPORT = True
     REPORT_FILENAME = "performance_report.txt"
+    DASHBOARD_FILENAME = "performance_dashboard.html"
+    DASHBOARD_DATA_FILENAME = "dashboard_data.json"
+    DASHBOARD_SENTINEL_FILENAME = ".dashboard_opened"
+    DASHBOARD_HTTP_PORT = 8742
+    DASHBOARD_SERVER_LINGER_SECONDS = 4
 
     # Color palette used for the positions pie chart slices (top-3 + others).
     PIE_COLORS = ["#4a90d9", "#34d399", "#fbbf24", "#6b7a8d"]
@@ -240,6 +248,7 @@ class PerformanceMonitoring:
                     "value": value,
                     "suffix": m.get("suffix", ""),
                     "color": m.get("color", "neutral"),
+                    "dash_id": "dash-" + m["key"].replace("_", "-"),
                 })
             if rendered_metrics:
                 rendered_groups.append({"name": group_name, "metrics": rendered_metrics})
@@ -265,27 +274,84 @@ class PerformanceMonitoring:
                 "current_exposure": None,
                 "history_length": None,
                 "positions": [],
+                "dashboard_data_filename": self.DASHBOARD_DATA_FILENAME,
             }
             context = {**defaults, **analytics}
             context["rendered_groups"] = self._build_rendered_groups(analytics)
             context["pie_chart_data_json"] = json.dumps(self._build_pie_chart_data(analytics))
-
+            # NOTE: max_drawdown_pct is a positive float in the analytics dict.
+            # The template applies |abs and prepends a literal '-' for display.
+            # Any new consumer of this dict must apply its own sign treatment.
             html = template.render(**context)
 
             output_dir = self.config.get("output_dir", ".")
             os.makedirs(output_dir, exist_ok=True)
-            path = os.path.join(output_dir, "performance_dashboard.html")
+            path = os.path.join(output_dir, self.DASHBOARD_FILENAME)
             with open(path, "w", encoding="utf-8") as fh:
                 fh.write(html)
             abs_path = os.path.abspath(path)
-            webbrowser.open(f"file:///{abs_path}")
-            print(f"[PerformanceMonitoring] Dashboard opened in browser: {abs_path}")
         except Exception as exc:
-            print(f"[PerformanceMonitoring] Could not save HTML report: {exc}")
+            print(f"[PerformanceMonitoring] Could not render or write HTML report: {exc}")
+            return
+
+        try:
+            self._write_dashboard_json(analytics, output_dir)
+        except Exception as exc:
+            print(f"[PerformanceMonitoring] Could not write dashboard JSON: {exc}")
+            return
+
+        try:
+            self._deliver_dashboard(html, abs_path, output_dir)
+        except Exception as exc:
+            print(f"[PerformanceMonitoring] Could not deliver dashboard: {exc}")
 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _write_dashboard_json(self, analytics: dict, output_dir: str) -> None:
+        """Write the analytics payload as a JSON sidecar for the JS polling layer."""
+        path = os.path.join(output_dir, self.DASHBOARD_DATA_FILENAME)
+        os.makedirs(output_dir, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(analytics, fh, default=str)
+
+    def _deliver_dashboard(self, html: str, local_path: str, output_dir: str) -> None:
+        """Start an ephemeral HTTP server for this run and open the dashboard on first run.
+
+        ``HTTPServer.allow_reuse_address = 1`` (set by the stdlib) ensures SO_REUSEADDR
+        is applied before bind(), so the port is reusable across back-to-back scheduler runs.
+        """
+        serve_dir = os.path.abspath(output_dir)
+
+        class _Handler(SimpleHTTPRequestHandler):
+            def __init__(self_inner, *args, **kwargs):
+                super().__init__(*args, directory=serve_dir, **kwargs)
+
+            def log_message(self_inner, format, *args):  # noqa: A002
+                pass  # suppress per-request logging
+
+        server = HTTPServer(("", self.DASHBOARD_HTTP_PORT), _Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+
+        url = f"http://localhost:{self.DASHBOARD_HTTP_PORT}/{self.DASHBOARD_FILENAME}"
+        sentinel_path = os.path.join(output_dir, self.DASHBOARD_SENTINEL_FILENAME)
+        try:
+            if not os.path.exists(sentinel_path):
+                webbrowser.open(url)
+                # Write sentinel only after a successful open() to avoid permanently
+                # suppressing the browser launch if open() raises on headless hosts.
+                with open(sentinel_path, "w", encoding="utf-8") as fh:
+                    fh.write("")
+                print(f"[PerformanceMonitoring] Dashboard opened at {url}")
+            else:
+                print(f"[PerformanceMonitoring] Dashboard updated at {url}")
+        finally:
+            # Always linger so the browser can complete its initial HTTP fetch,
+            # then shut the server down cleanly regardless of any exception above.
+            time.sleep(self.DASHBOARD_SERVER_LINGER_SECONDS)
+            server.shutdown()
 
     @staticmethod
     def _negate_drawdown(value) -> float | None:

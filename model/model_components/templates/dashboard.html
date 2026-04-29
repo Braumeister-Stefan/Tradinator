@@ -233,7 +233,7 @@
 
     <header class="page-header">
         <h1>Tradinator &mdash; Performance Dashboard</h1>
-        <div class="timestamp">Generated: {{ timestamp }}</div>
+        <div id="dash-timestamp" class="timestamp">Generated: {{ timestamp }}</div>
     </header>
 
     <div class="grid">
@@ -249,33 +249,33 @@
             <div class="metric-row">
                 <span class="metric-label">{{ m.label }}</span>
                 {%- if m.value is none %}
-                <span class="metric-value na">N/A</span>
+                <span id="{{ m.dash_id }}" class="metric-value na">N/A</span>
 
                 {%- elif m.color == "signed" %}
                 {%- if m.value >= 0 %}
-                <span class="metric-value positive">+{{ "%.2f"|format(m.value) }}{{ m.suffix }}</span>
+                <span id="{{ m.dash_id }}" class="metric-value positive">+{{ "%.2f"|format(m.value) }}{{ m.suffix }}</span>
                 {%- else %}
-                <span class="metric-value negative">{{ "%.2f"|format(m.value) }}{{ m.suffix }}</span>
+                <span id="{{ m.dash_id }}" class="metric-value negative">{{ "%.2f"|format(m.value) }}{{ m.suffix }}</span>
                 {%- endif %}
 
                 {%- elif m.color == "drawdown" %}
-                <span class="metric-value negative">-{{ "%.2f"|format(m.value | abs) }}{{ m.suffix }}</span>
+                <span id="{{ m.dash_id }}" class="metric-value negative">-{{ "%.2f"|format(m.value | abs) }}{{ m.suffix }}</span>
 
                 {%- elif m.color == "sharpe" %}
                 {%- if m.value >= 1.0 %}
-                <span class="metric-value positive">{{ "%.2f"|format(m.value) }}{{ m.suffix }}</span>
+                <span id="{{ m.dash_id }}" class="metric-value positive">{{ "%.2f"|format(m.value) }}{{ m.suffix }}</span>
                 {%- else %}
-                <span class="metric-value caution">{{ "%.2f"|format(m.value) }}{{ m.suffix }}</span>
+                <span id="{{ m.dash_id }}" class="metric-value caution">{{ "%.2f"|format(m.value) }}{{ m.suffix }}</span>
                 {%- endif %}
 
                 {%- elif m.color == "caution" %}
-                <span class="metric-value caution">{{ "%.2f"|format(m.value) }}{{ m.suffix }}</span>
+                <span id="{{ m.dash_id }}" class="metric-value caution">{{ "%.2f"|format(m.value) }}{{ m.suffix }}</span>
 
                 {%- elif m.color == "integer" %}
-                <span class="metric-value">{{ m.value | int }}</span>
+                <span id="{{ m.dash_id }}" class="metric-value">{{ m.value | int }}</span>
 
                 {%- else %}
-                <span class="metric-value">{{ "%.2f"|format(m.value) }}{{ m.suffix }}</span>
+                <span id="{{ m.dash_id }}" class="metric-value">{{ "%.2f"|format(m.value) }}{{ m.suffix }}</span>
                 {%- endif %}
             </div>
             {%- endfor %}
@@ -369,6 +369,77 @@
         ctx.stroke();
     })();
     </script>
+
+<script>
+(function () {
+  var POLL_INTERVAL_MS = 60000;
+  var DATA_URL = "{{ dashboard_data_filename }}";
+
+  function patch(id, text, cssClass) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    if (cssClass !== undefined) {
+      el.className = "metric-value " + cssClass;
+    }
+  }
+
+  function cssForReturn(val) {
+    if (val === null || val === undefined) return "na";
+    if (val >= 0) return "positive";
+    return "negative";
+  }
+
+  function fmtReturn(val) {
+    if (val === null || val === undefined) return "N/A";
+    var s = parseFloat(val).toFixed(2) + "%";
+    return val > 0 ? "+" + s : s;
+  }
+
+  function applyData(d) {
+    patch("dash-timestamp", d.timestamp || "");
+    patch("dash-total-return-pct",   fmtReturn(d.total_return_pct),   cssForReturn(d.total_return_pct));
+    patch("dash-period-return-pct",  fmtReturn(d.period_return_pct),  cssForReturn(d.period_return_pct));
+    var dd = d.max_drawdown_pct;
+    patch("dash-max-drawdown-pct",
+      dd === null || dd === undefined ? "N/A" : "-" + Math.abs(parseFloat(dd)).toFixed(2) + "%",
+      dd === null || dd === undefined ? "na" : "negative");
+    var sr = d.sharpe_ratio;
+    patch("dash-sharpe-ratio",
+      sr === null || sr === undefined ? "N/A" : parseFloat(sr).toFixed(2),
+      sr === null || sr === undefined ? "na" : (parseFloat(sr) >= 1.0 ? "positive" : "caution"));
+    var vp = d.volatility_annual_pct;
+    patch("dash-volatility-annual-pct",
+      vp === null || vp === undefined ? "N/A" : parseFloat(vp).toFixed(2) + "%",
+      vp === null || vp === undefined ? "na" : "caution");
+    var exp = d.current_exposure || {};
+    var inv = exp.invested_pct;
+    patch("dash-invested-pct",
+      inv === null || inv === undefined ? "N/A" : parseFloat(inv).toFixed(2) + "%",
+      inv === null || inv === undefined ? "na" : "");
+    var cash = exp.cash_pct;
+    patch("dash-cash-pct",
+      cash === null || cash === undefined ? "N/A" : parseFloat(cash).toFixed(2) + "%",
+      cash === null || cash === undefined ? "na" : "");
+    patch("dash-position-count",
+      exp.position_count !== null && exp.position_count !== undefined ? String(exp.position_count) : "N/A",
+      exp.position_count !== null && exp.position_count !== undefined ? "" : "na");
+    patch("dash-history-length",
+      d.history_length !== null && d.history_length !== undefined ? String(d.history_length) : "N/A",
+      d.history_length !== null && d.history_length !== undefined ? "" : "na");
+  }
+
+  function poll() {
+    fetch(DATA_URL + "?t=" + Date.now())
+      .then(function (r) { return r.json(); })
+      .then(function (d) { applyData(d); })
+      .catch(function () { /* server between runs — silent retry next interval */ });
+  }
+
+  setInterval(poll, POLL_INTERVAL_MS);
+  setTimeout(poll, 2000);
+})();
+</script>
 
 </body>
 </html>
