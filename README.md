@@ -1,6 +1,6 @@
 # Tradinator
 
-A modular trading engine for automated **paper trading**, supporting multiple brokerages via a pluggable adapter layer. Currently connected to the IG platform; IBKR support is scaffolded as a placeholder.
+A modular trading engine for automated **paper trading**, supporting multiple brokerages via a pluggable adapter layer. Connected to the IG platform; IBKR support is scaffolded.
 
 > **DISCLAIMER:** Tradinator is a personal experimentation tool for paper trading.
 > It does not constitute trading advice, investment recommendation, or financial
@@ -206,7 +206,13 @@ The `BrokerAdapter` protocol (`model/model_components/broker_adapter.py`) define
 | **OrderExecutor** | Sends MARKET and LIMIT orders via adapter, confirms acceptance, persists an `orderbook.json` with order states |
 | **PortfolioLedger** | Append-only JSON record of positions, cash, and trade history |
 | **PortfolioAnalytics** | Computes total return, period return, max drawdown, Sharpe ratio |
-| **PerformanceMonitoring** | Prints formatted report to terminal, saves text and HTML dashboard |
+| **PerformanceMonitoring** | Terminal report, text file, and HTML dashboard on port 8742 with JS data polling; metrics configurable per-entry via `METRICS_CONFIG` (enable/disable, label, suffix, colour); includes a positions pie chart |
+
+## Dashboard
+
+Served on port 8742, the dashboard auto-opens in the browser on the first run and stays accessible at `http://localhost:8742/performance_dashboard.html` until the process is stopped with Ctrl+C.
+
+![Performance Dashboard](media_assets/dashboard.png)
 
 ## Universe Series
 
@@ -241,9 +247,7 @@ DataPipeline(config={}).ingest_historic()
 
 ## Phase 1 scope
 
-This is a **structural skeleton** with placeholder logic where appropriate:
-
-- Signal generation uses a simple MA crossover (placeholder)
+- Signal generation uses a simple MA crossover
 - Strategy validation includes Sharpe/volatility stubs
 - Portfolio construction is long-only with proportional weighting
 - No short selling, no backtesting engine, no production-grade risk handling
