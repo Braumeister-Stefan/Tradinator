@@ -173,7 +173,7 @@
 
     <header class="page-header">
         <h1>Tradinator &mdash; Performance Dashboard</h1>
-        <div class="timestamp">Generated: {{ timestamp }}</div>
+        <div id="dash-timestamp" class="timestamp">Generated: {{ timestamp }}</div>
     </header>
 
     <div class="grid">
@@ -186,21 +186,21 @@
             <div class="metric-row">
                 <span class="metric-label">Total Return</span>
                 {% if total_return_pct is none %}
-                <span class="metric-value na">N/A</span>
+                <span id="dash-total-return" class="metric-value na">N/A</span>
                 {% elif total_return_pct >= 0 %}
-                <span class="metric-value positive">+{{ "%.2f"|format(total_return_pct) }}%</span>
+                <span id="dash-total-return" class="metric-value positive">+{{ "%.2f"|format(total_return_pct) }}%</span>
                 {% else %}
-                <span class="metric-value negative">{{ "%.2f"|format(total_return_pct) }}%</span>
+                <span id="dash-total-return" class="metric-value negative">{{ "%.2f"|format(total_return_pct) }}%</span>
                 {% endif %}
             </div>
             <div class="metric-row">
                 <span class="metric-label">Period Return</span>
                 {% if period_return_pct is none %}
-                <span class="metric-value na">N/A</span>
+                <span id="dash-period-return" class="metric-value na">N/A</span>
                 {% elif period_return_pct >= 0 %}
-                <span class="metric-value positive">+{{ "%.2f"|format(period_return_pct) }}%</span>
+                <span id="dash-period-return" class="metric-value positive">+{{ "%.2f"|format(period_return_pct) }}%</span>
                 {% else %}
-                <span class="metric-value negative">{{ "%.2f"|format(period_return_pct) }}%</span>
+                <span id="dash-period-return" class="metric-value negative">{{ "%.2f"|format(period_return_pct) }}%</span>
                 {% endif %}
             </div>
 
@@ -208,27 +208,27 @@
             <div class="metric-row">
                 <span class="metric-label">Max Drawdown</span>
                 {% if max_drawdown_pct is none %}
-                <span class="metric-value na">N/A</span>
+                <span id="dash-max-drawdown" class="metric-value na">N/A</span>
                 {% else %}
-                <span class="metric-value negative">-{{ "%.2f"|format(max_drawdown_pct | abs) }}%</span>
+                <span id="dash-max-drawdown" class="metric-value negative">-{{ "%.2f"|format(max_drawdown_pct | abs) }}%</span>
                 {% endif %}
             </div>
             <div class="metric-row">
                 <span class="metric-label">Sharpe Ratio</span>
                 {% if sharpe_ratio is none %}
-                <span class="metric-value na">N/A</span>
+                <span id="dash-sharpe" class="metric-value na">N/A</span>
                 {% elif sharpe_ratio >= 1.0 %}
-                <span class="metric-value positive">{{ "%.2f"|format(sharpe_ratio) }}</span>
+                <span id="dash-sharpe" class="metric-value positive">{{ "%.2f"|format(sharpe_ratio) }}</span>
                 {% else %}
-                <span class="metric-value caution">{{ "%.2f"|format(sharpe_ratio) }}</span>
+                <span id="dash-sharpe" class="metric-value caution">{{ "%.2f"|format(sharpe_ratio) }}</span>
                 {% endif %}
             </div>
             <div class="metric-row">
                 <span class="metric-label">Annual Volatility</span>
                 {% if volatility_annual_pct is none %}
-                <span class="metric-value na">N/A</span>
+                <span id="dash-volatility" class="metric-value na">N/A</span>
                 {% else %}
-                <span class="metric-value caution">{{ "%.2f"|format(volatility_annual_pct) }}%</span>
+                <span id="dash-volatility" class="metric-value caution">{{ "%.2f"|format(volatility_annual_pct) }}%</span>
                 {% endif %}
             </div>
 
@@ -237,25 +237,25 @@
             <div class="metric-row">
                 <span class="metric-label">Invested</span>
                 {% if exposure.get("invested_pct") is none %}
-                <span class="metric-value na">N/A</span>
+                <span id="dash-invested" class="metric-value na">N/A</span>
                 {% else %}
-                <span class="metric-value">{{ "%.2f"|format(exposure["invested_pct"]) }}%</span>
+                <span id="dash-invested" class="metric-value">{{ "%.2f"|format(exposure["invested_pct"]) }}%</span>
                 {% endif %}
             </div>
             <div class="metric-row">
                 <span class="metric-label">Cash</span>
                 {% if exposure.get("cash_pct") is none %}
-                <span class="metric-value na">N/A</span>
+                <span id="dash-cash" class="metric-value na">N/A</span>
                 {% else %}
-                <span class="metric-value">{{ "%.2f"|format(exposure["cash_pct"]) }}%</span>
+                <span id="dash-cash" class="metric-value">{{ "%.2f"|format(exposure["cash_pct"]) }}%</span>
                 {% endif %}
             </div>
             <div class="metric-row">
                 <span class="metric-label">Open Positions</span>
                 {% if exposure.get("position_count") is none %}
-                <span class="metric-value na">N/A</span>
+                <span id="dash-positions" class="metric-value na">N/A</span>
                 {% else %}
-                <span class="metric-value">{{ exposure["position_count"] | int }}</span>
+                <span id="dash-positions" class="metric-value">{{ exposure["position_count"] | int }}</span>
                 {% endif %}
             </div>
 
@@ -263,9 +263,9 @@
             <div class="metric-row">
                 <span class="metric-label">Snapshots Available</span>
                 {% if history_length is none %}
-                <span class="metric-value na">N/A</span>
+                <span id="dash-history-length" class="metric-value na">N/A</span>
                 {% else %}
-                <span class="metric-value">{{ history_length | int }}</span>
+                <span id="dash-history-length" class="metric-value">{{ history_length | int }}</span>
                 {% endif %}
             </div>
         </div>
@@ -293,6 +293,61 @@
     <footer class="disclaimer">
         This is not trading advice. Paper trading only.
     </footer>
+
+<script>
+(function () {
+  var POLL_INTERVAL_MS = 60000;
+  var DATA_URL = "dashboard_data.json";
+
+  function fmt(val, decimals, suffix) {
+    if (val === null || val === undefined) return "N/A";
+    return parseFloat(val).toFixed(decimals) + (suffix || "");
+  }
+
+  function patch(id, text, cssClass) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    if (cssClass !== undefined) {
+      el.className = "metric-value " + cssClass;
+    }
+  }
+
+  function cssForValue(val) {
+    if (val === null || val === undefined) return "na";
+    if (val > 0) return "positive";
+    if (val < 0) return "negative";
+    return "caution";
+  }
+
+  function applyData(d) {
+    patch("dash-timestamp", d.timestamp || "");
+    patch("dash-total-return",   fmt(d.total_return_pct, 2, "%"),   cssForValue(d.total_return_pct));
+    patch("dash-period-return",  fmt(d.period_return_pct, 2, "%"),  cssForValue(d.period_return_pct));
+    var dd = d.max_drawdown_pct;
+    patch("dash-max-drawdown",
+      dd === null || dd === undefined ? "N/A" : "-" + Math.abs(parseFloat(dd)).toFixed(2) + "%",
+      dd === null || dd === undefined ? "na" : "negative");
+    patch("dash-sharpe",      fmt(d.sharpe_ratio, 2),              cssForValue(d.sharpe_ratio));
+    patch("dash-volatility",  fmt(d.volatility_annual_pct, 2, "%"), "caution");
+    var exp = d.current_exposure || {};
+    patch("dash-invested",   fmt(exp.invested_pct, 1, "%"),  cssForValue(exp.invested_pct));
+    patch("dash-cash",       fmt(exp.cash_pct, 1, "%"),      "na");
+    patch("dash-positions",  exp.position_count !== undefined && exp.position_count !== null ? String(exp.position_count) : "N/A", "na");
+    patch("dash-history-length", d.history_length !== undefined && d.history_length !== null ? String(d.history_length) : "N/A", "na");
+  }
+
+  function poll() {
+    fetch(DATA_URL + "?t=" + Date.now())
+      .then(function (r) { return r.json(); })
+      .then(function (d) { applyData(d); })
+      .catch(function () { /* server between runs — silent retry next interval */ });
+  }
+
+  setInterval(poll, POLL_INTERVAL_MS);
+  setTimeout(poll, 2000);
+})();
+</script>
 
 </body>
 </html>
