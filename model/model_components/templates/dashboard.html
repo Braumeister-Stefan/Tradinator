@@ -317,7 +317,7 @@
     if (val === null || val === undefined) return "na";
     if (val > 0) return "positive";
     if (val < 0) return "negative";
-    return "caution";
+    return "positive";  // zero return: neutral/positive, matching Jinja2 >= 0 branch
   }
 
   function fmtReturn(val) {
@@ -352,11 +352,11 @@
       cash === null || cash === undefined ? "N/A" : parseFloat(cash).toFixed(2) + "%",
       cash === null || cash === undefined ? "na" : "");
     patch("dash-positions",
-      exp.position_count !== undefined && exp.position_count !== null ? String(exp.position_count) : "N/A",
-      exp.position_count !== undefined && exp.position_count !== null ? "" : "na");
+      exp.position_count !== null && exp.position_count !== undefined ? String(exp.position_count) : "N/A",
+      exp.position_count !== null && exp.position_count !== undefined ? "" : "na");
     patch("dash-history-length",
-      d.history_length !== undefined && d.history_length !== null ? String(d.history_length) : "N/A",
-      d.history_length !== undefined && d.history_length !== null ? "" : "na");
+      d.history_length !== null && d.history_length !== undefined ? String(d.history_length) : "N/A",
+      d.history_length !== null && d.history_length !== undefined ? "" : "na");
   }
 
   function poll() {
