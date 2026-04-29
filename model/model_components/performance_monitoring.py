@@ -57,8 +57,8 @@ class PerformanceMonitoring:
     SAVE_REPORT = True
     REPORT_FILENAME = "performance_report.txt"
 
-    # Colour palette used for the positions pie chart slices (top-3 + others).
-    PIE_COLOURS = ["#4a90d9", "#34d399", "#fbbf24", "#6b7a8d"]
+    # Color palette used for the positions pie chart slices (top-3 + others).
+    PIE_COLORS = ["#4a90d9", "#34d399", "#fbbf24", "#6b7a8d"]
 
     def __init__(self, config: dict):
         """Store config for later use by run()."""
@@ -209,11 +209,11 @@ class PerformanceMonitoring:
         slices = []
         for i, pos in enumerate(top):
             pct = round(pos["value"] / total * 100, 1)
-            slices.append({"label": pos["label"], "pct": pct, "color": self.PIE_COLOURS[i]})
+            slices.append({"label": pos["label"], "pct": pct, "color": self.PIE_COLORS[i]})
 
         if others_value > 0:
             pct = round(others_value / total * 100, 1)
-            slices.append({"label": "Others", "pct": pct, "color": self.PIE_COLOURS[3]})
+            slices.append({"label": "Others", "pct": pct, "color": self.PIE_COLORS[3]})
 
         return slices
 
