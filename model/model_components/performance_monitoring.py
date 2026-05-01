@@ -371,8 +371,11 @@ class PerformanceMonitoring:
         """Upload the dashboard HTML and JSON sidecar to a remote host via FTP over TLS.
 
         Reads connection parameters from config: ``ftp_host``, ``ftp_user``,
-        ``ftp_password``, ``ftp_remote_dir``.  If any required key is absent,
-        logs an error and returns without raising so the pipeline continues.
+        ``ftp_password``, ``ftp_remote_dir``.  An optional ``ftp_json_remote_dir``
+        redirects the JSON sidecar to a different remote path; falls back to
+        ``ftp_remote_dir`` when absent (backward-compatible).
+        If any required key is absent, logs an error and returns without raising
+        so the pipeline continues.
         Uploads only the two dashboard files — never the full output directory.
         """
         required_keys = ("ftp_host", "ftp_user", "ftp_password", "ftp_remote_dir")
@@ -388,35 +391,39 @@ class PerformanceMonitoring:
         user = self.config["ftp_user"]
         password = self.config["ftp_password"]
         remote_dir = self.config["ftp_remote_dir"]
+        # Fall back to remote_dir when ftp_json_remote_dir is absent or empty.
+        json_remote_dir = self.config.get("ftp_json_remote_dir") or remote_dir
 
-        files_to_upload = [
-            os.path.join(output_dir, self.DASHBOARD_FILENAME),
-            os.path.join(output_dir, self.DASHBOARD_DATA_FILENAME),
-        ]
+        html_local = os.path.join(output_dir, self.DASHBOARD_FILENAME)
+        json_local = os.path.join(output_dir, self.DASHBOARD_DATA_FILENAME)
 
         try:
             with ftplib.FTP_TLS(host) as ftp:
                 ftp.login(user, password)
                 ftp.prot_p()  # enable encrypted data channel
-                try:
-                    ftp.cwd(remote_dir)
-                except ftplib.error_perm as exc:
-                    print(
-                        f"[PerformanceMonitoring] FTP publish failed — "
-                        f"remote directory does not exist or is inaccessible: "
-                        f"{remote_dir!r} ({exc})"
-                    )
-                    return
-                for local_path in files_to_upload:
-                    filename = os.path.basename(local_path)
-                    with open(local_path, "rb") as fh:
-                        ftp.storbinary(f"STOR {filename}", fh)
+                self._ftp_upload(ftp, html_local, remote_dir)
+                self._ftp_upload(ftp, json_local, json_remote_dir)
             print(
-                f"[PerformanceMonitoring] Dashboard published to "
-                f"{host}/{remote_dir.lstrip('/')}"
+                f"[PerformanceMonitoring] Dashboard published — "
+                f"HTML → {host}/{remote_dir.lstrip('/')}  "
+                f"JSON → {host}/{json_remote_dir.lstrip('/')}"
             )
         except ftplib.all_errors as exc:
             print(f"[PerformanceMonitoring] FTP publish failed: {exc}")
+
+    @staticmethod
+    def _ftp_upload(ftp: ftplib.FTP_TLS, local_path: str, remote_dir: str) -> None:
+        """Change to remote_dir and upload a single file; raises on FTP errors."""
+        try:
+            ftp.cwd(remote_dir)
+        except ftplib.error_perm as exc:
+            raise ftplib.error_perm(
+                f"Remote directory does not exist or is inaccessible: "
+                f"{remote_dir!r} ({exc})"
+            ) from exc
+        filename = os.path.basename(local_path)
+        with open(local_path, "rb") as fh:
+            ftp.storbinary(f"STOR {filename}", fh)
 
     @staticmethod
     def _negate_drawdown(value) -> float | None:

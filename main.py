@@ -151,6 +151,7 @@ config = {
     "ftp_user":     _env.get("FTP_USER", ""),
     "ftp_password": _env.get("FTP_PASSWORD", ""),
     "ftp_remote_dir": _env.get("FTP_REMOTE_DIR", ""),
+    "ftp_json_remote_dir": _env.get("FTP_JSON_REMOTE_DIR", ""),
 }
 
 # ---------------------------------------------------------------------------
