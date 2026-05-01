@@ -13,6 +13,7 @@ guidance of any kind. Use at your own risk.
 import ftplib
 import json
 import os
+import posixpath
 import threading
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
@@ -298,17 +299,16 @@ class PerformanceMonitoring:
             print(f"[PerformanceMonitoring] Could not render or write HTML report: {exc}")
             return
 
-        json_written = True
+        errors: list[str] = []
         try:
             self._write_dashboard_json(analytics, pie_chart_data, output_dir)
         except Exception as exc:
-            print(f"[PerformanceMonitoring] Could not write dashboard JSON: {exc}")
-            json_written = False
+            errors.append(f"JSON write: {exc}")
 
         deliver_mode = self.config.get("deliver_mode", self.DELIVER_MODE)
         if deliver_mode == "ftp":
             try:
-                self._publish_via_ftp(output_dir, json_written=json_written)
+                self._publish_via_ftp(output_dir, skip_json=bool(errors))
             except Exception as exc:
                 print(f"[PerformanceMonitoring] Could not publish dashboard via FTP: {exc}")
         elif deliver_mode == "file_only":
@@ -318,6 +318,9 @@ class PerformanceMonitoring:
                 self._deliver_dashboard(html, abs_path, output_dir)
             except Exception as exc:
                 print(f"[PerformanceMonitoring] Could not deliver dashboard: {exc}")
+
+        if errors:
+            print(f"[PerformanceMonitoring] Completed with warnings: {'; '.join(errors)}")
 
     # ------------------------------------------------------------------
     # Helpers
@@ -368,7 +371,7 @@ class PerformanceMonitoring:
         finally:
             server.shutdown()
 
-    def _publish_via_ftp(self, output_dir: str, *, json_written: bool = True) -> None:
+    def _publish_via_ftp(self, output_dir: str, *, skip_json: bool = False) -> None:
         """Upload the dashboard HTML and JSON sidecar to a remote host via FTP over TLS.
 
         Reads connection parameters from config: ``ftp_host``, ``ftp_user``,
@@ -378,7 +381,7 @@ class PerformanceMonitoring:
         If any required key is absent, logs an error and returns without raising
         so the pipeline continues.
         Uploads only the two dashboard files — never the full output directory.
-        When ``json_written`` is False the JSON upload step is skipped.
+        When ``skip_json`` is True the JSON upload step is skipped.
         """
         required_keys = ("ftp_host", "ftp_user", "ftp_password", "ftp_remote_dir")
         missing = [k for k in required_keys if not self.config.get(k)]
@@ -413,7 +416,7 @@ class PerformanceMonitoring:
                         f"[PerformanceMonitoring] FTP upload failed for HTML "
                         f"({remote_dir}): {exc}"
                     )
-                if json_written:
+                if not skip_json:
                     try:
                         self._ftp_upload(ftp, json_local, json_remote_dir)
                         json_ok = True
@@ -436,20 +439,20 @@ class PerformanceMonitoring:
 
     @staticmethod
     def _ftp_upload(ftp: ftplib.FTP_TLS, local_path: str, remote_dir: str) -> None:
-        """Reset to FTP root, change to remote_dir, and upload a single file.
+        """Normalise remote_dir to an absolute POSIX path client-side before issuing CWD.
 
-        Always resets CWD to '/' first so that relative ``remote_dir`` values
-        are not silently interpreted relative to the previous working directory.
-        Raises ``ftplib.error_perm`` with a descriptive message on directory
-        errors so callers can log the failing path.
+        Eliminates relative-path drift between sequential calls on a shared FTP connection
+        without requiring a server round-trip to reset to '/'.  Raises ``ftplib.error_perm``
+        with a descriptive message — including the normalised absolute path — on directory
+        errors so callers can log exactly what path was sent to the server.
         """
+        abs_dir = posixpath.normpath(posixpath.join("/", remote_dir.lstrip("/")))
         try:
-            ftp.cwd("/")
-            ftp.cwd(remote_dir)
+            ftp.cwd(abs_dir)
         except ftplib.error_perm as exc:
             raise ftplib.error_perm(
                 f"Remote directory does not exist or is inaccessible: "
-                f"{remote_dir!r} ({exc})"
+                f"{abs_dir!r} ({exc})"
             ) from exc
         filename = os.path.basename(local_path)
         with open(local_path, "rb") as fh:
