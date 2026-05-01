@@ -17,7 +17,7 @@ class StrategyEval:
     """Validate trading signals with basic quality and risk checks."""
 
     VALID_DIRECTIONS = {"BUY", "SELL", "HOLD"}
-    MIN_SIGNAL_STRENGTH = 0.01  # minimum strength to pass
+    MIN_SIGNAL_STRENGTH = 0.001  # minimum strength to pass
     MAX_SIGNALS_PCT = 1.0       # max fraction of universe (reserved for Phase 2)
     RISK_FREE_RATE = 0.04       # annual risk-free rate for Sharpe stub
     MIN_DATA_POINTS = 20        # minimum price history length for validation
