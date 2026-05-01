@@ -15,8 +15,8 @@ import datetime
 class SignalEngine:
     """Create trading signals from market data using a moving-average crossover."""
 
-    FAST_WINDOW = 10        # short moving average period
-    SLOW_WINDOW = 30        # long moving average period
+    FAST_WINDOW = 5         # short moving average period
+    SLOW_WINDOW = 50        # long moving average period
     SIGNAL_THRESHOLD = 0.0  # minimum absolute strength to generate a signal
 
     def __init__(self, config: dict):
