@@ -191,21 +191,31 @@ class PerformanceMonitoring:
         Returns a list of dicts with keys: label, pct, color.
         Cash is excluded.  The top-3 positions by notional value are shown
         individually; all remaining positions are combined as ``Others``.
+
+        Multiple broker position tickets for the same instrument (e.g. two
+        separate orders filled at different times) are aggregated by
+        instrument_id so each underlying market appears only once.
         """
         positions = analytics.get("positions") or []
-        valued = []
+
+        # Aggregate notional value by instrument_id across all position tickets.
+        aggregated: dict[str, float] = {}
         for pos in positions:
             level = float(pos.get("level") or 0)
             size = abs(float(pos.get("size") or 0))
             value = size * level
             if value > 0:
-                # Use the third dot-segment of the epic as a compact label
-                # (e.g. "FTSE" from "IX.D.FTSE.DAILY.IP"), falling back to
-                # the full instrument_id when the format does not match.
                 raw_id = pos.get("instrument_id") or "Unknown"
-                parts = raw_id.split(".")
-                label = parts[2] if len(parts) >= 3 else raw_id
-                valued.append({"label": label, "value": value})
+                aggregated[raw_id] = aggregated.get(raw_id, 0.0) + value
+
+        valued = []
+        for raw_id, value in aggregated.items():
+            # Use the third dot-segment of the epic as a compact label
+            # (e.g. "FTSE" from "IX.D.FTSE.DAILY.IP"), falling back to
+            # the full instrument_id when the format does not match.
+            parts = raw_id.split(".")
+            label = parts[2] if len(parts) >= 3 else raw_id
+            valued.append({"label": label, "value": value})
 
         if not valued:
             return []

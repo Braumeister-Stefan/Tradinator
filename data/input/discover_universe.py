@@ -34,12 +34,22 @@ RESOLUTION = "DAY"
 
 # Search terms to discover additional markets via IG's search endpoint.
 SEARCH_TERMS = [
-    "Germany 40", "FTSE 100", "Wall Street", "US 500", "US Tech 100",
-    "France 40", "Australia 200", "Japan 225", "Hang Seng", "Euro Stoxx",
-    "Russell 2000", "Netherlands 25", "Spain 35", "Switzerland Blue Chip",
-    "Italy 40", "FTSE 250",
-    "Apple", "Microsoft", "Amazon", "Tesla", "Google", "NVIDIA",
-    "Meta", "Netflix", "Vodafone", "Barclays", "AstraZeneca", "BP",
+    # Indices — Americas
+    "US 500", "Wall Street", "US Tech 100", "Russell 2000",
+    # Indices — UK / Europe
+    "FTSE 100", "FTSE 250", "Germany 40", "France 40", "Euro Stoxx",
+    "Netherlands 25", "Spain 35", "Switzerland Blue Chip", "Italy 40",
+    # Indices — Asia / Pacific
+    "Australia 200", "Japan 225", "Hang Seng",
+    # Forex
+    "EUR USD", "GBP USD", "USD JPY", "AUD USD", "USD CAD",
+    "EUR GBP", "EUR JPY", "USD CHF", "NZD USD",
+    # Commodities
+    "US Crude", "Brent Crude", "Gold", "Silver", "Natural Gas", "Copper",
+    # Individual equities (UK & US)
+    "Apple", "Microsoft", "Amazon", "Tesla", "NVIDIA",
+    "Meta", "Alphabet", "Netflix",
+    "Vodafone", "Barclays", "AstraZeneca", "BP",
 ]
 
 
