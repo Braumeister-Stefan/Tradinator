@@ -298,16 +298,17 @@ class PerformanceMonitoring:
             print(f"[PerformanceMonitoring] Could not render or write HTML report: {exc}")
             return
 
+        json_written = True
         try:
             self._write_dashboard_json(analytics, pie_chart_data, output_dir)
         except Exception as exc:
             print(f"[PerformanceMonitoring] Could not write dashboard JSON: {exc}")
-            return
+            json_written = False
 
         deliver_mode = self.config.get("deliver_mode", self.DELIVER_MODE)
         if deliver_mode == "ftp":
             try:
-                self._publish_via_ftp(output_dir)
+                self._publish_via_ftp(output_dir, json_written=json_written)
             except Exception as exc:
                 print(f"[PerformanceMonitoring] Could not publish dashboard via FTP: {exc}")
         elif deliver_mode == "file_only":
@@ -367,7 +368,7 @@ class PerformanceMonitoring:
         finally:
             server.shutdown()
 
-    def _publish_via_ftp(self, output_dir: str) -> None:
+    def _publish_via_ftp(self, output_dir: str, *, json_written: bool = True) -> None:
         """Upload the dashboard HTML and JSON sidecar to a remote host via FTP over TLS.
 
         Reads connection parameters from config: ``ftp_host``, ``ftp_user``,
@@ -377,6 +378,7 @@ class PerformanceMonitoring:
         If any required key is absent, logs an error and returns without raising
         so the pipeline continues.
         Uploads only the two dashboard files — never the full output directory.
+        When ``json_written`` is False the JSON upload step is skipped.
         """
         required_keys = ("ftp_host", "ftp_user", "ftp_password", "ftp_remote_dir")
         missing = [k for k in required_keys if not self.config.get(k)]
@@ -397,24 +399,52 @@ class PerformanceMonitoring:
         html_local = os.path.join(output_dir, self.DASHBOARD_FILENAME)
         json_local = os.path.join(output_dir, self.DASHBOARD_DATA_FILENAME)
 
+        html_ok = False
+        json_ok = False
         try:
             with ftplib.FTP_TLS(host) as ftp:
                 ftp.login(user, password)
                 ftp.prot_p()  # enable encrypted data channel
-                self._ftp_upload(ftp, html_local, remote_dir)
-                self._ftp_upload(ftp, json_local, json_remote_dir)
-            print(
-                f"[PerformanceMonitoring] Dashboard published — "
-                f"HTML → {host}/{remote_dir.lstrip('/')}  "
-                f"JSON → {host}/{json_remote_dir.lstrip('/')}"
-            )
+                try:
+                    self._ftp_upload(ftp, html_local, remote_dir)
+                    html_ok = True
+                except ftplib.all_errors as exc:
+                    print(
+                        f"[PerformanceMonitoring] FTP upload failed for HTML "
+                        f"({remote_dir}): {exc}"
+                    )
+                if json_written:
+                    try:
+                        self._ftp_upload(ftp, json_local, json_remote_dir)
+                        json_ok = True
+                    except ftplib.all_errors as exc:
+                        print(
+                            f"[PerformanceMonitoring] FTP upload failed for JSON "
+                            f"({json_remote_dir}): {exc}"
+                        )
         except ftplib.all_errors as exc:
-            print(f"[PerformanceMonitoring] FTP publish failed: {exc}")
+            print(f"[PerformanceMonitoring] FTP connection failed: {exc}")
+            return
+
+        if html_ok or json_ok:
+            parts = []
+            if html_ok:
+                parts.append(f"HTML → {host}/{remote_dir.lstrip('/')}")
+            if json_ok:
+                parts.append(f"JSON → {host}/{json_remote_dir.lstrip('/')}")
+            print(f"[PerformanceMonitoring] Dashboard published — {' | '.join(parts)}")
 
     @staticmethod
     def _ftp_upload(ftp: ftplib.FTP_TLS, local_path: str, remote_dir: str) -> None:
-        """Change to remote_dir and upload a single file; raises on FTP errors."""
+        """Reset to FTP root, change to remote_dir, and upload a single file.
+
+        Always resets CWD to '/' first so that relative ``remote_dir`` values
+        are not silently interpreted relative to the previous working directory.
+        Raises ``ftplib.error_perm`` with a descriptive message on directory
+        errors so callers can log the failing path.
+        """
         try:
+            ftp.cwd("/")
             ftp.cwd(remote_dir)
         except ftplib.error_perm as exc:
             raise ftplib.error_perm(
