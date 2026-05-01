@@ -13,7 +13,12 @@ import argparse
 import json
 import os
 
+from dotenv import dotenv_values
+
 from model import Model, RunLoop
+
+ENV_PATH = os.path.join("secrets", ".env")
+_env = dotenv_values(ENV_PATH) if os.path.exists(ENV_PATH) else {}
 
 UNIVERSE_PATH = os.path.join("data", "input", "universe.json")
 
@@ -135,6 +140,17 @@ config = {
     # Output -------------------------------------------------------------
     "output_dir": "data/output",        # base directory for all output files
     "max_handoff_age_seconds": 7200,   # max age of handoff file before considered stale
+
+    # Dashboard delivery -------------------------------------------------
+    # Set deliver_mode to "ftp" to publish the dashboard to a remote host, or
+    # "file_only" for non-blocking local output without starting an HTTP server.
+    # Default "localhost" preserves the current local HTTP server behaviour.
+    "deliver_mode": _env.get("DELIVER_MODE", "localhost"),
+    "dashboard_data_url": _env.get("DASHBOARD_DATA_URL", "dashboard_data.json"),
+    "ftp_host":     _env.get("FTP_HOST", ""),
+    "ftp_user":     _env.get("FTP_USER", ""),
+    "ftp_password": _env.get("FTP_PASSWORD", ""),
+    "ftp_remote_dir": _env.get("FTP_REMOTE_DIR", ""),
 }
 
 # ---------------------------------------------------------------------------

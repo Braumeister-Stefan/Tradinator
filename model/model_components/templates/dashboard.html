@@ -310,70 +310,78 @@
 
     <script>
     (function () {
-        var slices = {{ pie_chart_data_json | safe }};
         var wrapper = document.getElementById('pie-wrapper');
 
-        if (!slices || slices.length === 0) {
-            wrapper.innerHTML = '<div class="pie-empty">No open positions to display</div>';
-            return;
+        function renderPie(slices) {
+            wrapper.innerHTML = '';
+            if (!slices || slices.length === 0) {
+                wrapper.innerHTML = '<div class="pie-empty">No open positions to display</div>';
+                return;
+            }
+
+            // --- Build canvas ---
+            var size = 180;
+            var canvas = document.createElement('canvas');
+            canvas.id = 'positions-chart';
+            canvas.width = size;
+            canvas.height = size;
+
+            // --- Build legend ---
+            var legend = document.createElement('div');
+            legend.className = 'pie-legend';
+            slices.forEach(function (s) {
+                var item = document.createElement('div');
+                item.className = 'pie-legend-item';
+                item.innerHTML =
+                    '<span class="pie-legend-swatch" style="background:' + s.color + '"></span>' +
+                    '<span class="pie-legend-label">' + s.label + '</span>' +
+                    '<span class="pie-legend-pct">' + s.pct.toFixed(1) + '%</span>';
+                legend.appendChild(item);
+            });
+
+            var container = document.createElement('div');
+            container.className = 'pie-container';
+            container.appendChild(canvas);
+            container.appendChild(legend);
+            wrapper.appendChild(container);
+
+            // --- Draw pie ---
+            var ctx = canvas.getContext('2d');
+            var cx = size / 2, cy = size / 2, r = size / 2 - 6;
+            var start = -Math.PI / 2;
+            var total = slices.reduce(function (a, s) { return a + s.pct; }, 0);
+
+            slices.forEach(function (s) {
+                var sweep = (s.pct / total) * 2 * Math.PI;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, r, start, start + sweep);
+                ctx.closePath();
+                ctx.fillStyle = s.color;
+                ctx.fill();
+                start += sweep;
+            });
+
+            // Thin separator ring
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+            ctx.strokeStyle = '#0f1923';
+            ctx.lineWidth = 2;
+            ctx.stroke();
         }
 
-        // --- Build canvas ---
-        var size = 180;
-        var canvas = document.createElement('canvas');
-        canvas.id = 'positions-chart';
-        canvas.width = size;
-        canvas.height = size;
+        // Initial render from server-side data
+        renderPie({{ pie_chart_data_json | safe }});
 
-        // --- Build legend ---
-        var legend = document.createElement('div');
-        legend.className = 'pie-legend';
-        slices.forEach(function (s) {
-            var item = document.createElement('div');
-            item.className = 'pie-legend-item';
-            item.innerHTML =
-                '<span class="pie-legend-swatch" style="background:' + s.color + '"></span>' +
-                '<span class="pie-legend-label">' + s.label + '</span>' +
-                '<span class="pie-legend-pct">' + s.pct.toFixed(1) + '%</span>';
-            legend.appendChild(item);
-        });
-
-        var container = document.createElement('div');
-        container.className = 'pie-container';
-        container.appendChild(canvas);
-        container.appendChild(legend);
-        wrapper.appendChild(container);
-
-        // --- Draw pie ---
-        var ctx = canvas.getContext('2d');
-        var cx = size / 2, cy = size / 2, r = size / 2 - 6;
-        var start = -Math.PI / 2;
-        var total = slices.reduce(function (a, s) { return a + s.pct; }, 0);
-
-        slices.forEach(function (s) {
-            var sweep = (s.pct / total) * 2 * Math.PI;
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.arc(cx, cy, r, start, start + sweep);
-            ctx.closePath();
-            ctx.fillStyle = s.color;
-            ctx.fill();
-            start += sweep;
-        });
-
-        // Thin separator ring
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-        ctx.strokeStyle = '#0f1923';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        // Expose for polling layer
+        window._renderPie = renderPie;
     })();
     </script>
 
 <script>
 (function () {
   var POLL_INTERVAL_MS = 60000;
-  var DATA_URL = "{{ dashboard_data_filename }}";
+  var DATA_URL = "{{ dashboard_data_url }}";
 
   function patch(id, text, cssClass) {
     var el = document.getElementById(id);
@@ -427,6 +435,11 @@
     patch("dash-history-length",
       d.history_length !== null && d.history_length !== undefined ? String(d.history_length) : "N/A",
       d.history_length !== null && d.history_length !== undefined ? "" : "na");
+    if (d.pie_chart_data && typeof window._renderPie === "function") {
+      // Defensive check: _renderPie is normally defined by the initialisation
+      // script above, but guard against edge cases where that script failed.
+      window._renderPie(d.pie_chart_data);
+    }
   }
 
   function poll() {

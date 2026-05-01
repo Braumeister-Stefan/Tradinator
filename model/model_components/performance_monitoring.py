@@ -10,11 +10,10 @@ It does not constitute trading advice, investment recommendation, or financial
 guidance of any kind. Use at your own risk.
 """
 
+import ftplib
 import json
 import os
 import threading
-import time
-import webbrowser
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 from jinja2 import Environment, FileSystemLoader
@@ -63,7 +62,9 @@ class PerformanceMonitoring:
     DASHBOARD_DATA_FILENAME = "dashboard_data.json"
     DASHBOARD_SENTINEL_FILENAME = ".dashboard_opened"
     DASHBOARD_HTTP_PORT = 8742
-    DASHBOARD_SERVER_LINGER_SECONDS = 4
+    # Delivery mode: "localhost" (default), "file_only", or "ftp"
+    DELIVER_MODE = "localhost"
+    FTP_REMOTE_DIR = ""
 
     # Color palette used for the positions pie chart slices (top-3 + others).
     PIE_COLORS = ["#4a90d9", "#34d399", "#fbbf24", "#6b7a8d"]
@@ -264,6 +265,7 @@ class PerformanceMonitoring:
             )
             template = env.get_template("dashboard.html")
 
+            pie_chart_data = self._build_pie_chart_data(analytics)
             defaults = {
                 "timestamp": "",
                 "total_return_pct": None,
@@ -274,11 +276,13 @@ class PerformanceMonitoring:
                 "current_exposure": None,
                 "history_length": None,
                 "positions": [],
-                "dashboard_data_filename": self.DASHBOARD_DATA_FILENAME,
+                "dashboard_data_url": self.config.get(
+                    "dashboard_data_url", self.DASHBOARD_DATA_FILENAME
+                ),
             }
             context = {**defaults, **analytics}
             context["rendered_groups"] = self._build_rendered_groups(analytics)
-            context["pie_chart_data_json"] = json.dumps(self._build_pie_chart_data(analytics))
+            context["pie_chart_data_json"] = json.dumps(pie_chart_data)
             # NOTE: max_drawdown_pct is a positive float in the analytics dict.
             # The template applies |abs and prepends a literal '-' for display.
             # Any new consumer of this dict must apply its own sign treatment.
@@ -295,33 +299,47 @@ class PerformanceMonitoring:
             return
 
         try:
-            self._write_dashboard_json(analytics, output_dir)
+            self._write_dashboard_json(analytics, pie_chart_data, output_dir)
         except Exception as exc:
             print(f"[PerformanceMonitoring] Could not write dashboard JSON: {exc}")
             return
 
-        try:
-            self._deliver_dashboard(html, abs_path, output_dir)
-        except Exception as exc:
-            print(f"[PerformanceMonitoring] Could not deliver dashboard: {exc}")
+        deliver_mode = self.config.get("deliver_mode", self.DELIVER_MODE)
+        if deliver_mode == "ftp":
+            try:
+                self._publish_via_ftp(output_dir)
+            except Exception as exc:
+                print(f"[PerformanceMonitoring] Could not publish dashboard via FTP: {exc}")
+        elif deliver_mode == "file_only":
+            print(f"[PerformanceMonitoring] Dashboard written to {abs_path}")
+        else:
+            try:
+                self._deliver_dashboard(html, abs_path, output_dir)
+            except Exception as exc:
+                print(f"[PerformanceMonitoring] Could not deliver dashboard: {exc}")
 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 
-    def _write_dashboard_json(self, analytics: dict, output_dir: str) -> None:
+    def _write_dashboard_json(self, analytics: dict, pie_chart_data: list, output_dir: str) -> None:
         """Write the analytics payload as a JSON sidecar for the JS polling layer."""
         path = os.path.join(output_dir, self.DASHBOARD_DATA_FILENAME)
         os.makedirs(output_dir, exist_ok=True)
+        payload = dict(analytics)
+        payload["pie_chart_data"] = pie_chart_data
         with open(path, "w", encoding="utf-8") as fh:
-            json.dump(analytics, fh, default=str)
+            json.dump(payload, fh, default=str)
 
     def _deliver_dashboard(self, html: str, local_path: str, output_dir: str) -> None:
         """Start an ephemeral HTTP server for this run and open the dashboard on first run.
 
         ``HTTPServer.allow_reuse_address = 1`` (set by the stdlib) ensures SO_REUSEADDR
         is applied before bind(), so the port is reusable across back-to-back scheduler runs.
+        Binds to 127.0.0.1 (loopback only) to prevent unintended network exposure.
         """
+        import webbrowser
+
         serve_dir = os.path.abspath(output_dir)
 
         class _Handler(SimpleHTTPRequestHandler):
@@ -331,7 +349,7 @@ class PerformanceMonitoring:
             def log_message(self_inner, format, *args):  # noqa: A002
                 pass  # suppress per-request logging
 
-        server = HTTPServer(("", self.DASHBOARD_HTTP_PORT), _Handler)
+        server = HTTPServer(("127.0.0.1", self.DASHBOARD_HTTP_PORT), _Handler)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
 
@@ -348,6 +366,57 @@ class PerformanceMonitoring:
             pass
         finally:
             server.shutdown()
+
+    def _publish_via_ftp(self, output_dir: str) -> None:
+        """Upload the dashboard HTML and JSON sidecar to a remote host via FTP over TLS.
+
+        Reads connection parameters from config: ``ftp_host``, ``ftp_user``,
+        ``ftp_password``, ``ftp_remote_dir``.  If any required key is absent,
+        logs an error and returns without raising so the pipeline continues.
+        Uploads only the two dashboard files — never the full output directory.
+        """
+        required_keys = ("ftp_host", "ftp_user", "ftp_password", "ftp_remote_dir")
+        missing = [k for k in required_keys if not self.config.get(k)]
+        if missing:
+            print(
+                f"[PerformanceMonitoring] FTP publish skipped — missing config keys: "
+                f"{', '.join(missing)}"
+            )
+            return
+
+        host = self.config["ftp_host"]
+        user = self.config["ftp_user"]
+        password = self.config["ftp_password"]
+        remote_dir = self.config["ftp_remote_dir"]
+
+        files_to_upload = [
+            os.path.join(output_dir, self.DASHBOARD_FILENAME),
+            os.path.join(output_dir, self.DASHBOARD_DATA_FILENAME),
+        ]
+
+        try:
+            with ftplib.FTP_TLS(host) as ftp:
+                ftp.login(user, password)
+                ftp.prot_p()  # enable encrypted data channel
+                try:
+                    ftp.cwd(remote_dir)
+                except ftplib.error_perm as exc:
+                    print(
+                        f"[PerformanceMonitoring] FTP publish failed — "
+                        f"remote directory does not exist or is inaccessible: "
+                        f"{remote_dir!r} ({exc})"
+                    )
+                    return
+                for local_path in files_to_upload:
+                    filename = os.path.basename(local_path)
+                    with open(local_path, "rb") as fh:
+                        ftp.storbinary(f"STOR {filename}", fh)
+            print(
+                f"[PerformanceMonitoring] Dashboard published to "
+                f"{host}/{remote_dir.lstrip('/')}"
+            )
+        except ftplib.all_errors as exc:
+            print(f"[PerformanceMonitoring] FTP publish failed: {exc}")
 
     @staticmethod
     def _negate_drawdown(value) -> float | None:
