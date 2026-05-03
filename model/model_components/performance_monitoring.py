@@ -281,7 +281,7 @@ class PerformanceMonitoring:
 
             pie_chart_data = self._build_pie_chart_data(analytics)
             deliver_mode = self.config.get("deliver_mode", self.DELIVER_MODE)
-            if deliver_mode == "ftp":
+            if deliver_mode in ("ftp", "netlify"):
                 data_url = self.config.get("dashboard_data_url", self.DASHBOARD_DATA_FILENAME)
             else:
                 data_url = self.DASHBOARD_DATA_FILENAME
