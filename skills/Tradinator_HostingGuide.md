@@ -91,14 +91,15 @@ An inline IIFE fetches `dashboard_data.json?t=<epoch>` (cache-busted) 2 seconds 
 
 **Class constants** — replaced dead `DASHBOARD_SERVER_LINGER_SECONDS` with:
 ```python
-DELIVER_MODE = "localhost"   # "localhost" | "file_only" | "ftp"
+DELIVER_MODE = "localhost"   # "localhost" | "file_only" | "ftp" | "netlify"
 FTP_REMOTE_DIR = ""
 ```
 
 **`_save_html_report()`** — added `deliver_mode` dispatch after writing both files:
 - `"localhost"` → existing `_deliver_dashboard()` (default, unchanged behaviour)
 - `"file_only"` → prints path and returns immediately (non-blocking, for headless/cron use)
-- `"ftp"` → calls new `_publish_via_ftp(output_dir)`
+- `"ftp"` → calls `_publish_via_ftp(output_dir)`
+- `"netlify"` → calls `_publish_via_netlify(output_dir)`
 
 Added `dashboard_data_url` to the Jinja2 context dict (replaces `dashboard_data_filename`):
 ```python
@@ -119,6 +120,14 @@ Default is `"dashboard_data.json"` — preserves relative-URL behaviour for loca
 - Uploads **only** `performance_dashboard.html` and `dashboard_data.json` — never the full directory
 - Wraps the FTP block in `try/except ftplib.all_errors`; pipeline continues on failure
 
+**`_publish_via_netlify(output_dir)`** — new method:
+- Reads `netlify_token` and `netlify_site_id` from `self.config`
+- If either key is missing, logs a descriptive error and returns without raising
+- Uses only stdlib (`hashlib`, `urllib.request`) — no new dependencies
+- SHA-1 digests each file and POSTs a deploy manifest to `api.netlify.com`
+- PUTs only the files whose digests Netlify does not already have cached (incremental deploy)
+- Wraps all network calls in `try/except`; pipeline continues on failure
+
 ### 2. `model/model_components/templates/dashboard.html`
 
 **Pie chart** — extracted drawing logic into a named `renderPie(slices)` function exposed as `window._renderPie`. Initial render uses Jinja2-baked data on page load. The polling `applyData()` function calls `window._renderPie(d.pie_chart_data)` on each successful poll, keeping the chart current.
@@ -131,11 +140,11 @@ with:
 ```javascript
 var DATA_URL = "{{ dashboard_data_url }}";
 ```
-When `dashboard_data_url` is set to an absolute URL in config (e.g. `https://wilmars.one/tradinator/dashboard_data.json`), polling works from any page location.
+When `dashboard_data_url` is set to an absolute URL in config (e.g. `https://wilmars.one/dashboard_data.json`), polling works from any page location.
 
 ### 3. `main.py`
 
-Added `dotenv_values` import. Config dict reads FTP keys from `secrets/.env` at startup:
+Added `dotenv_values` import. Config dict reads FTP and Netlify keys from `secrets/.env` at startup:
 ```python
 "deliver_mode":       _env.get("DELIVER_MODE", "localhost"),
 "dashboard_data_url": _env.get("DASHBOARD_DATA_URL", "dashboard_data.json"),
@@ -143,15 +152,17 @@ Added `dotenv_values` import. Config dict reads FTP keys from `secrets/.env` at 
 "ftp_user":           _env.get("FTP_USER", ""),
 "ftp_password":       _env.get("FTP_PASSWORD", ""),
 "ftp_remote_dir":     _env.get("FTP_REMOTE_DIR", ""),
+"netlify_token":      _env.get("NETLIFY_TOKEN", ""),
+"netlify_site_id":    _env.get("NETLIFY_SITE_ID", ""),
 ```
 All default to safe empty/localhost values — existing users are unaffected.
 
 ### 4. `secrets/.env.example`
 
-Added two new commented-out sections:
+Added three new commented-out sections:
 ```
 # --- Dashboard delivery (optional) ---
-# DELIVER_MODE=localhost          # localhost | file_only | ftp
+# DELIVER_MODE=localhost          # localhost | file_only | ftp | netlify
 # DASHBOARD_DATA_URL=dashboard_data.json
 
 # --- GoDaddy FTP (required when DELIVER_MODE=ftp) ---
@@ -159,11 +170,85 @@ Added two new commented-out sections:
 # FTP_USER=your_ftp_username
 # FTP_PASSWORD=your_ftp_password
 # FTP_REMOTE_DIR=/public_html/tradinator
+
+# --- Netlify (required when DELIVER_MODE=netlify) ---
+# NETLIFY_TOKEN=your_netlify_personal_access_token
+# NETLIFY_SITE_ID=your_netlify_site_id
 ```
 
 ---
 
-## Deployment Workflow
+## Deployment Workflow — Netlify (recommended when no cPanel hosting exists)
+
+Use this workflow when the GoDaddy account holds only a domain registration with no hosting plan (e.g. the account shows only **Domains** and **Websites + Marketing**, not **Web Hosting / cPanel**).
+
+### Why Netlify
+
+- Free tier (100 GB bandwidth / month, unlimited deploys)
+- No server to manage — Netlify serves the static files
+- Custom domain (`wilmars.one`) supported via a free CNAME record in GoDaddy DNS
+- No FTP, no cPanel, no hosting purchase required
+- The pipeline publishes via Netlify's REST API using only Python stdlib (`hashlib`, `urllib.request`)
+
+### One-time setup
+
+**A. Create a Netlify site**
+
+1. Go to [app.netlify.com](https://app.netlify.com) → **Add new site** → **Deploy manually**.
+2. Drop any placeholder file when prompted (the first real deploy will overwrite it).
+3. Note the **Site ID** from **Site configuration → General → Site details** — it looks like `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`.
+4. Go to **User settings → Applications → Personal access tokens** → **New access token**.  Give it a name (e.g. `tradinator`) and copy the token — you will not see it again.
+
+**B. Point your custom domain at Netlify**
+
+1. In Netlify: **Domain management → Add custom domain** → enter `wilmars.one`.  Follow the prompts.
+2. In GoDaddy: **My Products → Domains → wilmars.one → DNS → Add** a CNAME record:
+   - **Host:** `@` (or `www` if you prefer `www.wilmars.one`)
+   - **Points to:** `<your-netlify-site-name>.netlify.app`
+   - **TTL:** 1 hour
+3. DNS propagation takes up to 24 hours.  Netlify provisions an SSL certificate automatically once the DNS resolves.
+
+**C. Configure `secrets/.env`**
+
+Add these lines (copy from `secrets/.env.example`):
+
+```
+DELIVER_MODE=netlify
+NETLIFY_TOKEN=your_netlify_personal_access_token
+NETLIFY_SITE_ID=your_netlify_site_id
+DASHBOARD_DATA_URL=https://wilmars.one/dashboard_data.json
+```
+
+> `DASHBOARD_DATA_URL` tells the in-page JavaScript where to poll for updates.
+> Use your custom domain once DNS is live, or `https://<site-name>.netlify.app/dashboard_data.json` until then.
+
+**D. Run the pipeline**
+
+```
+python main.py
+```
+
+Confirm both files are live:
+- `https://wilmars.one/` (or `https://<site-name>.netlify.app/`) → dashboard HTML
+- `https://wilmars.one/dashboard_data.json` → JSON sidecar (should be valid JSON)
+
+### Per-run workflow (after setup)
+
+Every pipeline execution automatically:
+1. Computes analytics and renders the dashboard
+2. Writes `data/output/performance_dashboard.html` and `data/output/dashboard_data.json`
+3. Deploys both files to Netlify via the Files Deploy API (only uploads what changed)
+4. Returns — no blocking, scheduled/decoupled mode continues normally
+
+### Latency
+
+- JSON is updated at pipeline run frequency (e.g. every 3600 seconds in `scheduled` mode)
+- An open browser tab reflects the latest run within ≤ 60 seconds of the deploy completing
+- The pie chart updates on the next poll cycle after each deploy
+
+---
+
+## Deployment Workflow — GoDaddy FTP (requires a cPanel hosting plan)
 
 ### One-time setup
 
@@ -203,20 +288,21 @@ Every pipeline execution automatically:
 | Concern | Detail |
 |---|---|
 | **Loopback binding** | `HTTPServer` now binds to `127.0.0.1` — localhost server is no longer reachable from the network |
-| **Broker credentials** | `_publish_via_ftp()` uploads only the two dashboard files — `secrets/.env`, ledger files, and handoff data are never uploaded |
-| **FTP credentials** | Stored in `secrets/.env` (already gitignored). Use `FTP_TLS` with `.prot_p()` — credentials and data transfer are encrypted |
-| **Public portfolio data** | `dashboard_data.json` on GoDaddy is publicly readable. It exposes position counts, weights, labels (e.g. "FTSE"), and return metrics. This is paper trading data — no real monetary exposure — but the operator should confirm this disclosure is acceptable |
-| **Access control** | If access control is required, add a `.htaccess` file to `/public_html/tradinator/` via FTP enabling HTTP Basic Auth. The polling script would need `credentials: "include"` added to the `fetch()` call. This requires no Python changes |
-| **CORS** | HTML and JSON are co-located on the same origin (`wilmars.one`) — no CORS headers required |
+| **Broker credentials** | Neither `_publish_via_ftp()` nor `_publish_via_netlify()` touches `secrets/.env`, ledger files, or handoff data — only the two dashboard files are ever uploaded |
+| **FTP credentials** | Stored in `secrets/.env` (gitignored). Uses `FTP_TLS` with `.prot_p()` — credentials and data transfer are encrypted |
+| **Netlify token** | Stored in `secrets/.env` (gitignored). Transmitted only over HTTPS to `api.netlify.com` |
+| **Public portfolio data** | `dashboard_data.json` on Netlify/GoDaddy is publicly readable. It exposes position counts, weights, labels (e.g. "FTSE"), and return metrics. This is paper trading data — no real monetary exposure — but the operator should confirm this disclosure is acceptable |
+| **Access control** | If access control is required for the FTP workflow, add a `.htaccess` file to `/public_html/tradinator/` via FTP enabling HTTP Basic Auth. For Netlify, use **Site configuration → Access control → Basic password protection** (Pro plan) or a Netlify Edge Function. The polling script would need `credentials: "include"` added to the `fetch()` call |
+| **CORS** | HTML and JSON are co-located on the same origin — no CORS headers required |
 
 ---
 
 ## CORS Constraint
 
-Both files **must** be served from the same origin. If they are on different origins (e.g. HTML on GoDaddy, JSON on GitHub raw), the browser blocks the `fetch()` call. Co-location is a hard constraint of the polling architecture.
+Both files **must** be served from the same origin. If they are on different origins (e.g. HTML on Netlify, JSON on GitHub raw), the browser blocks the `fetch()` call. Co-location is a hard constraint of the polling architecture.
 
 ---
 
 ## Alternative: GitHub Actions + FTP Deploy
 
-Instead of uploading from within the Python process, the pipeline can commit the two files to a deploy branch and trigger a GitHub Actions workflow that uses an FTP deploy action (e.g. `SamKirkland/FTP-Deploy-Action`) to push to GoDaddy. GoDaddy FTP credentials are stored as GitHub Actions secrets. This keeps deployment logic out of the Python code but requires a Git commit per deploy, which pollutes repository history with generated data. The in-process `ftplib` approach is simpler and preferred.
+Instead of uploading from within the Python process, the pipeline can commit the two files to a deploy branch and trigger a GitHub Actions workflow that uses an FTP deploy action (e.g. `SamKirkland/FTP-Deploy-Action`) to push to GoDaddy. GoDaddy FTP credentials are stored as GitHub Actions secrets. This keeps deployment logic out of the Python code but requires a Git commit per deploy, which pollutes repository history with generated data. The in-process `ftplib` approach is simpler and preferred when cPanel hosting is available.

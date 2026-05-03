@@ -142,8 +142,9 @@ config = {
     "max_handoff_age_seconds": 7200,   # max age of handoff file before considered stale
 
     # Dashboard delivery -------------------------------------------------
-    # Set deliver_mode to "ftp" to publish the dashboard to a remote host, or
-    # "file_only" for non-blocking local output without starting an HTTP server.
+    # Set deliver_mode to "ftp" to publish the dashboard to a remote host via
+    # FTPS, "netlify" to deploy via the Netlify Files API, or "file_only" for
+    # non-blocking local output without starting an HTTP server.
     # Default "localhost" preserves the current local HTTP server behaviour.
     "deliver_mode": _env.get("DELIVER_MODE", "localhost"),
     "dashboard_data_url": _env.get("DASHBOARD_DATA_URL", "dashboard_data.json"),
@@ -152,6 +153,8 @@ config = {
     "ftp_password": _env.get("FTP_PASSWORD", ""),
     "ftp_remote_dir": _env.get("FTP_REMOTE_DIR", ""),
     "ftp_json_remote_dir": _env.get("FTP_JSON_REMOTE_DIR", ""),
+    "netlify_token":   _env.get("NETLIFY_TOKEN", ""),
+    "netlify_site_id": _env.get("NETLIFY_SITE_ID", ""),
 }
 
 # ---------------------------------------------------------------------------
