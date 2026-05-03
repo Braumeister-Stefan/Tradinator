@@ -10,6 +10,7 @@ It does not constitute trading advice, investment recommendation, or financial
 guidance of any kind. Use at your own risk.
 """
 
+import base64
 import ftplib
 import hashlib
 import json
@@ -331,6 +332,11 @@ class PerformanceMonitoring:
                 self._publish_via_netlify(output_dir, skip_json=bool(errors))
             except Exception as exc:
                 print(f"[PerformanceMonitoring] Could not publish dashboard via Netlify: {exc}")
+        elif deliver_mode == "github_pages":
+            try:
+                self._publish_via_github_pages(output_dir, skip_json=bool(errors))
+            except Exception as exc:
+                print(f"[PerformanceMonitoring] Could not publish dashboard_data.json via GitHub Pages: {exc}")
         elif deliver_mode == "file_only":
             print(f"[PerformanceMonitoring] Dashboard written to {abs_path}")
         else:
@@ -576,6 +582,104 @@ class PerformanceMonitoring:
                 f"[PerformanceMonitoring] Dashboard published to Netlify — "
                 f"{deploy_url or site_id}"
             )
+
+    def _publish_via_github_pages(self, output_dir: str, *, skip_json: bool = False) -> None:
+        """Push dashboard_data.json to a GitHub Pages repository via the Contents API.
+
+        Reads ``github_pat``, ``github_repo``, and optionally ``github_json_path``
+        and ``github_branch`` from config.  Uses only stdlib — no extra dependencies.
+        The file is created on first run and updated (with its current SHA) on all
+        subsequent runs.  When ``skip_json`` is True the upload step is skipped.
+        """
+        if skip_json:
+            print("[PerformanceMonitoring] GitHub Pages: skipping JSON upload (JSON write failed).")
+            return
+
+        token = self.config.get("github_pat", "").strip()
+        repo = self.config.get("github_repo", "").strip()
+        file_path = self.config.get("github_json_path", "dashboard_data.json").strip()
+        branch = self.config.get("github_branch", "main").strip()
+        commit_message = self.config.get(
+            "github_commit_message", "chore: update dashboard data"
+        )
+
+        if not token or not repo:
+            missing = [k for k, v in [("github_pat", token), ("github_repo", repo)] if not v]
+            print(
+                f"[PerformanceMonitoring] GitHub Pages publish skipped — "
+                f"missing config keys: {', '.join(missing)}"
+            )
+            return
+
+        local_json = os.path.join(output_dir, self.DASHBOARD_DATA_FILENAME)
+        try:
+            with open(local_json, "rb") as fh:
+                content_bytes = fh.read()
+        except OSError as exc:
+            print(f"[PerformanceMonitoring] GitHub Pages: cannot read JSON: {exc}")
+            return
+
+        content_b64 = base64.b64encode(content_bytes).decode()
+        auth_header = f"Bearer {token}"
+        api_url = f"https://api.github.com/repos/{repo}/contents/{file_path}"
+        common_headers = {
+            "Authorization": auth_header,
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+
+        # Step 1 — fetch the current file SHA (required for updates; absent for creates).
+        sha: str | None = None
+        get_req = urllib.request.Request(
+            f"{api_url}?ref={branch}",
+            headers=common_headers,
+            method="GET",
+        )
+        try:
+            with urllib.request.urlopen(get_req, timeout=15) as resp:
+                sha = json.loads(resp.read()).get("sha")
+        except urllib.error.HTTPError as exc:
+            if exc.code != 404:
+                print(
+                    f"[PerformanceMonitoring] GitHub Pages: failed to read existing file "
+                    f"({exc.code}): {exc.reason}"
+                )
+                return
+            # 404 → file does not exist yet; create it without a SHA.
+        except Exception as exc:
+            print(f"[PerformanceMonitoring] GitHub Pages: failed to read existing file: {exc}")
+            return
+
+        # Step 2 — PUT to create or update the file.
+        put_body: dict = {
+            "message": commit_message,
+            "content": content_b64,
+            "branch": branch,
+        }
+        if sha:
+            put_body["sha"] = sha
+
+        put_headers = {**common_headers, "Content-Type": "application/json"}
+        put_req = urllib.request.Request(
+            api_url,
+            data=json.dumps(put_body).encode(),
+            headers=put_headers,
+            method="PUT",
+        )
+        try:
+            with urllib.request.urlopen(put_req, timeout=30) as resp:
+                result = json.loads(resp.read())
+            commit_url = result.get("commit", {}).get("html_url", "")
+            print(
+                f"[PerformanceMonitoring] dashboard_data.json pushed to GitHub Pages"
+                + (f" — {commit_url}" if commit_url else "")
+            )
+        except urllib.error.HTTPError as exc:
+            print(
+                f"[PerformanceMonitoring] GitHub Pages push failed ({exc.code}): {exc.reason}"
+            )
+        except Exception as exc:
+            print(f"[PerformanceMonitoring] GitHub Pages push failed: {exc}")
 
     @staticmethod
     def _ftp_upload(ftp: ftplib.FTP_TLS, local_path: str, remote_dir: str) -> None:
