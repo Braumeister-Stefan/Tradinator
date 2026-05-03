@@ -11,10 +11,13 @@ guidance of any kind. Use at your own risk.
 """
 
 import ftplib
+import hashlib
 import json
 import os
 import posixpath
 import threading
+import urllib.error
+import urllib.request
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 from jinja2 import Environment, FileSystemLoader
@@ -63,7 +66,7 @@ class PerformanceMonitoring:
     DASHBOARD_DATA_FILENAME = "dashboard_data.json"
     DASHBOARD_SENTINEL_FILENAME = ".dashboard_opened"
     DASHBOARD_HTTP_PORT = 8742
-    # Delivery mode: "localhost" (default), "file_only", or "ftp"
+    # Delivery mode: "localhost" (default), "file_only", "ftp", or "netlify"
     DELIVER_MODE = "localhost"
     FTP_REMOTE_DIR = ""
 
@@ -321,6 +324,11 @@ class PerformanceMonitoring:
                 self._publish_via_ftp(output_dir, skip_json=bool(errors))
             except Exception as exc:
                 print(f"[PerformanceMonitoring] Could not publish dashboard via FTP: {exc}")
+        elif deliver_mode == "netlify":
+            try:
+                self._publish_via_netlify(output_dir, skip_json=bool(errors))
+            except Exception as exc:
+                print(f"[PerformanceMonitoring] Could not publish dashboard via Netlify: {exc}")
         elif deliver_mode == "file_only":
             print(f"[PerformanceMonitoring] Dashboard written to {abs_path}")
         else:
@@ -446,6 +454,126 @@ class PerformanceMonitoring:
             if json_ok:
                 parts.append(f"JSON → {host}/{json_remote_dir.lstrip('/')}")
             print(f"[PerformanceMonitoring] Dashboard published — {' | '.join(parts)}")
+
+    def _publish_via_netlify(self, output_dir: str, *, skip_json: bool = False) -> None:
+        """Deploy the dashboard to Netlify via the Files Deploy API.
+
+        Reads ``netlify_token`` and ``netlify_site_id`` from config.
+        Uses only stdlib (``hashlib``, ``urllib.request``) — no extra dependencies.
+
+        Netlify deploy flow:
+          1. POST ``/api/v1/sites/{site_id}/deploys`` with a dict mapping each
+             remote path to the SHA-1 digest of its content.  Netlify responds
+             with a deploy ID and a list of digests it still needs.
+          2. PUT each required file to ``/api/v1/deploys/{deploy_id}/files/{path}``.
+             Netlify publishes the deploy automatically once all required files
+             have been received.
+
+        Wraps all network calls in try/except so the pipeline continues on failure.
+        """
+        token = self.config.get("netlify_token", "")
+        site_id = self.config.get("netlify_site_id", "")
+        if not token or not site_id:
+            missing = [k for k, v in [("netlify_token", token), ("netlify_site_id", site_id)] if not v]
+            print(
+                f"[PerformanceMonitoring] Netlify publish skipped — missing config keys: "
+                f"{', '.join(missing)}"
+            )
+            return
+
+        html_local = os.path.join(output_dir, self.DASHBOARD_FILENAME)
+        json_local = os.path.join(output_dir, self.DASHBOARD_DATA_FILENAME)
+
+        def _sha1(path: str) -> str:
+            h = hashlib.sha1()
+            with open(path, "rb") as f:
+                for chunk in iter(lambda: f.read(65536), b""):
+                    h.update(chunk)
+            return h.hexdigest()
+
+        # Map remote path -> (sha1 digest, local path)
+        file_entries: dict[str, tuple[str, str]] = {}
+        try:
+            file_entries["/index.html"] = (_sha1(html_local), html_local)
+        except OSError as exc:
+            print(f"[PerformanceMonitoring] Netlify publish skipped — cannot read HTML: {exc}")
+            return
+        if not skip_json:
+            try:
+                file_entries["/dashboard_data.json"] = (_sha1(json_local), json_local)
+            except OSError as exc:
+                print(f"[PerformanceMonitoring] Netlify: JSON not readable, skipping: {exc}")
+
+        auth_header = f"Bearer {token}"
+
+        # Step 1 — create the deploy
+        files_payload = {remote: digest for remote, (digest, _) in file_entries.items()}
+        body = json.dumps({"files": files_payload}).encode()
+        req = urllib.request.Request(
+            f"https://api.netlify.com/api/v1/sites/{site_id}/deploys",
+            data=body,
+            headers={
+                "Authorization": auth_header,
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                deploy = json.loads(resp.read())
+        except urllib.error.HTTPError as exc:
+            print(f"[PerformanceMonitoring] Netlify deploy creation failed ({exc.code}): {exc.reason}")
+            return
+        except Exception as exc:
+            print(f"[PerformanceMonitoring] Netlify deploy creation failed: {exc}")
+            return
+
+        deploy_id = deploy.get("id")
+        required_hashes: list[str] = deploy.get("required", [])
+        if not deploy_id:
+            print("[PerformanceMonitoring] Netlify deploy creation returned no deploy ID")
+            return
+
+        # Step 2 — upload files whose digest Netlify does not yet have cached
+        sha_to_entry = {digest: (remote, local) for remote, (digest, local) in file_entries.items()}
+        uploaded: list[str] = []
+        for sha in required_hashes:
+            if sha not in sha_to_entry:
+                continue
+            remote_path, local_path = sha_to_entry[sha]
+            try:
+                with open(local_path, "rb") as fh:
+                    data = fh.read()
+            except OSError as exc:
+                print(f"[PerformanceMonitoring] Netlify: cannot read {local_path}: {exc}")
+                continue
+            put_req = urllib.request.Request(
+                f"https://api.netlify.com/api/v1/deploys/{deploy_id}/files{remote_path}",
+                data=data,
+                headers={
+                    "Authorization": auth_header,
+                    "Content-Type": "application/octet-stream",
+                },
+                method="PUT",
+            )
+            try:
+                with urllib.request.urlopen(put_req, timeout=60):
+                    pass
+                uploaded.append(remote_path)
+            except urllib.error.HTTPError as exc:
+                print(
+                    f"[PerformanceMonitoring] Netlify upload failed for {remote_path} "
+                    f"({exc.code}): {exc.reason}"
+                )
+            except Exception as exc:
+                print(f"[PerformanceMonitoring] Netlify upload failed for {remote_path}: {exc}")
+
+        deploy_url = deploy.get("deploy_ssl_url") or deploy.get("deploy_url", "")
+        if uploaded or not required_hashes:
+            print(
+                f"[PerformanceMonitoring] Dashboard published to Netlify — "
+                f"{deploy_url or site_id}"
+            )
 
     @staticmethod
     def _ftp_upload(ftp: ftplib.FTP_TLS, local_path: str, remote_dir: str) -> None:
