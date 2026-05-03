@@ -277,6 +277,11 @@ class PerformanceMonitoring:
             template = env.get_template("dashboard.html")
 
             pie_chart_data = self._build_pie_chart_data(analytics)
+            deliver_mode = self.config.get("deliver_mode", self.DELIVER_MODE)
+            if deliver_mode == "ftp":
+                data_url = self.config.get("dashboard_data_url", self.DASHBOARD_DATA_FILENAME)
+            else:
+                data_url = self.DASHBOARD_DATA_FILENAME
             defaults = {
                 "timestamp": "",
                 "total_return_pct": None,
@@ -287,9 +292,7 @@ class PerformanceMonitoring:
                 "current_exposure": None,
                 "history_length": None,
                 "positions": [],
-                "dashboard_data_url": self.config.get(
-                    "dashboard_data_url", self.DASHBOARD_DATA_FILENAME
-                ),
+                "dashboard_data_url": data_url,
             }
             context = {**defaults, **analytics}
             context["rendered_groups"] = self._build_rendered_groups(analytics)
@@ -315,7 +318,6 @@ class PerformanceMonitoring:
         except Exception as exc:
             errors.append(f"JSON write: {exc}")
 
-        deliver_mode = self.config.get("deliver_mode", self.DELIVER_MODE)
         if deliver_mode == "ftp":
             try:
                 self._publish_via_ftp(output_dir, skip_json=bool(errors))
