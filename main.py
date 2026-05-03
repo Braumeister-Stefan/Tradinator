@@ -131,7 +131,7 @@ config = {
 
     # Market data --------------------------------------------------------
     "resolution": "DAY",                # price bar resolution
-    "lookback": 80,                     # number of bars to fetch
+    "lookback": 5,                     # number of bars to fetch
 
     # Portfolio rules ----------------------------------------------------
     "max_position_pct": 0.25,           # max weight for a single position
