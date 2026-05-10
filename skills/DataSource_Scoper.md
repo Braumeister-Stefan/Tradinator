@@ -16,41 +16,30 @@ The DataSource Scoper reads two data sources — `universe.json` and `universe_s
 - Reads and summarises the stored price series (`universe_series.xlsx`)
 - Computes the union and identifies mismatches between them
 
-**What it does not do:**
-- Connect to any broker
-- Modify any file
-- Ingest historic series
-- Trigger or call any pipeline component
-
 ---
 
 ## 2. Files in Scope
 
-### 2.1 Read targets (data files)
+### 2.1 Permitted reads (allowlist)
+
+The scoper MAY read only these files. Everything not on this list must not be read, called, or modified.
 
 | File | Role |
 |---|---|
 | `data/input/universe.json` | Instrument registry — source of truth for the investible universe |
 | `data/input/universe_series.xlsx` | Stored price series — three sheets of price history |
-| `data/input/historic_series/*.xlsx` | Historic ingest folder — scanned for presence only |
+| `data/input/historic_series/*.xlsx` | Historic ingest folder — scanned for file names and epic headers only |
 
-### 2.2 Reference files (read for constants and logic — do NOT modify)
+### 2.2 Path constants
 
-| File | Relevant elements |
+These literal paths are defined directly in the skill:
+
+| Constant | Value |
 |---|---|
-| `main.py` | `_load_universe()` deduplication logic, `UNIVERSE_PATH` constant, `config["resolution"]`, `config["lookback"]` |
-| `model/model_components/data_pipeline.py` | `DataPipeline` class constants (see Section 4) |
-
-### 2.3 Files outside scope (must NOT be read, called, or modified)
-
-| File | Reason |
-|---|---|
-| `data/input/discover_universe.py` | Makes live broker API calls — excluded by design |
-| `model/model_components/broker_connector.py` | Initiates broker session — excluded by design |
-| `model/model_components/broker_adapter.py` | Protocol interface — not needed for inspection |
-| `model/model_components/ig_adapter.py` | Live broker adapter — excluded by design |
-| `data/output/` | Pipeline outputs — not in scope |
-| `secrets/.env` | Credentials — must never be read or referenced |
+| `UNIVERSE_PATH` | `"data/input/universe.json"` |
+| `SERIES_FILE` | `"data/input/universe_series.xlsx"` |
+| `HISTORIC_DIR` | `"data/input/historic_series"` |
+| `SHEET_NAMES` | `("mid_close", "bid_close", "mid_open")` |
 
 ---
 
@@ -79,6 +68,8 @@ The DataSource Scoper reads two data sources — `universe.json` and `universe_s
 
 Current state: 30 instruments — 5 `verified`, 25 `candidate`.
 
+Instruments with a missing or empty `epic` field are excluded from all counts and reported as `malformed_entries`. Instruments where `status` is any value other than `"verified"` or `"candidate"` are reported under `unknown_status`.
+
 #### `data/input/universe_series.xlsx`
 
 Multi-sheet Excel file. All three sheets share the same layout:
@@ -87,15 +78,15 @@ Multi-sheet Excel file. All three sheets share the same layout:
 |---|---|
 | **Sheets** | `mid_close`, `bid_close`, `mid_open` |
 | **Column A** | Datetime index (row 1 cell is `None` / blank) |
-| **Columns B…N** | One column per instrument, header = IG epic string |
+| **Columns B onwards** | One column per stored epic, header = IG epic string |
 | **Cell values** | `float` price, or `None` for missing/unfetched bars |
-| **Index type** | `datetime` (Python `datetime.datetime` objects) |
+| **Index type** | Stored as naive datetime in file; loaded as UTC-aware `pandas.Timestamp` via `pd.to_datetime(..., utc=True)` |
 
-Current state: 13 epics across columns. Epics in the file do not fully align with `universe.json` (see Section 5).
+Current state: 13 epics across columns. Epics in the file do not fully align with `universe.json` (see Section 4).
 
 #### `data/input/historic_series/*.xlsx`
 
-Same schema as `universe_series.xlsx`. The folder is currently empty (contains only `.gitkeep`). The scoper must report presence/absence of files but need not parse them for the core report. If files are present, their column headers (epic names) must be extracted to identify what additional series exist.
+Same schema as `universe_series.xlsx`. The folder is currently empty (contains only `.gitkeep`). The scoper reports file count and names only. If files are present, their column headers (epic names) must be extracted to identify what additional series exist.
 
 ---
 
@@ -107,14 +98,13 @@ The Scope Report is a structured data object (or equivalent formatted text) with
 
 | Field | Type | Description |
 |---|---|---|
-| `total_instruments` | int | Total instruments in `universe.json` |
+| `total_instruments` | int | Total instruments in `universe.json` (excludes malformed entries) |
 | `verified_count` | int | Count with `status == "verified"` |
 | `candidate_count` | int | Count with `status == "candidate"` |
 | `verified_epics` | list[str] | Epics with `status == "verified"` |
 | `candidate_epics` | list[str] | Epics with `status == "candidate"` |
-| `deduplicated_epics` | list[str] | Output of `_load_universe()` deduplication — the list that the pipeline actually uses |
-| `deduplication_collisions` | list[tuple[str, str]] | Pairs of (dropped epic, retained epic) where two epics share the same 3-segment base |
-| `instruments_with_notes` | list[dict] | Instruments carrying a `note` field, with epic + note text |
+| `unknown_status` | list[str] | Epics where `status` is neither `"verified"` nor `"candidate"` |
+| `malformed_entries` | int | Count of instruments excluded due to missing or empty `epic` field |
 
 **Section B — Series Scope**
 
@@ -122,52 +112,24 @@ The Scope Report is a structured data object (or equivalent formatted text) with
 |---|---|---|
 | `series_epics` | list[str] | All epic column headers found in `universe_series.xlsx` (any sheet) |
 | `series_epic_count` | int | Count of unique epics across all sheets |
-| `date_range` | dict[str, dict] | Per-sheet: `{"first": datetime, "last": datetime, "row_count": int}` for each of `mid_close`, `bid_close`, `mid_open` |
-| `coverage_per_epic` | dict[str, dict] | Per epic: `{"non_null_count": int, "null_count": int}` per sheet — summarises data density |
+| `date_range` | dict[str, dict] | Per-sheet: `{"first": datetime, "last": datetime}` for each of `mid_close`, `bid_close`, `mid_open`; absent if sheet is missing |
+| `sheets_have_consistent_date_range` | bool | True if all three sheets have identical first and last datetime values |
+| `sheets_fully_consistent` | bool | True if all three sheets contain exactly the same set of epic columns |
+| `historic_file_count` | int | Number of files found in `data/input/historic_series/` (excluding `.gitkeep`) |
 | `historic_files_present` | list[str] | Filenames found in `data/input/historic_series/` (excluding `.gitkeep`) |
-| `historic_epics` | list[str] | Union of epic column headers from all historic ingest files (empty list if none present) |
 
 **Section C — Discrepancy Analysis**
 
 | Field | Type | Description |
 |---|---|---|
-| `in_universe_not_in_series` | list[str] | Epics present in `deduplicated_epics` but absent as columns in `universe_series.xlsx` |
+| `in_universe_not_in_series` | list[str] | Epics present in `universe.json` but absent as columns in `universe_series.xlsx` |
 | `in_series_not_in_universe` | list[str] | Epics present as columns in `universe_series.xlsx` but absent from `universe.json` entirely (orphaned series) |
 | `verified_not_in_series` | list[str] | Subset of `verified_epics` that have no column in the series file — highest-priority gaps |
-| `candidates_never_fetched` | list[str] | Candidate epics absent from both series file and historic ingest — have never been fetched |
-| `cross_sheet_column_mismatch` | list[str] | Epics present in some sheets of `universe_series.xlsx` but not all three |
+| `same_base_variant_orphans` | list[dict] | Epics in the series file whose 3-segment base (e.g. `IX.D.DAX`) matches a universe epic but the exact identifier differs. Format: `[{"series_epic": str, "universe_epic": str}]` |
 
 ---
 
-## 4. Relevant Constants
-
-These constants define the configuration context for interpreting the data sources. They are read for context only — the scoper must not alter them.
-
-### From `model/model_components/data_pipeline.py` — `DataPipeline` class
-
-| Constant | Value | Relevance |
-|---|---|---|
-| `SERIES_FILE` | `"data/input/universe_series.xlsx"` | Canonical path for the master series file |
-| `HISTORIC_DIR` | `"data/input/historic_series"` | Canonical path for the historic ingest folder |
-| `SHEET_NAMES` | `("mid_close", "bid_close", "mid_open")` | Authoritative list of expected sheet names |
-| `DEFAULT_RESOLUTION` | `"DAY"` | Resolution the pipeline fetches at (informational context for report) |
-| `DEFAULT_LOOKBACK` | `50` | Default bar count if config does not override (informational context) |
-
-### From `main.py`
-
-| Constant / config key | Value | Relevance |
-|---|---|---|
-| `UNIVERSE_PATH` | `"data/input/universe.json"` | Canonical path for the universe file |
-| `config["resolution"]` | `"DAY"` | Active resolution for the running config |
-| `config["lookback"]` | `5` | Active lookback for the running config |
-
-### Deduplication logic in `main.py::_load_universe()`
-
-The pipeline deduplicates epics by comparing the first three dot-segments (e.g. `IX.D.FTSE` from `IX.D.FTSE.DAILY.IP`). Only the first encountered variant per base is retained. The scoper must replicate this logic when computing `deduplicated_epics` and `deduplication_collisions` — it must not call `_load_universe()` directly (to avoid importing `main.py`), but must implement the same base-extraction rule inline.
-
----
-
-## 5. Three Scopes — Detailed Definitions
+## 4. Scope Definitions
 
 ### Scope 1 — Universe Scope
 
@@ -176,7 +138,8 @@ The universe scope answers: *what instruments does the system know about, and wh
 - Source: `data/input/universe.json`
 - A `verified` instrument has been tested against the IG Demo API by `discover_universe.py` and confirmed accessible.
 - A `candidate` instrument is registered but unverified — it may or may not be tradeable.
-- The deduplicated list is the effective input to the pipeline (`broker_state["instruments"]`); only this list matters operationally.
+- The scoper does NOT make live broker calls. The `verified` status reflects the last run of `discover_universe.py`. The current loaded broker is identified from `config["broker"]` in `main.py` — if this is not `"ig"`, the verified status may not reflect current accessibility.
+- All `verified_epics` entries reflect IG Demo API validation only. If `config["broker"]` is not `"ig"`, the `verified_epics` list has no accessibility guarantee for the current broker.
 
 ### Scope 2 — Series Scope
 
@@ -186,20 +149,34 @@ The series scope answers: *what price data is actually stored, and for which ins
 - Each column in the xlsx file represents one instrument's price history for one price type.
 - Columns in the series file are IG epic strings — the same identifier space as `universe.json`.
 - A column may exist but contain only `None` values; this is meaningfully different from the column being absent.
-- The `historic_series/` folder supplements the master file via `DataPipeline._ingest_historic_files()`. The scoper must check whether any files are present and, if so, which epics they contain.
+- The `historic_series/` folder supplements the master file. The scoper reports file count and names only.
 
 ### Scope 3 — Discrepancy Analysis
 
 The discrepancy analysis answers: *where are the gaps and anomalies between what the system knows and what it has stored?*
 
-Priority classification for gaps:
+Three discrepancy categories are reported:
 
-| Priority | Condition | Meaning |
-|---|---|---|
-| **P1** | Verified epic absent from series file | Pipeline will attempt to fetch live but has no historical buffer |
-| **P2** | Series column absent for any deduplicated epic | Pipeline fetches live but cannot extend from a stored baseline |
-| **P3** | Series column present for an epic not in universe.json | Orphaned data — instrument removed from universe, data not cleaned up |
-| **P4** | Candidate epic absent from both series and historic files | Never been fetched; no data at all |
+| Field | Meaning |
+|---|---|
+| `in_universe_not_in_series` | Universe entry has no stored series column |
+| `in_series_not_in_universe` | Series column has no corresponding universe entry |
+| `verified_not_in_series` | Verified (cleared-for-trading) epic has no series column — highest-priority gap |
+
+`same_base_variant_orphans` is a sub-category of `in_series_not_in_universe`: series epics that share a 3-segment base with a universe epic but differ in the full identifier. These are distinct from true orphans where no base match exists in the universe at all.
+
+---
+
+## 5. Error Handling Contract
+
+| Condition | Required behaviour |
+|---|---|
+| `universe.json` missing | Report as error in Section A output; do not abort — continue to Section B |
+| `universe_series.xlsx` missing | Report absence in Section B; Section A proceeds normally |
+| File present but corrupt / unreadable | Catch exception; report error for that file; continue with remaining sections |
+| `historic_series/` absent or empty | Report `historic_file_count: 0`; no error |
+
+The scoper must never raise an unhandled exception due to missing or malformed input files.
 
 ---
 
@@ -208,37 +185,39 @@ Priority classification for gaps:
 | Dependency | Source | Usage |
 |---|---|---|
 | `json` | Python stdlib | Parse `universe.json` |
-| `openpyxl` or `pandas` | Already in `requirements.txt` | Read `universe_series.xlsx` and historic files |
+| `pandas` | Already in `requirements.txt` | Read `universe_series.xlsx` and historic files; datetime loading via `pd.to_datetime(..., utc=True)` |
 | `os` / `pathlib` | Python stdlib | Directory scan of `historic_series/` |
-| `datetime` | Python stdlib | Date range computation |
 
 No broker dependencies. No network calls. No credentials required.
 
 ---
 
-## 7. Guardrails — Files and Functions That Must Not Be Touched
+## 7. Guardrails and Out of Scope
 
-Any future agent or task operating under this skill's scope is prohibited from modifying the following:
+The scoper MAY read only the files listed in Section 2.1. Everything else must not be read, called, or modified.
+
+### 7.1 Assets that must not be touched
 
 | Asset | Type | Reason |
 |---|---|---|
 | `data/input/universe.json` | Data file | Registry of record; modifications require `discover_universe.py` |
 | `data/input/universe_series.xlsx` | Data file | Master price series; written only by `DataPipeline` |
 | `data/input/historic_series/` | Directory | Ingest source; contents written externally |
+| `data/input/discover_universe.py` | Script | Makes live broker API calls |
 | `main.py` | Code file | Entry point and config definition |
+| `model/model.py` | Code file | Pipeline orchestration |
+| `model/run_loop.py` | Code file | Pipeline orchestration |
+| `model/handoff.py` | Code file | Pipeline orchestration |
+| `model/__init__.py` | Code file | Package init exports Model and RunLoop — importing triggers broker session setup |
 | `model/model_components/data_pipeline.py` | Code file | Pipeline component |
 | `model/model_components/broker_connector.py` | Code file | Broker session management |
 | `model/model_components/broker_adapter.py` | Code file | Protocol definition |
 | `model/model_components/ig_adapter.py` | Code file | Live broker adapter |
-| `data/input/discover_universe.py` | Script | Broker validation script |
+| `model/model_components/ibkr_adapter.py` | Code file | Live broker adapter |
 | `secrets/` | Directory | Credentials; must never be accessed |
 | `data/output/` | Directory | Pipeline outputs; not in scope |
 
----
-
-## 8. Out of Scope
-
-The following are explicitly outside the scope of any task operating under this skill:
+### 7.2 Explicitly out of scope
 
 - Making broker API calls of any kind
 - Writing, updating, or deleting any file in `data/` or `secrets/`
@@ -247,58 +226,26 @@ The following are explicitly outside the scope of any task operating under this 
 - Fetching or ingesting new price bars
 - Modifying `universe.json` to add, remove, or promote instruments
 - Computing trading signals or portfolio metrics
-- Importing or invoking `discover_universe.py`, `broker_connector.py`, `ig_adapter.py`, or `Model`
+- Importing or invoking `discover_universe.py`, `broker_connector.py`, `ig_adapter.py`, `ibkr_adapter.py`, `Model`, `RunLoop`, or `Handoff`
 
 ---
 
-## 9. Scope Report — Example Structure
+## 8. Scope Report — Structural Sketch
 
 ```
 === DataSource Scope Report ===
-Generated: 2026-06-01T12:00:00
 
 --- A. Universe Scope ---
-Total instruments:     30
-  Verified:            5
-  Candidates:          25
-Deduplicated (active): 29  (1 deduplication collision)
-  Collision: IX.D.DAX.IFD.IP dropped in favour of IX.D.DAX.DAILY.IP
-
-Verified epics:
-  IX.D.FTSE.DAILY.IP, IX.D.SPTRD.DAILY.IP, CS.D.EURUSD.MINI.IP,
-  CS.D.GBPUSD.MINI.IP, CC.D.CL.UMP.IP
-
-Instruments with notes: 3
-  CC.D.GC.UMP.IP — "WARN: verify on Demo; spot alt CS.D.GOLD.MINI.IP"
-  ...
+{ total_instruments, verified_count, candidate_count, verified_epics,
+  candidate_epics, unknown_status, malformed_entries }
 
 --- B. Series Scope ---
-Epics in universe_series.xlsx:  13
-Sheets present: mid_close, bid_close, mid_open
-
-Date ranges:
-  mid_close:  2026-02-18 → 2026-06-01  (450 rows)
-  bid_close:  2026-02-18 → 2026-06-01  (450 rows)
-  mid_open:   2026-02-18 → 2026-06-01  (450 rows)
-
-Coverage (non-null / total rows per epic per sheet):
-  CC.D.CL.UMP.IP   — mid_close: 200/450, bid_close: 200/450, mid_open: 200/450
-  ...
-
-Historic ingest files: none
+{ series_epics, series_epic_count, date_range, sheets_have_consistent_date_range,
+  sheets_fully_consistent, historic_file_count, historic_files_present }
 
 --- C. Discrepancy Analysis ---
-[P1] Verified epics with NO series data: 0
-
-[P2] Active (deduplicated) epics with no series column: 16
-  IX.D.DAX.DAILY.IP, IX.D.DOW.DAILY.IP, CS.D.USDJPY.MINI.IP, ...
-
-[P3] Series orphans (in file, not in universe.json): 0
-
-[P4] Candidate epics never fetched: 22
-  IX.D.DAX.DAILY.IP, ...
-
-Cross-sheet column mismatches: 0
+{ in_universe_not_in_series, in_series_not_in_universe, verified_not_in_series,
+  same_base_variant_orphans }
 ```
 
-*(The exact formatting is implementation detail — BUILDER territory. The above illustrates the required information, not the required format.)*
+*(The exact formatting is implementation detail — BUILDER territory.)*
