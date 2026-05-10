@@ -155,7 +155,7 @@ config = {
     "universe_path": "data/input/universe.json",
     "universe": [...],                 # loaded from universe.json at startup
     "resolution": "DAY",
-    "lookback": 50,
+    "lookback": 5,
     "max_position_pct": 0.25,
     "cash_reserve_pct": 0.05,
     "output_dir": "data/output",
@@ -163,9 +163,63 @@ config = {
 }
 ```
 
-The instrument universe is loaded from `data/input/universe.json` at startup. Duplicate epic variants (e.g. `.DAILY.IP` and `.IFD.IP` for the same base) are deduplicated automatically. Run `data/input/discover_universe.py` to validate epics against the IG API.
-
 Minor parameters (indicator windows, risk-free rate, display width, etc.) are listed at the top of each component class.
+
+## Inputs
+
+Tradinator reads two input files at pipeline startup: a universe definition and a master price series.
+
+| Term | Definition |
+|---|---|
+| **epic** | IG's unique instrument identifier (e.g. `IX.D.FTSE.DAILY.IP`) |
+| **universe** | The set of instruments the system knows about and may trade |
+| **candidate** | A universe instrument whose epic has not been validated against the IG Demo API |
+| **verified** | A universe instrument confirmed to return price data on the IG Demo API via `discover_universe.py` |
+
+### Observable Universe
+
+`data/input/universe.json` defines 30 instruments:
+
+| Asset class | Count | Regions |
+|---|---|---|
+| Indices | 15 | UK, US, EU, APAC |
+| Forex | 9 | Global |
+| Commodities | 6 | Global |
+
+Five are verified; the remaining 25 are candidates. Only verified instruments are eligible for data fetches and signal generation.
+
+| Verified epic | Instrument |
+|---|---|
+| `IX.D.FTSE.DAILY.IP` | FTSE 100 |
+| `IX.D.SPTRD.DAILY.IP` | S&P 500 |
+| `CS.D.EURUSD.MINI.IP` | EUR/USD Mini |
+| `CS.D.GBPUSD.MINI.IP` | GBP/USD Mini |
+| `CC.D.CL.UMP.IP` | Crude Oil (WTI) |
+
+Epic status is set by running `data/input/discover_universe.py`, which validates each epic against the IG Demo API and **replaces** `universe.json` with only the instruments that pass validation — candidates that fail are removed entirely, not merely flagged. If fewer than 20 epics pass Phase 1, the script runs a second phase that queries the IG search endpoint for approximately 35 terms (indices, forex pairs, commodities) and appends any newly discovered valid epics to the file. Status is not set manually. Duplicate epic variants (e.g. `.DAILY.IP` and `.IFD.IP` for the same base) are deduplicated at pipeline startup.
+
+### Time Series Data
+
+`data/input/universe_series.xlsx` is the master price series, written by `DataPipeline` on every run. The current file holds **13 epics** over **125 rows** (2026-02-18 to 2026-05-01).
+
+| Sheet | Content |
+|---|---|
+| `mid_close` | Mid-price close — (bid + ask) / 2 |
+| `bid_close` | Bid close |
+| `mid_open` | Mid-price open — (bid + ask) / 2 |
+
+All three sheets share the same 13 epic columns and 125-row datetime index.
+
+All 5 verified epics are present in the series. Of the remaining 8 stored epics, 4 are actual universe candidates and 4 are not present in `universe.json` at all:
+
+- 3 are variant orphans — stored under a different epic suffix than their entry in `universe.json` (e.g. `IX.D.DAX.IFD.IP` stored; `IX.D.DAX.DAILY.IP` in universe)
+- 1 (`IX.D.HANGSENG.DAILY.IP`) has no matching base instrument in `universe.json` at all (universe carries `IX.D.HSENG.DAILY.IP`)
+
+The 21 remaining universe instruments — all candidates — have no stored series.
+
+On merge, live data takes precedence over existing master values at the same timestamp — stored rows are overwritten by freshly fetched bars. Historic-file data has the lowest precedence: existing master values win over historic-file values on overlap. Precedence order (highest to lowest): live fetched data > existing master values > historic file data.
+
+**Historic series:** `data/input/historic_series/` accepts `.xlsx` files of the same three-sheet schema (`mid_close`, `bid_close`, `mid_open`) to backfill the master series. The folder is currently empty. Files are validated on load; any file that fails a schema check is skipped with a warning. Ingestion runs automatically on every pipeline run.
 
 ## Broker Abstraction
 
@@ -216,29 +270,17 @@ Served on port 8742, the dashboard auto-opens in the browser on the first run an
 
 ## Universe Series
 
-`DataPipeline` maintains a master time series file at `data/input/universe_series.xlsx`. The file is updated automatically on every pipeline run as a non-blocking side effect — a write failure will not interrupt the pipeline.
+`DataPipeline` writes `data/input/universe_series.xlsx` as a non-blocking side effect — a write failure will not interrupt the pipeline.
 
 ### File layout
-
-The xlsx file contains three sheets:
-
-| Sheet | Content |
-|---|---|
-| `mid_close` | Mid-price close (bid + ask) / 2 |
-| `bid_close` | Bid close |
-| `mid_open` | Mid-price open (bid + ask) / 2 |
 
 Each sheet has a datetime index (rows sorted ascending, oldest at top) and one column per instrument in the universe.
 
 ### Historic data ingestion
 
-To backfill or supplement the master file with external data:
+To backfill or supplement the master file with external data, place `.xlsx` files in `data/input/historic_series/`. Each file must follow the same schema: three sheets (`mid_close`, `bid_close`, `mid_open`), datetime index, numeric values, one column per instrument.
 
-1. Place `.xlsx` files in `data/input/historic_series/`. Each file must follow the same schema: three sheets (`mid_close`, `bid_close`, `mid_open`), datetime index, numeric values, one column per instrument.
-2. Files are validated on load — any file that fails schema checks is skipped with a warning.
-3. On merge, existing master values take precedence over historic values where timestamps and instruments overlap.
-
-Historic ingestion runs automatically during every pipeline run. It can also be invoked standalone:
+Historic ingestion can also be triggered standalone:
 
 ```python
 from model.model_components import DataPipeline
