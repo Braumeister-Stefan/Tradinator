@@ -82,13 +82,48 @@ class BrokerAdapter(Protocol):
         """
         ...
 
+    def fetch_historical_prices_by_date_range(
+        self, instrument_id: str, resolution: str, from_date: str
+    ) -> list[dict]:
+        """Fetch OHLCV bars from ``from_date`` (ISO-8601 UTC) to the present.
+
+        Parameters
+        ----------
+        instrument_id : str
+            Broker-specific instrument identifier (e.g. IG epic).
+        resolution : str
+            Bar resolution, e.g. ``"DAY"``.
+        from_date : str
+            ISO-8601 UTC start timestamp, e.g. ``"2026-01-15T00:00:00"``.
+            Bars at or after this timestamp are returned.
+
+        Returns
+        -------
+        list[dict]
+            Same schema as :meth:`fetch_historical_prices`.
+        """
+        ...
+
     def fetch_instrument_info(self, instrument_id: str) -> dict:
-        """Fetch display name and currency for an instrument.
+        """Fetch display name, currency, dealing rules, and order eligibility.
 
         Returns
         -------
         dict
-            ``{"instrument_name": str, "instrument_id": str, "currency": str}``
+            Contains the following keys::
+
+                {
+                    "instrument_name":  str,
+                    "instrument_id":    str,
+                    "currency":         str,
+                    "min_deal_size":    float,
+                    "max_deal_size":    float | None,
+                    "min_size_increment": float,
+                    "scaling_factor":   float,
+                    "dealing_enabled":  bool,
+                    "buy_allowed":      bool,
+                    "sell_allowed":     bool,
+                }
         """
         ...
 
