@@ -39,7 +39,7 @@ def _make_universe_json(verified: list = None, candidates: list = None, extra: l
     return json.dumps({"description": "test", "instruments": instruments})
 
 
-def _make_mock_dataframe(epics: list, first: str = "2026-01-01", last: str = "2026-12-31"):
+def _make_mock_dataframe(epics: list[str], first: str = "2026-01-01", last: str = "2026-12-31"):
     """Return a pandas DataFrame mimicking a loaded series sheet."""
     import pandas as pd
     dates = pd.to_datetime([first, last], utc=True)

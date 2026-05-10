@@ -125,7 +125,7 @@ def _load_section_b(series_file: str, historic_dir: str, sheet_names: tuple) -> 
     return result
 
 
-def _list_historic_files(historic_dir: str) -> list:
+def _list_historic_files(historic_dir: str) -> list[str]:
     """Return filenames in historic_dir, excluding .gitkeep. Returns [] if absent."""
     path = Path(historic_dir)
     if not path.exists():
@@ -168,9 +168,9 @@ def _compute_section_c(section_a: dict, section_b: dict) -> dict:
     }
 
 
-def _find_variant_orphans(series_epics: set, universe_epics: set) -> list:
+def _find_variant_orphans(series_epics: set[str], universe_epics: set[str]) -> list[dict]:
     """Find series epics whose 3-segment base matches a universe epic's base but the exact epic differs."""
-    universe_base_map: dict = {}
+    universe_base_map: dict[str, str] = {}
     for epic in universe_epics:
         universe_base_map[_base(epic)] = epic
 
