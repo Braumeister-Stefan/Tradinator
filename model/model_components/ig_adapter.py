@@ -124,11 +124,61 @@ class IGBrokerAdapter:
         for bar in bars:
             ts = bar.get("snapshotTimeUTC") or bar.get("snapshotTime")
 
+            result.append({
+                "close": self._mid(bar.get("closePrice")),
+                "high": self._mid(bar.get("highPrice")),
+                "low": self._mid(bar.get("lowPrice")),
+                "open": self._mid(bar.get("openPrice")),
+                "volume": bar.get("lastTradedVolume"),
+                "timestamp": ts,
+            })
+        return result
+
+    def fetch_historical_prices_by_date_range(
+        self, instrument_id: str, resolution: str, from_date: str
+    ) -> list[dict]:
+        """Fetch historical OHLCV bars from IG from a given UTC date to now.
+
+        Uses the IG date-range API (``fetch_historical_prices_by_epic_and_date_range``)
+        to retrieve only bars at or after ``from_date``.  This enables incremental
+        fetching: pass the last stored timestamp so only genuinely new bars are
+        downloaded.
+
+        Parameters
+        ----------
+        instrument_id : str
+            IG epic identifier.
+        resolution : str
+            Bar resolution, e.g. ``"DAY"``.
+        from_date : str
+            ISO-8601 UTC start timestamp, e.g. ``"2026-01-15T00:00:01"``.
+            Bars at or after this timestamp are returned.
+
+        Returns
+        -------
+        list[dict]
+            Same schema as :meth:`fetch_historical_prices`:
+            ``{close, high, low, open, volume, bid_close, timestamp}``.
+        """
+        ig = self._require_session()
+        # trading_ig expects "YYYY/MM/DD HH:MM:SS:000" format for date-range calls.
+        # Normalise from ISO-8601 (e.g. "2026-01-15T00:00:01" or "2026-01-15T00:00:01.123Z")
+        # to that format.  Strip fractional seconds and timezone suffixes first.
+        base = from_date.split(".")[0].rstrip("Z")  # drop fractions and Z
+        normalised = base.replace("T", " ").replace("-", "/") + ":000"
+        # Use current UTC time as end_date so all new bars up to now are included.
+        end_str = time.strftime("%Y/%m/%d %H:%M:%S:000", time.gmtime())
+        raw = ig.fetch_historical_prices_by_epic_and_date_range(
+            instrument_id, resolution, normalised, end_str
+        )
+        bars = raw.get("prices", [])
+        result: list[dict] = []
+        for bar in bars:
+            ts = bar.get("snapshotTimeUTC") or bar.get("snapshotTime")
             close_price = bar.get("closePrice")
             bid_close_val = None
             if close_price is not None:
                 bid_close_val = close_price.get("bid")
-
             result.append({
                 "close": self._mid(bar.get("closePrice")),
                 "high": self._mid(bar.get("highPrice")),
@@ -141,7 +191,13 @@ class IGBrokerAdapter:
         return result
 
     def fetch_instrument_info(self, instrument_id: str) -> dict:
-        """Fetch instrument name, currency, and dealing rules from IG."""
+        """Fetch instrument name, currency, dealing rules, and order eligibility from IG.
+
+        The returned dict includes ``buy_allowed`` and ``sell_allowed`` flags
+        derived from the IG snapshot's ``dealingEnabled`` field and the instrument's
+        ``allowedDealingDirections``.  These flags gate whether the pipeline may
+        open BUY or SELL orders for this instrument.
+        """
         ig = self._require_session()
         defaults = {
             "instrument_name": instrument_id,
@@ -151,6 +207,9 @@ class IGBrokerAdapter:
             "max_deal_size": None,
             "min_size_increment": 1.0,
             "scaling_factor": 1,
+            "dealing_enabled": True,
+            "buy_allowed": True,
+            "sell_allowed": True,
         }
         try:
             market = ig.fetch_market_by_epic(instrument_id)
@@ -162,6 +221,18 @@ class IGBrokerAdapter:
             max_deal_size = float(max_deal_raw["value"]) if "value" in max_deal_raw else None
             min_size_increment = float(dealing_rules.get("minSizeIncrement", {}).get("value", 1.0))
             scaling_factor = float(snapshot.get("scalingFactor", 1))
+            # Dealing eligibility — controls which order directions are permitted.
+            dealing_enabled = bool(snapshot.get("dealingEnabled", True))
+            allowed_directions = instrument.get("allowedDealingDirections", "BUY_AND_SELL")
+            # Use explicit enum comparison rather than substring matching to avoid
+            # false positives on future IG API values (e.g. "SELL_ONLY_BUY_LATER").
+            if isinstance(allowed_directions, list):
+                buy_allowed = dealing_enabled and "BUY" in allowed_directions
+                sell_allowed = dealing_enabled and "SELL" in allowed_directions
+            else:
+                allowed_str = str(allowed_directions).upper()
+                buy_allowed = dealing_enabled and allowed_str in ("BUY", "BUY_AND_SELL")
+                sell_allowed = dealing_enabled and allowed_str in ("SELL", "BUY_AND_SELL")
             return {
                 "instrument_name": instrument.get("name", instrument_id),
                 "instrument_id": instrument_id,
@@ -172,6 +243,9 @@ class IGBrokerAdapter:
                 "max_deal_size": max_deal_size,
                 "min_size_increment": min_size_increment,
                 "scaling_factor": scaling_factor,
+                "dealing_enabled": dealing_enabled,
+                "buy_allowed": buy_allowed,
+                "sell_allowed": sell_allowed,
             }
         except Exception as exc:
             print(

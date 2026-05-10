@@ -39,7 +39,7 @@ These literal paths are defined directly in the skill:
 | `UNIVERSE_PATH` | `"data/input/universe.json"` |
 | `SERIES_FILE` | `"data/input/universe_series.xlsx"` |
 | `HISTORIC_DIR` | `"data/input/historic_series"` |
-| `SHEET_NAMES` | `("mid_close", "bid_close", "mid_open")` |
+| `SHEET_NAMES` | `("mid_close",)` |
 
 ---
 
@@ -76,7 +76,7 @@ Multi-sheet Excel file. All three sheets share the same layout:
 
 | Element | Detail |
 |---|---|
-| **Sheets** | `mid_close`, `bid_close`, `mid_open` |
+| **Sheets** | `mid_close` |
 | **Column A** | Datetime index (row 1 cell is `None` / blank) |
 | **Columns B onwards** | One column per stored epic, header = IG epic string |
 | **Cell values** | `float` price, or `None` for missing/unfetched bars |
@@ -112,9 +112,7 @@ The Scope Report is a structured data object (or equivalent formatted text) with
 |---|---|---|
 | `series_epics` | list[str] | All epic column headers found in `universe_series.xlsx` (any sheet) |
 | `series_epic_count` | int | Count of unique epics across all sheets |
-| `date_range` | dict[str, dict] | Per-sheet: `{"first": datetime, "last": datetime}` for each of `mid_close`, `bid_close`, `mid_open`; absent if sheet is missing |
-| `sheets_have_consistent_date_range` | bool | True if all three sheets have identical first and last datetime values |
-| `sheets_fully_consistent` | bool | True if all three sheets contain exactly the same set of epic columns (column set only — ordering is not checked) |
+| `date_range` | dict | `{"first": datetime, "last": datetime}` for `mid_close`; absent if sheet is missing |
 | `historic_file_count` | int | Number of files found in `data/input/historic_series/` (excluding `.gitkeep`) |
 | `historic_files_present` | list[str] | Filenames found in `data/input/historic_series/` (excluding `.gitkeep`) |
 
@@ -240,8 +238,8 @@ The scoper MAY read only the files listed in Section 2.1. Everything else must n
   candidate_epics, unknown_status, malformed_entries }
 
 --- B. Series Scope ---
-{ series_epics, series_epic_count, date_range, sheets_have_consistent_date_range,
-  sheets_fully_consistent, historic_file_count, historic_files_present }
+{ series_epics, series_epic_count, date_range,
+  historic_file_count, historic_files_present }
 
 --- C. Discrepancy Analysis ---
 { in_universe_not_in_series, in_series_not_in_universe, verified_not_in_series,

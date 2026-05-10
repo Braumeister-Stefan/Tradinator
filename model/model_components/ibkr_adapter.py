@@ -35,6 +35,11 @@ class IBKRBrokerAdapter:
     ) -> list[dict]:
         raise NotImplementedError("IBKR adapter is not yet implemented.")
 
+    def fetch_historical_prices_by_date_range(
+        self, instrument_id: str, resolution: str, from_date: str
+    ) -> list[dict]:
+        raise NotImplementedError("IBKR adapter is not yet implemented.")
+
     def fetch_instrument_info(self, instrument_id: str) -> dict:
         raise NotImplementedError("IBKR adapter is not yet implemented.")
 
