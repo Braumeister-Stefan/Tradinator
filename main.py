@@ -10,6 +10,7 @@ guidance of any kind. Use at your own risk.
 """
 
 import argparse
+import importlib.util
 import json
 import os
 
@@ -121,7 +122,35 @@ def _parse_args():
         default=3600,
         help="Seconds between execution cycles for decoupled mode (default: 3600)",
     )
+    parser.add_argument(
+        "--discover",
+        action="store_true",
+        default=False,
+        help=(
+            "Run universe discovery and validation before the main pipeline. "
+            "Validates all candidates in universe_candidates.json against the IG API "
+            "(Tier 1: broker recognition + dealing enabled; Tier 2: price data available) "
+            "and updates universe.json with only the valid instruments. "
+            "Equivalent to setting run_discover=True in config."
+        ),
+    )
     return parser.parse_args()
+
+
+def _run_discover(config: dict) -> None:  # noqa: ARG001
+    """Invoke discover_universe.main() to validate and refresh the universe.
+
+    Loads ``data/input/discover_universe.py`` via importlib so it is not
+    executed at import time and does not pollute the module namespace.
+    """
+    discover_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "data", "input", "discover_universe.py",
+    )
+    spec = importlib.util.spec_from_file_location("discover_universe", discover_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module.main()
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +166,7 @@ config = {
     # Universe -----------------------------------------------------------
     "universe_path": UNIVERSE_PATH,     # path to universe JSON file
     "universe": _load_universe(UNIVERSE_PATH),
+    "run_discover": False,              # set True or use --discover to re-validate universe
 
     # Market data --------------------------------------------------------
     "resolution": "DAY",                # price bar resolution
@@ -175,7 +205,20 @@ config = {
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     args = _parse_args()
+
+    # Merge CLI --discover flag into config
+    if args.discover:
+        config["run_discover"] = True
+
     try:
+        # --- Universe discovery (optional, gated by config key or --discover) ---
+        if config.get("run_discover", False):
+            print("\n[main] run_discover=True — running universe validation...")
+            _run_discover(config)
+            # Reload universe after discover updates universe.json
+            config["universe"] = _load_universe(UNIVERSE_PATH)
+            print(f"[main] Universe reloaded: {len(config['universe'])} valid instrument(s).\n")
+
         model = Model(config)
         run_loop = RunLoop(
             model,

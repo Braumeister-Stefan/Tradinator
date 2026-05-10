@@ -5,12 +5,31 @@ Downloads historical market data for each instrument via the broker adapter
 and performs basic cleaning (forward-fill).  Persists consolidated series to
 an xlsx master file as a side effect.
 
+Two-tier validation integration
+--------------------------------
+T2 (data availability) validation status for each instrument is continuously
+maintained in ``universe_candidates.json``:
+
+- On a **cold-start** (no stored series for the instrument): fetches the last
+  ``lookback`` bars via the fixed-count API.  This matches the intention that
+  every first run retrieves the configured window of history.
+- On a **subsequent run** (stored series exists): fetches only bars after the
+  last stored timestamp using the date-range API, so the master file grows
+  incrementally — one or more new bars per run rather than re-fetching the
+  same window repeatedly.
+
+If the most-recent fetch returns zero bars the instrument's T2 status is
+set to ``NO`` in ``universe_candidates.json`` and it is removed from
+``universe.json``.  Gaps (NaN values) in an otherwise-populated series do
+**not** disqualify an instrument.
+
 DISCLAIMER: Tradinator is a personal experimentation tool for paper trading.
 It does not constitute trading advice, investment recommendation, or financial
 guidance of any kind. Use at your own risk.
 """
 
 
+import json
 import os
 import time
 
@@ -27,17 +46,36 @@ class DataPipeline:
     SERIES_FILE = "data/input/universe_series.xlsx"  # master file path
     HISTORIC_DIR = "data/input/historic_series"  # historic ingest folder
     SHEET_NAMES = ("mid_close", "bid_close", "mid_open")  # the three sheet names
+    CANDIDATES_PATH = "data/input/universe_candidates.json"  # candidate registry
+    UNIVERSE_PATH = "data/input/universe.json"               # machine-read universe
 
     def __init__(self, config: dict):
         """Store config for later use by run()."""
         self.config = config
 
     def run(self, broker_state: dict) -> dict:
-        """Download prices for each instrument, clean them, and return market_data."""
+        """Download prices for each instrument, clean them, and return market_data.
+
+        Fetch strategy
+        --------------
+        1. Load the existing master series file **before** the fetch loop so the
+           last stored timestamp can be determined per instrument.
+        2. For instruments with no stored data (cold start): call the fixed-count
+           API (``fetch_historical_prices``) with the configured ``lookback``.
+        3. For instruments with existing stored data: call the date-range API
+           (``fetch_historical_prices_by_date_range``) from the last stored
+           timestamp + 1 second, retrieving only genuinely new bars.
+        4. After each fetch, update the T2 status in ``universe_candidates.json``
+           and — if the fetch returned zero bars — remove the instrument from
+           ``universe.json``.
+        """
         adapter = broker_state["adapter"]
         instruments = broker_state["instruments"]
         resolution = self.config.get("resolution", self.DEFAULT_RESOLUTION)
         lookback = self.config.get("lookback", self.DEFAULT_LOOKBACK)
+
+        # Load master series before the fetch loop (needed for last-date lookup).
+        master = self._load_series_file(self.SERIES_FILE)
 
         prices = {}
 
@@ -45,25 +83,68 @@ class DataPipeline:
             if i > 0:
                 time.sleep(self.RATE_LIMIT_DELAY)
 
-            print(f"[DataPipeline] Fetching {instrument_id} ({resolution}, {lookback} bars)…")
-            try:
-                bars = adapter.fetch_historical_prices(
-                    instrument_id, resolution, lookback
+            last_date = self._get_last_stored_date(instrument_id, master)
+
+            if last_date is not None:
+                # Incremental fetch — retrieve only bars after the last stored bar.
+                print(
+                    f"[DataPipeline] Incremental fetch {instrument_id}"
+                    f" from {last_date} ({resolution})…"
                 )
-            except Exception as exc:
-                print(f"[DataPipeline] WARNING: skipping {instrument_id} — {exc}")
-                continue
+                try:
+                    bars = adapter.fetch_historical_prices_by_date_range(
+                        instrument_id, resolution, last_date
+                    )
+                except Exception as exc:
+                    print(
+                        f"[DataPipeline] WARNING: incremental fetch failed for"
+                        f" {instrument_id} — {exc}. Falling back to fixed-count fetch."
+                    )
+                    try:
+                        bars = adapter.fetch_historical_prices(
+                            instrument_id, resolution, lookback
+                        )
+                    except Exception as exc2:
+                        print(
+                            f"[DataPipeline] WARNING: skipping {instrument_id} — {exc2}"
+                        )
+                        self._update_t2_status(instrument_id, "NO", f"fetch exception: {exc2}")
+                        self._remove_from_universe(instrument_id)
+                        continue
+            else:
+                # Cold start — fetch the configured lookback window.
+                print(
+                    f"[DataPipeline] Cold-start fetch {instrument_id}"
+                    f" ({resolution}, {lookback} bars)…"
+                )
+                try:
+                    bars = adapter.fetch_historical_prices(
+                        instrument_id, resolution, lookback
+                    )
+                except Exception as exc:
+                    print(f"[DataPipeline] WARNING: skipping {instrument_id} — {exc}")
+                    self._update_t2_status(instrument_id, "NO", f"fetch exception: {exc}")
+                    self._remove_from_universe(instrument_id)
+                    continue
 
             parsed = self._bars_to_columns(bars)
             if parsed is None:
-                print(f"[DataPipeline] WARNING: no usable data for {instrument_id}, skipping.")
+                print(
+                    f"[DataPipeline] WARNING: no usable data for {instrument_id},"
+                    " removing from universe."
+                )
+                self._update_t2_status(instrument_id, "NO", "fetch returned no usable bars")
+                self._remove_from_universe(instrument_id)
                 continue
 
             prices[instrument_id] = parsed
+            self._update_t2_status(
+                instrument_id, "YES", f"{len(bars)} bar(s) fetched"
+            )
 
         prices = self._clean_prices(prices)
 
-        # --- Fetch instrument metadata with dealing rules (REQ-3) ---
+        # --- Fetch instrument metadata with dealing rules ---
         instrument_metadata = {}
         for i, instrument_id in enumerate(prices):
             if i > 0:
@@ -85,10 +166,9 @@ class DataPipeline:
                     "sell_allowed": True,
                 }
 
-        # --- Persistence side effect (R11) ---
+        # --- Persistence side effect ---
         try:
             live_frames = self._build_dataframes(prices)
-            master = self._load_series_file(self.SERIES_FILE)
             if master is None:
                 master = {name: pd.DataFrame() for name in self.SHEET_NAMES}
             master = self._ingest_historic_files(master, self.HISTORIC_DIR)
@@ -116,6 +196,105 @@ class DataPipeline:
         if not self._validate_series_schema(master):
             print("[DataPipeline] WARNING: master series failed validation after ingest.")
         self._save_series_file(master, self.SERIES_FILE)
+
+    # ------------------------------------------------------------------
+    # Incremental fetch helpers
+    # ------------------------------------------------------------------
+
+    def _get_last_stored_date(
+        self, instrument_id: str, master: "dict | None"
+    ) -> "str | None":
+        """Return ISO-8601 UTC timestamp (last stored + 1 second) for incremental fetch.
+
+        Uses the ``mid_close`` sheet as the reference.  Returns ``None`` when
+        no stored data exists for *instrument_id*, indicating a cold start.
+        """
+        if master is None:
+            return None
+        ref_sheet = master.get(self.SHEET_NAMES[0])  # mid_close
+        if ref_sheet is None or ref_sheet.empty:
+            return None
+        if instrument_id not in ref_sheet.columns:
+            return None
+        series = ref_sheet[instrument_id].dropna()
+        if series.empty:
+            return None
+        last_ts = series.index.max()
+        # Add 1 second so the last stored bar is not re-fetched.
+        next_ts = last_ts + pd.Timedelta(seconds=1)
+        return next_ts.strftime("%Y-%m-%dT%H:%M:%S")
+
+    def _update_t2_status(
+        self, instrument_id: str, t2_status: str, t2_reason: str
+    ) -> None:
+        """Update T2 status for an instrument in universe_candidates.json.
+
+        Silently skips if the candidates file does not exist.  Failure to
+        update is non-fatal — a warning is printed but the pipeline continues.
+        """
+        if not os.path.isfile(self.CANDIDATES_PATH):
+            return
+        try:
+            with open(self.CANDIDATES_PATH) as f:
+                data = json.load(f)
+
+            now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            updated = False
+            for candidate in data.get("candidates", []):
+                if candidate.get("epic") == instrument_id:
+                    candidate["t2_status"] = t2_status
+                    candidate["t2_reason"] = t2_reason
+                    candidate["valid"] = (
+                        candidate.get("t1_status") == "PASS" and t2_status == "YES"
+                    )
+                    candidate["last_validated"] = now_utc
+                    updated = True
+                    break
+
+            if updated:
+                with open(self.CANDIDATES_PATH, "w") as f:
+                    json.dump(data, f, indent=2)
+                    f.write("\n")
+        except Exception as exc:
+            print(
+                f"[DataPipeline] WARNING: could not update T2 status"
+                f" for {instrument_id} — {exc}"
+            )
+
+    def _remove_from_universe(self, instrument_id: str) -> None:
+        """Remove an instrument from universe.json when T2 fails (zero bars returned).
+
+        Instruments are removed from the machine-read universe so the pipeline
+        does not continue trying to trade them.  Re-run ``discover_universe.py``
+        to re-add an instrument if data becomes available again.
+
+        Silently skips if universe.json does not exist.  Failure is non-fatal.
+        """
+        if not os.path.isfile(self.UNIVERSE_PATH):
+            return
+        try:
+            with open(self.UNIVERSE_PATH) as f:
+                data = json.load(f)
+
+            original_count = len(data.get("instruments", []))
+            data["instruments"] = [
+                inst for inst in data.get("instruments", [])
+                if inst.get("epic") != instrument_id
+            ]
+            removed = original_count - len(data["instruments"])
+            if removed > 0:
+                print(
+                    f"[DataPipeline] Removed {instrument_id} from universe.json"
+                    " (T2=NO, zero bars in last fetch)."
+                )
+                with open(self.UNIVERSE_PATH, "w") as f:
+                    json.dump(data, f, indent=2)
+                    f.write("\n")
+        except Exception as exc:
+            print(
+                f"[DataPipeline] WARNING: could not remove {instrument_id}"
+                f" from universe.json — {exc}"
+            )
 
     # ------------------------------------------------------------------
     # Internal methods
