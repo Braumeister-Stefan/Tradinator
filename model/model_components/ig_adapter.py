@@ -124,18 +124,12 @@ class IGBrokerAdapter:
         for bar in bars:
             ts = bar.get("snapshotTimeUTC") or bar.get("snapshotTime")
 
-            close_price = bar.get("closePrice")
-            bid_close_val = None
-            if close_price is not None:
-                bid_close_val = close_price.get("bid")
-
             result.append({
                 "close": self._mid(bar.get("closePrice")),
                 "high": self._mid(bar.get("highPrice")),
                 "low": self._mid(bar.get("lowPrice")),
                 "open": self._mid(bar.get("openPrice")),
                 "volume": bar.get("lastTradedVolume"),
-                "bid_close": bid_close_val,
                 "timestamp": ts,
             })
         return result

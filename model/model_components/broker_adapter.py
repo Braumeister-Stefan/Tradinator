@@ -77,7 +77,6 @@ class BrokerAdapter(Protocol):
                     "low":       float | None,
                     "open":      float | None,
                     "volume":    float | None,
-                    "bid_close": float | None,
                     "timestamp": str,
                 }
         """

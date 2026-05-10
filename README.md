@@ -210,10 +210,8 @@ Epic status is set by running `data/input/discover_universe.py`, which validates
 | Sheet | Content |
 |---|---|
 | `mid_close` | Mid-price close — (bid + ask) / 2 |
-| `bid_close` | Bid close |
-| `mid_open` | Mid-price open — (bid + ask) / 2 |
 
-All three sheets share the same 13 epic columns and 125-row datetime index.
+The single sheet maintains the same 13 epic columns and 125-row datetime index structure.
 
 All 5 verified epics are present in the series. Of the remaining 8 stored epics, 4 are actual universe candidates and 4 are not present in `universe.json` at all:
 
@@ -226,7 +224,7 @@ On merge, live data takes precedence over existing master values at the same tim
 
 ### 5.2.1 Historic series files
 
-`data/input/historic_series/` accepts `.xlsx` files of the same three-sheet schema (`mid_close`, `bid_close`, `mid_open`) to backfill the master series. The folder is currently empty. Files are validated on load; any file that fails a schema check is skipped with a warning. Ingestion runs automatically on every pipeline run.
+`data/input/historic_series/` accepts `.xlsx` files with a `mid_close` sheet to backfill the master series. The folder is currently empty. Files are validated on load; any file that fails a schema check is skipped with a warning. Ingestion runs automatically on every pipeline run.
 
 ## 6. Components
 
@@ -260,7 +258,7 @@ Each sheet has a datetime index (rows sorted ascending, oldest at top) and one c
 
 ### 8.2 Historic data ingestion
 
-To backfill or supplement the master file with external data, place `.xlsx` files in `data/input/historic_series/`. Each file must follow the same schema: three sheets (`mid_close`, `bid_close`, `mid_open`), datetime index, numeric values, one column per instrument.
+To backfill or supplement the master file with external data, place `.xlsx` files in `data/input/historic_series/`. Each file must follow the same schema: a `mid_close` sheet, datetime index, numeric values, one column per instrument.
 
 Historic ingestion can also be triggered standalone:
 
