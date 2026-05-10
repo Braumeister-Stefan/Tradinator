@@ -210,9 +210,10 @@ def _validate_tier1(ig: "IGService", epic: str) -> tuple[str, str]:
         # IG returns a 404 / error.security.notFound for unknown epics.
         # Any other exception (timeout, auth, rate-limit) is API_ERROR to
         # avoid permanently blacklisting valid epics due to transient faults.
+        exc_detail = f"{type(exc).__name__}: {repr(exc)}"  # P5-log: always non-empty
         if any(kw in exc_str for kw in ("not found", "404", "invalid epic", "notfound")):
-            return "EPIC_NOT_RECOGNIZED", str(exc)
-        return "API_ERROR", str(exc)
+            return "EPIC_NOT_RECOGNIZED", exc_detail
+        return "API_ERROR", exc_detail
 
     if not market:
         return "EPIC_NOT_RECOGNIZED", "fetch_market_by_epic returned empty response"
@@ -222,6 +223,16 @@ def _validate_tier1(ig: "IGService", epic: str) -> tuple[str, str]:
 
     if dealing_enabled is False:
         return "DEALING_DISABLED", "dealingEnabled=false in market snapshot"
+
+    if dealing_enabled is None:
+        # P4-log: dealingEnabled field absent — log snapshot keys and instrument type
+        # to identify whether this is a systematic pattern for certain instrument types.
+        instrument = market.get("instrument", {})
+        print(
+            f"[discover_universe] DEBUG {epic}: dealingEnabled absent from snapshot"
+            f" — snapshot_keys={list(snapshot.keys())}"
+            f", instrument_type={instrument.get('type', 'unknown')}"
+        )
 
     reason = (
         "dealingEnabled=true"
