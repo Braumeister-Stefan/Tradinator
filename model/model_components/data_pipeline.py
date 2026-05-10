@@ -80,6 +80,9 @@ class DataPipeline:
                     "max_deal_size": None,
                     "min_size_increment": 1.0,
                     "scaling_factor": 1,
+                    "dealing_enabled": True,
+                    "buy_allowed": True,
+                    "sell_allowed": True,
                 }
 
         # --- Persistence side effect (R11) ---

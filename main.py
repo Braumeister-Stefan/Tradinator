@@ -45,13 +45,22 @@ def _load_universe(path: str) -> list[str]:
 
     instruments = data.get("instruments", [])
     if not instruments:
-        print(f"WARNING: No instruments found in {path} — pipeline will run with an empty universe.")
+        print(
+            f"WARNING: No instruments found in {path} — pipeline will run with an empty universe. "
+            "Run discover_universe.py (or use --discover) to populate it."
+        )
 
     seen_bases: set[str] = set()
     epics: list[str] = []
     for inst in instruments:
         epic = inst.get("epic", "")
         if not epic:
+            continue
+        if not inst.get("valid", True):
+            print(
+                f"WARNING: universe.json contains invalid instrument '{epic}' — skipping. "
+                "Run discover_universe.py or edit universe_candidates.json."
+            )
             continue
         # Base = first three dot-segments, e.g. "IX.D.FTSE" from
         # "IX.D.FTSE.DAILY.IP" — identical for DAILY / IFD / CASH variants.
