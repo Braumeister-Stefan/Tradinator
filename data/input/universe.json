@@ -1,10 +1,89 @@
 {
-  "description": "Tradinator instrument universe — IG Demo epics that have passed two-tier validation (T1: broker recognition + dealing enabled; T2: price data available). Managed automatically by discover_universe.py and DataPipeline. Do not edit manually; edit universe_candidates.json to add new candidates.",
+  "description": "Tradinator instrument universe \u2014 IG Demo epics that have passed Tier 1 validation (broker recognition + dealing enabled). Tier 2 (data availability) is validated continuously by DataPipeline; instruments that return zero bars on a cold-start fetch are removed automatically. Last T1 validation: 2026-05-10T22:25:03Z.",
   "instruments": [
-    {"epic": "IX.D.FTSE.DAILY.IP",  "name": "FTSE 100",         "asset_class": "index",     "region": "UK",     "valid": true},
-    {"epic": "IX.D.SPTRD.DAILY.IP", "name": "US 500 (S&P 500)", "asset_class": "index",     "region": "US",     "valid": true},
-    {"epic": "CS.D.EURUSD.MINI.IP", "name": "EUR/USD Mini",     "asset_class": "forex",     "region": "global", "valid": true},
-    {"epic": "CS.D.GBPUSD.MINI.IP", "name": "GBP/USD Mini",     "asset_class": "forex",     "region": "global", "valid": true},
-    {"epic": "CC.D.CL.UMP.IP",      "name": "Oil - US Crude",   "asset_class": "commodity", "region": "global", "valid": true}
+    {
+      "epic": "IX.D.FTSE.DAILY.IP",
+      "name": "FTSE 100",
+      "asset_class": "index",
+      "region": "UK",
+      "valid": true
+    },
+    {
+      "epic": "IX.D.SPTRD.DAILY.IP",
+      "name": "US 500 (S&P 500)",
+      "asset_class": "index",
+      "region": "US",
+      "valid": true
+    },
+    {
+      "epic": "CS.D.EURUSD.MINI.IP",
+      "name": "EUR/USD Mini",
+      "asset_class": "forex",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CS.D.GBPUSD.MINI.IP",
+      "name": "GBP/USD Mini",
+      "asset_class": "forex",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CC.D.CL.UMP.IP",
+      "name": "Oil - US Crude",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "IX.D.DAX.DAILY.IP",
+      "name": "Germany 40 (DAX)",
+      "asset_class": "index",
+      "region": "EU",
+      "valid": true
+    },
+    {
+      "epic": "CS.D.GBPDKK.MINI.IP",
+      "name": "GBP/DKK Mini",
+      "asset_class": "forex",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CS.D.GBPPLN.MINI.IP",
+      "name": "GBP/PLN Mini",
+      "asset_class": "forex",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CS.D.GBPZAR.MINI.IP",
+      "name": "GBP/ZAR Mini",
+      "asset_class": "forex",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "MT.D.HG.Month2.IP",
+      "name": "Copper Futures (month 2)",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CS.D.BITCOIN.CFD.IP",
+      "name": "Bitcoin / USD (CFD)",
+      "asset_class": "crypto",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CS.D.ETHUSD.CFD.IP",
+      "name": "Ethereum / USD (CFD)",
+      "asset_class": "crypto",
+      "region": "global",
+      "valid": true
+    }
   ]
 }

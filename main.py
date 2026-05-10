@@ -137,13 +137,17 @@ def _parse_args():
     return parser.parse_args()
 
 
-def _run_discover(_config: dict) -> None:
+def _run_discover(_config: dict) -> bool:
     """Invoke discover_universe.main() to validate and refresh the universe.
 
     Loads ``data/input/discover_universe.py`` via importlib so it is not
     executed at import time and does not pollute the module namespace.
     The ``_config`` parameter is accepted for forward-compatibility (e.g.,
     to pass broker credentials in future) but is not used at present.
+
+    Returns True if discovery completed successfully, False if the broker API
+    was unavailable (503/500 after retries) and the run was skipped.  In the
+    False case the existing universe.json on disk is used unchanged.
     """
     discover_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
@@ -155,7 +159,30 @@ def _run_discover(_config: dict) -> None:
         raise SystemExit(1)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    module.main()
+    try:
+        module.main()
+        return True
+    except Exception as exc:
+        exc_str = str(exc)
+        exc_type = type(exc).__name__
+        # Catch transient broker-side failures and fall back to the existing
+        # universe.json rather than crashing the run:
+        #   - 503/500 after retries: IG server unavailable / maintenance
+        #   - ApiExceededException: rate limit or concurrent session cap hit;
+        #     has no message body so the status-code check alone won't catch it
+        _is_transient = (
+            any(code in exc_str for code in ("503", "500"))
+            or exc_type == "ApiExceededException"
+        )
+        if _is_transient:
+            print(
+                f"\n[_run_discover] WARNING: universe discovery skipped -- "
+                f"IG broker API unavailable ({exc_type}: {exc_str or '(no message)'}).\n"
+                "  Continuing with the existing universe.json on disk.\n"
+                "  Re-run with --discover once the IG servers are back online."
+            )
+            return False
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -171,7 +198,7 @@ config = {
     # Universe -----------------------------------------------------------
     "universe_path": UNIVERSE_PATH,     # path to universe JSON file
     "universe": _load_universe(UNIVERSE_PATH),
-    "run_discover": False,              # set True or use --discover to re-validate universe
+    "run_discover": False,          # set True or use --discover to re-validate universe
 
     # Market data --------------------------------------------------------
     "resolution": "DAY",                # price bar resolution
@@ -218,11 +245,17 @@ if __name__ == "__main__":
     try:
         # --- Universe discovery (optional, gated by config key or --discover) ---
         if config.get("run_discover", False):
-            print("\n[main] run_discover=True — running universe validation...")
-            _run_discover(config)
-            # Reload universe after discover updates universe.json
-            config["universe"] = _load_universe(UNIVERSE_PATH)
-            print(f"[main] Universe reloaded: {len(config['universe'])} valid instrument(s).\n")
+            print("\n[main] run_discover=True -- running universe validation...")
+            discovered = _run_discover(config)
+            if discovered:
+                # Reload universe after discover updates universe.json
+                config["universe"] = _load_universe(UNIVERSE_PATH)
+                print(f"[main] Universe reloaded: {len(config['universe'])} valid instrument(s).\n")
+            else:
+                print(
+                    f"[main] Using cached universe: {len(config['universe'])} instrument(s) "
+                    "(discover skipped -- broker unavailable).\n"
+                )
 
         model = Model(config)
         run_loop = RunLoop(

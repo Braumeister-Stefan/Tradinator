@@ -100,6 +100,19 @@ def _connect() -> "IGService":
         print("ERROR: Missing IG credentials. Set IG_USERNAME, IG_PASSWORD, IG_API_KEY.")
         raise SystemExit(1)
 
+    # Sanitised credential summary — logged unconditionally so the values
+    # actually sent to IG are visible when a session error occurs.
+    def _mask(value: str, keep: int = 3) -> str:
+        return value[:keep] + "***" if len(value) > keep else "***"
+
+    print(
+        f"[_connect] Attempting IG session -- "
+        f"username='{_mask(username)}' "
+        f"api_key='{_mask(api_key)}' "
+        f"acc_type='{acc_type}' "
+        f"acc_number='{acc_number if acc_number else '(not set)'}'"
+    )
+
     ig = IGService(
         username, password, api_key,
         acc_type=acc_type,
@@ -107,8 +120,71 @@ def _connect() -> "IGService":
         return_dataframe=False,
         return_munch=False,
     )
-    ig.create_session(version="2")
-    print(f"Connected to IG {acc_type.upper()}")
+
+    # Retry create_session for transient 503/500 server errors (e.g. weekend
+    # DEMO maintenance, momentary overload).  Credential errors (wrong
+    # password -> 500 with a specific body) and ApiExceededException are not
+    # retried because retrying won't help.
+    _RETRYABLE_CODES = ("503", "500")
+    _MAX_RETRIES = 3
+    _BACKOFF_BASE = 15  # seconds; doubles each attempt: 15, 30, 60
+
+    last_exc: Exception | None = None
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            ig.create_session(version="2")
+            last_exc = None
+            break  # success
+        except Exception as exc:
+            exc_type = type(exc).__name__
+            exc_str = str(exc).strip() or "(no message)"
+
+            # Non-retryable: ApiExceededException (rate limit) or anything
+            # that does not mention a 5xx status code.
+            is_retryable = any(code in exc_str for code in _RETRYABLE_CODES)
+            if not is_retryable or exc_type == "ApiExceededException":
+                print(
+                    f"\n[_connect] ERROR: ig.create_session() raised {exc_type}: {exc_str}\n"
+                    "  Diagnostic:\n"
+                    "    - ApiExceededException means IG has blocked further login\n"
+                    "      attempts -- account may have hit its daily API allowance\n"
+                    "      or too many sessions were opened in quick succession.\n"
+                    "      Wait several minutes before retrying.\n"
+                    "    - IGException / HTTP 500 with no retryable signal almost\n"
+                    "      always means wrong username, password, or API key.\n"
+                    "      Verify IG_USERNAME, IG_PASSWORD, IG_API_KEY in secrets/.env.\n"
+                    "    - If IG_ACC_NUMBER is not set, the library sends None which\n"
+                    "      may cause a malformed login body.\n"
+                    f"  Credential context: exc_type='{exc_type}' username='{_mask(username)}' "
+                    f"api_key='{_mask(api_key)}' "
+                    f"acc_type='{acc_type}' "
+                    f"acc_number='{acc_number if acc_number else '(not set -- set IG_ACC_NUMBER)'}'"
+                )
+                raise
+
+            last_exc = exc
+            wait = _BACKOFF_BASE * (2 ** (attempt - 1))
+            print(
+                f"[_connect] Attempt {attempt}/{_MAX_RETRIES} failed with {exc_type} "
+                f"({exc_str}) -- retrying in {wait}s..."
+            )
+            time.sleep(wait)
+
+    if last_exc is not None:
+        exc_type = type(last_exc).__name__
+        exc_str = str(last_exc).strip() or "(no message)"
+        print(
+            f"\n[_connect] ERROR: all {_MAX_RETRIES} session attempts failed.\n"
+            f"  Last error: {exc_type}: {exc_str}\n"
+            "  IG's DEMO servers are likely in a maintenance window or under\n"
+            "  sustained load. Retry later (DEMO maintenance: Sat ~21:00 to\n"
+            "  Sun ~08:00 UTC). Check https://status.ig.com for live status.\n"
+            f"  Credential context: username='{_mask(username)}' "
+            f"api_key='{_mask(api_key)}' acc_type='{acc_type}'"
+        )
+        raise last_exc
+
+    print(f"[_connect] Connected to IG {acc_type.upper()}")
     return ig
 
 
@@ -274,8 +350,8 @@ def _discover_via_search(
             time.sleep(RATE_LIMIT_DELAY)
             t1_status, t1_reason = _validate_tier1(ig, epic)
             name = mkt.get("instrumentName", epic)
-            t1_symbol = "✓" if t1_status == "PASS" else "✗"
-            print(f"  T1 {t1_symbol} {epic} ({name}) — {t1_status}: {t1_reason}")
+            t1_symbol = "PASS" if t1_status == "PASS" else "FAIL"
+            print(f"  T1 [{t1_symbol}] {epic} ({name}) -- {t1_status}: {t1_reason}")
 
             if t1_status == "PASS":
                 # T2 is deferred to DataPipeline; mark as PENDING_T2.
@@ -326,7 +402,7 @@ def main() -> None:
         name = inst.get("name", epic)
 
         if not epic:
-            print("  ✗ (skipped entry with missing epic)")
+            print("  [SKIP] (skipped entry with missing epic)")
             inst.update({
                 "t1_status": "UNTESTED",
                 "t1_reason": "missing epic field",
@@ -341,8 +417,8 @@ def main() -> None:
         # --- Tier 1: broker recognition + dealing eligibility ---
         time.sleep(RATE_LIMIT_DELAY)
         t1_status, t1_reason = _validate_tier1(ig, epic)
-        t1_symbol = "✓" if t1_status == "PASS" else "✗"
-        print(f"  T1 {t1_symbol} {epic} ({name}) — {t1_status}: {t1_reason}")
+        t1_symbol = "PASS" if t1_status == "PASS" else "FAIL"
+        print(f"  T1 [{t1_symbol}] {epic} ({name}) -- {t1_status}: {t1_reason}")
 
         if t1_status != "PASS":
             inst.update({
