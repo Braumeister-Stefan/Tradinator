@@ -137,8 +137,7 @@ class DataPipeline:
                     except Exception as exc2:
                         last_t2 = self._get_candidate_t2_status(instrument_id)  # P7-log
                         print(
-                            f"[DataPipeline] WARNING: skipping {instrument_id} — {exc2}"
-                            f" (last known T2={last_t2})"
+                            f"[DataPipeline] WARNING: skipping {instrument_id} — {exc2} (last known T2={last_t2})"
                         )
                         self._update_t2_status(instrument_id, "NO", f"fetch exception: {exc2}")
                         self._remove_from_universe(instrument_id)
@@ -292,11 +291,14 @@ class DataPipeline:
             master = self._merge_series(live_frames, master)
             # P10: drop series columns for instruments removed from universe this run
             # so the scoper's in_series_not_in_universe list does not grow unbounded.
-            for epic in removed_instruments:
+            # Collect all columns to drop first, then drop per sheet in one call.
+            if removed_instruments:
                 for sheet_name, df in master.items():
-                    if epic in df.columns:
-                        master[sheet_name] = df.drop(columns=[epic])
-                        print(f"[DataPipeline] Dropped stale series column for {epic} (T2=NO).")
+                    cols_to_drop = [e for e in removed_instruments if e in df.columns]
+                    if cols_to_drop:
+                        master[sheet_name] = df.drop(columns=cols_to_drop)
+                        for epic in cols_to_drop:
+                            print(f"[DataPipeline] Dropped stale series column for {epic} (T2=NO).")
             if not self._validate_series_schema(master):
                 print("[DataPipeline] WARNING: master series failed validation.")
             self._save_series_file(master, self.SERIES_FILE)

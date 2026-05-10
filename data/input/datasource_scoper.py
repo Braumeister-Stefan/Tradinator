@@ -63,12 +63,16 @@ def _load_section_a(universe_path: str) -> dict:
         elif status is None:
             # status field absent — fall back to the valid flag written by
             # discover_universe.py (valid=true → verified, valid=false → candidate).
-            if entry.get("valid", False):
+            # Instruments without either field are flagged in unknown_status.
+            valid = entry.get("valid")
+            if valid is True:
                 result["verified_epics"].append(epic)
                 result["verified_count"] += 1
-            else:
+            elif valid is False:
                 result["candidate_epics"].append(epic)
                 result["candidate_count"] += 1
+            else:
+                result["unknown_status"].append(epic)
         else:
             result["unknown_status"].append(epic)
 
