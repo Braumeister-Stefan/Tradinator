@@ -148,6 +148,9 @@ def _run_discover(config: dict) -> None:  # noqa: ARG001
         "data", "input", "discover_universe.py",
     )
     spec = importlib.util.spec_from_file_location("discover_universe", discover_path)
+    if spec is None or spec.loader is None:
+        print(f"ERROR: cannot load discover_universe from {discover_path}")
+        raise SystemExit(1)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     module.main()

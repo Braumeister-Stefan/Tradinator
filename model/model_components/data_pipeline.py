@@ -111,6 +111,29 @@ class DataPipeline:
                         self._update_t2_status(instrument_id, "NO", f"fetch exception: {exc2}")
                         self._remove_from_universe(instrument_id)
                         continue
+
+                parsed = self._bars_to_columns(bars)
+                if parsed is None:
+                    # Zero bars on an incremental fetch is normal on weekends and
+                    # public holidays — it means no new bar has closed since the last
+                    # stored bar.  This is NOT a T2 failure; do not remove the
+                    # instrument from the universe.  Serve the existing stored series
+                    # for this pipeline run instead of dropping the instrument.
+                    print(
+                        f"[DataPipeline] {instrument_id}: 0 new bars since {last_date}"
+                        " (non-trading day or no new data) — retaining stored series."
+                    )
+                    parsed = self._reconstruct_from_master(instrument_id, master)
+                    if parsed is None:
+                        print(
+                            f"[DataPipeline] WARNING: no stored series for {instrument_id},"
+                            " skipping this run."
+                        )
+                        continue
+                else:
+                    self._update_t2_status(
+                        instrument_id, "YES", f"{len(bars)} new bar(s) fetched"
+                    )
             else:
                 # Cold start — fetch the configured lookback window.
                 print(
@@ -127,20 +150,25 @@ class DataPipeline:
                     self._remove_from_universe(instrument_id)
                     continue
 
-            parsed = self._bars_to_columns(bars)
-            if parsed is None:
-                print(
-                    f"[DataPipeline] WARNING: no usable data for {instrument_id},"
-                    " removing from universe."
+                parsed = self._bars_to_columns(bars)
+                if parsed is None:
+                    # Cold-start returning zero bars is a genuine T2 failure:
+                    # the instrument has no data at all on the broker's API.
+                    print(
+                        f"[DataPipeline] WARNING: no usable data for {instrument_id}"
+                        " (cold-start) — removing from universe."
+                    )
+                    self._update_t2_status(
+                        instrument_id, "NO", "cold-start fetch returned no usable bars"
+                    )
+                    self._remove_from_universe(instrument_id)
+                    continue
+
+                self._update_t2_status(
+                    instrument_id, "YES", f"{len(bars)} bar(s) fetched (cold-start)"
                 )
-                self._update_t2_status(instrument_id, "NO", "fetch returned no usable bars")
-                self._remove_from_universe(instrument_id)
-                continue
 
             prices[instrument_id] = parsed
-            self._update_t2_status(
-                instrument_id, "YES", f"{len(bars)} bar(s) fetched"
-            )
 
         prices = self._clean_prices(prices)
 
@@ -223,6 +251,50 @@ class DataPipeline:
         # Add 1 second so the last stored bar is not re-fetched.
         next_ts = last_ts + pd.Timedelta(seconds=1)
         return next_ts.strftime("%Y-%m-%dT%H:%M:%S")
+
+    def _reconstruct_from_master(
+        self, instrument_id: str, master: "dict | None"
+    ) -> "dict | None":
+        """Rebuild a bars-as-columns dict from stored master series for one instrument.
+
+        Used when an incremental fetch returns zero bars (e.g., on weekends) so
+        the pipeline can still provide the previously-stored series to downstream
+        components without re-fetching.
+
+        Returns ``None`` if no stored series exists for *instrument_id*.
+        """
+        if master is None:
+            return None
+        close_sheet = master.get("mid_close")
+        open_sheet = master.get("mid_open")
+        bid_sheet = master.get("bid_close")
+        if close_sheet is None or close_sheet.empty:
+            return None
+        if instrument_id not in close_sheet.columns:
+            return None
+        close_series = close_sheet[instrument_id].dropna()
+        if close_series.empty:
+            return None
+        timestamps = [ts.strftime("%Y-%m-%dT%H:%M:%S") for ts in close_series.index]
+        open_vals = (
+            open_sheet[instrument_id].reindex(close_series.index).tolist()
+            if open_sheet is not None and instrument_id in open_sheet.columns
+            else [None] * len(timestamps)
+        )
+        bid_vals = (
+            bid_sheet[instrument_id].reindex(close_series.index).tolist()
+            if bid_sheet is not None and instrument_id in bid_sheet.columns
+            else [None] * len(timestamps)
+        )
+        return {
+            "close": close_series.tolist(),
+            "high": [None] * len(timestamps),
+            "low": [None] * len(timestamps),
+            "open": open_vals,
+            "volume": [None] * len(timestamps),
+            "bid_close": bid_vals,
+            "timestamps": timestamps,
+        }
 
     def _update_t2_status(
         self, instrument_id: str, t2_status: str, t2_reason: str

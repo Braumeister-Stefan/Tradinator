@@ -121,14 +121,22 @@ def _validate_tier1(ig: "IGService", epic: str) -> tuple[str, str]:
 
     Returns ``(t1_status, t1_reason)`` where *t1_status* is one of:
       ``PASS``                — epic recognised and dealingEnabled=true
-      ``EPIC_NOT_RECOGNIZED`` — call failed or returned no market data
+      ``EPIC_NOT_RECOGNIZED`` — broker explicitly reports the epic as unknown
+                                (404-style error or empty market response)
       ``DEALING_DISABLED``    — epic found but dealingEnabled=false in snapshot
-      ``API_ERROR``           — any other unexpected exception
+      ``API_ERROR``           — any other exception (network, auth, rate limit, etc.)
+                                that does NOT indicate the epic is invalid
     """
     try:
         market = ig.fetch_market_by_epic(epic)
     except Exception as exc:
-        return "EPIC_NOT_RECOGNIZED", str(exc)
+        exc_str = str(exc).lower()
+        # IG returns a 404 / error.security.notFound for unknown epics.
+        # Any other exception (timeout, auth, rate-limit) is API_ERROR to
+        # avoid permanently blacklisting valid epics due to transient faults.
+        if any(kw in exc_str for kw in ("not found", "404", "invalid epic", "notfound")):
+            return "EPIC_NOT_RECOGNIZED", str(exc)
+        return "API_ERROR", str(exc)
 
     if not market:
         return "EPIC_NOT_RECOGNIZED", "fetch_market_by_epic returned empty response"
@@ -235,12 +243,15 @@ def _discover_via_search(
     validated: list,
     now_utc: str,
 ) -> list[dict]:
-    """Use IG search endpoint to find additional working markets.
+    """Use IG search endpoint to find additional markets that pass T1 validation.
 
-    Newly discovered epics are treated as implicit T1 PASS (their presence in
-    the search results confirms broker recognition); T2 is still tested via a
-    full price-bar fetch.  Newly added candidates are appended to *validated*
-    and also returned as a list.
+    Each discovered epic is run through ``_validate_tier1`` (the search result
+    confirms the market exists but does NOT verify that dealing is enabled or
+    that the epic string is exactly valid).  T2 (data availability) is NOT
+    tested here — it is deferred to the trading pipeline (``DataPipeline``).
+    Newly discovered T1-PASS epics are added with ``t2_status: "PENDING_T2"``.
+
+    Candidates are appended to *validated* and T1-PASS ones are also returned.
     """
     discovered = []
     for term in SEARCH_TERMS:
@@ -258,28 +269,34 @@ def _discover_via_search(
                 continue
             known_epics.add(epic)
 
+            # Run a proper T1 check — search presence alone does not confirm
+            # dealing eligibility or that the exact epic string is valid.
             time.sleep(RATE_LIMIT_DELAY)
-            t2_status, t2_reason = _validate_tier2(ig, epic)
-            is_valid = (t2_status == "YES")
-
-            symbol = "✓" if is_valid else "✗"
+            t1_status, t1_reason = _validate_tier1(ig, epic)
             name = mkt.get("instrumentName", epic)
-            print(f"  {symbol} {epic} ({name}) — T2={t2_status}: {t2_reason}")
+            t1_symbol = "✓" if t1_status == "PASS" else "✗"
+            print(f"  T1 {t1_symbol} {epic} ({name}) — {t1_status}: {t1_reason}")
+
+            if t1_status == "PASS":
+                # T2 is deferred to DataPipeline; mark as PENDING_T2.
+                t2_status, t2_reason = "PENDING_T2", "awaiting DataPipeline data fetch"
+            else:
+                t2_status, t2_reason = "NEVER_TRIED", None
 
             candidate = {
                 "epic": epic,
                 "name": name,
                 "asset_class": "unknown",
                 "region": "unknown",
-                "t1_status": "PASS",
-                "t1_reason": "discovered via IG search — broker recognition implicit",
+                "t1_status": t1_status,
+                "t1_reason": t1_reason,
                 "t2_status": t2_status,
                 "t2_reason": t2_reason,
-                "valid": is_valid,
+                "valid": False,  # only confirmed valid after DataPipeline T2 test
                 "last_validated": now_utc,
             }
             validated.append(candidate)
-            if is_valid:
+            if t1_status == "PASS":
                 discovered.append(candidate)
 
     return discovered
@@ -298,10 +315,10 @@ def main() -> None:
         print("No candidates found in universe_candidates.json. Nothing to validate.")
         return
 
-    print(f"\n=== Phase 1: Validating {len(candidates)} candidates (T1 + T2) ===")
+    print(f"\n=== Phase 1: Validating {len(candidates)} candidates (Tier 1 only) ===")
+    print("Note: Tier 2 (data availability) is validated by the trading pipeline.")
     validated: list[dict] = []
     t1_pass_count = 0
-    t2_pass_count = 0
     now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
     for inst in candidates:
@@ -341,48 +358,46 @@ def main() -> None:
 
         t1_pass_count += 1
 
-        # --- Tier 2: price data availability ---
-        time.sleep(RATE_LIMIT_DELAY)
-        t2_status, t2_reason = _validate_tier2(ig, epic)
-        t2_symbol = "✓" if t2_status == "YES" else "✗"
-        print(f"  T2 {t2_symbol} {epic} ({name}) — {t2_status}: {t2_reason}")
-
-        is_valid = (t2_status == "YES")
-        if is_valid:
-            t2_pass_count += 1
-
+        # T1 passed — mark as PENDING_T2.  The DataPipeline resolves this
+        # to YES/NO on the next run by fetching actual price data.
+        # T2 is not pre-tested here to keep discover_universe.py focused on
+        # broker eligibility; the pipeline is the authoritative T2 gate.
         inst.update({
             "t1_status": t1_status,
             "t1_reason": t1_reason,
-            "t2_status": t2_status,
-            "t2_reason": t2_reason,
-            "valid": is_valid,
+            "t2_status": "PENDING_T2",
+            "t2_reason": "awaiting DataPipeline data fetch",
+            "valid": False,  # only confirmed valid after pipeline confirms T2=YES
             "last_validated": now_utc,
         })
         validated.append(inst)
 
-    print(f"\nPhase 1 complete: {t1_pass_count} T1-pass, {t2_pass_count} T2-pass (fully valid).")
+    print(f"\nPhase 1 complete: {t1_pass_count} T1-pass (PENDING_T2), "
+          f"{len(candidates) - t1_pass_count} T1-fail.")
 
-    # --- Phase 2: discover additional epics via IG search if < 20 valid ---
+    # --- Phase 2: discover additional epics via IG search if < 20 T1-pass ---
     known_epics = {c.get("epic", "") for c in validated}
-    valid_count = sum(1 for c in validated if c.get("valid"))
+    t1_pass_total = sum(1 for c in validated if c.get("t1_status") == "PASS")
 
-    if valid_count < 20:
+    if t1_pass_total < 20:
         print(
             f"\n=== Phase 2: Discovering additional markets "
-            f"(have {valid_count}/20 valid) ==="
+            f"(have {t1_pass_total}/20 T1-pass) ==="
         )
         discovered = _discover_via_search(ig, known_epics, validated, now_utc)
-        print(f"Phase 2 added {len(discovered)} new valid instrument(s).")
+        print(f"Phase 2 added {len(discovered)} new T1-pass instrument(s).")
 
     # --- Save candidates file (all candidates, pass and fail) ---
     candidates_data["candidates"] = validated
     candidates_data["last_discover_run"] = now_utc
     _save_candidates(candidates_data)
 
-    # --- Build and save universe.json (valid instruments only) ---
+    # --- Build and save universe.json (T1-pass instruments only) ---
+    # universe.json contains all T1-PASS instruments so the DataPipeline can
+    # fetch data for them (which constitutes the T2 test).  Instruments are
+    # removed by DataPipeline if their cold-start T2 fetch returns zero bars.
     universe_data = _load_universe()
-    valid_instruments = [
+    t1_pass_instruments = [
         {
             "epic": c["epic"],
             "name": c["name"],
@@ -391,25 +406,28 @@ def main() -> None:
             "valid": True,
         }
         for c in validated
-        if c.get("valid")
+        if c.get("t1_status") == "PASS"
     ]
-    universe_data["instruments"] = valid_instruments
+    universe_data["instruments"] = t1_pass_instruments
     universe_data["description"] = (
-        "Tradinator instrument universe — IG Demo epics that have passed two-tier validation "
-        "(T1: broker recognition + dealing enabled; T2: price data available). "
-        f"Last validated: {now_utc}."
+        "Tradinator instrument universe — IG Demo epics that have passed Tier 1 validation "
+        "(broker recognition + dealing enabled). "
+        "Tier 2 (data availability) is validated continuously by DataPipeline; "
+        "instruments that return zero bars on a cold-start fetch are removed automatically. "
+        f"Last T1 validation: {now_utc}."
     )
     _save_universe(universe_data)
 
-    valid_total = sum(1 for c in validated if c.get("valid"))
-    print(f"\nValidation complete: {t1_pass_count} T1-pass, {valid_total} fully valid (T1+T2).")
-    if valid_total < 20:
+    t1_total = sum(1 for c in validated if c.get("t1_status") == "PASS")
+    print(f"\nValidation complete: {t1_total} T1-pass instrument(s) written to universe.json.")
+    if t1_total < 20:
         print(
-            f"WARNING: Only {valid_total} valid epics found (target: 20). "
+            f"WARNING: Only {t1_total} T1-pass epics (target: 20). "
             "Consider adding more candidates to universe_candidates.json."
         )
     else:
-        print(f"SUCCESS: {valid_total} valid epics in universe.")
+        print(f"SUCCESS: {t1_total} T1-pass epics in universe.")
+    print("\nRun the main pipeline to complete Tier 2 validation (data availability).")
 
 
 if __name__ == "__main__":

@@ -106,12 +106,25 @@ class BrokerAdapter(Protocol):
         ...
 
     def fetch_instrument_info(self, instrument_id: str) -> dict:
-        """Fetch display name and currency for an instrument.
+        """Fetch display name, currency, dealing rules, and order eligibility.
 
         Returns
         -------
         dict
-            ``{"instrument_name": str, "instrument_id": str, "currency": str}``
+            Contains the following keys::
+
+                {
+                    "instrument_name":  str,
+                    "instrument_id":    str,
+                    "currency":         str,
+                    "min_deal_size":    float,
+                    "max_deal_size":    float | None,
+                    "min_size_increment": float,
+                    "scaling_factor":   float,
+                    "dealing_enabled":  bool,
+                    "buy_allowed":      bool,
+                    "sell_allowed":     bool,
+                }
         """
         ...
 
