@@ -1,16 +1,34 @@
 # Tradinator
 
-A modular trading engine for automated **paper trading**, supporting multiple brokerages via a pluggable adapter layer. Connected to the IG platform; IBKR support is scaffolded.
+A modular trading engine for automated **paper trading**, connected to the IG platform.
 
 > **DISCLAIMER:** Tradinator is a personal experimentation tool for paper trading.
 > It does not constitute trading advice, investment recommendation, or financial
 > guidance of any kind. Use at your own risk. ALL CONTENT IN THIS REPOSITORY IS IN THE PUBLIC DOMAIN  AND CAN BE USED FOR RESEARCH PURPOSES (INDIVIDUAL OR COMMERCIAL ENTITIES) ONLY
 
-## Architecture
+## Table of Contents
+
+- [1. Architecture](#1-architecture)
+- [2. Structure](#2-structure)
+- [3. Setup](#3-setup)
+  - [3.1 Command-line arguments](#31-command-line-arguments)
+  - [3.2 Environment variables](#32-environment-variables)
+    - [3.2.1 IG (default broker)](#321-ig-default-broker)
+- [4. Configuration](#4-configuration)
+- [5. Inputs](#5-inputs)
+  - [5.1 Observable Universe](#51-observable-universe)
+  - [5.2 Time Series Data](#52-time-series-data)
+    - [5.2.1 Historic series files](#521-historic-series-files)
+- [6. Components](#6-components)
+- [7. Dashboard](#7-dashboard)
+- [8. Universe Series](#8-universe-series)
+  - [8.1 File layout](#81-file-layout)
+  - [8.2 Historic data ingestion](#82-historic-data-ingestion)
+- [9. License](#9-license)
+
+## 1. Architecture
 
 Eleven components run across four phases (**GATHER → DECIDE → EXECUTE → RECORD/REPORT**). The orchestrator (`model/model.py`) exposes three entry points — `run_research()` (GATHER + DECIDE), `run_execution()` (EXECUTE + RECORD/REPORT), and `run()` (all four phases). A `RunLoop` (`model/run_loop.py`) controls *when* each entry point fires, supporting four run modes including a decoupled mode where research and execution run on independent schedules connected by a `Handoff` file.
-
-A **BrokerAdapter** protocol decouples the pipeline from any specific brokerage. The `BrokerConnector` selects the adapter named in `config["broker"]` (default `"ig"`), and all downstream components call normalised adapter methods — the raw broker client never leaks into the pipeline.
 
 ```mermaid
 flowchart TD
@@ -48,14 +66,9 @@ flowchart TD
     end
 
     G -->|"run() — full pipeline"| H
-
-    subgraph BROKER ADAPTERS
-        C -.-> M[IGBrokerAdapter<br/>trading_ig]
-        C -.-> N[IBKRBrokerAdapter<br/>placeholder]
-    end
 ```
 
-## Structure
+## 2. Structure
 
 ```
 Tradinator/
@@ -67,9 +80,7 @@ Tradinator/
 │   ├── handoff.py                    # JSON bridge between research and execution (decoupled mode)
 │   └── model_components/
 │       ├── __init__.py               # Exports all component classes
-│       ├── broker_adapter.py         # BrokerAdapter Protocol (interface)
 │       ├── ig_adapter.py             # IG implementation of BrokerAdapter
-│       ├── ibkr_adapter.py           # IBKR placeholder (NotImplementedError)
 │       ├── broker_connector.py       # Adapter selection & broker_state assembly
 │       ├── reconciliation.py         # Sync local orderbook with broker working orders
 │       ├── data_pipeline.py          # Market data acquisition & cleaning
@@ -96,7 +107,7 @@ Tradinator/
 └── README.md
 ```
 
-## Setup
+## 3. Setup
 
 ```bash
 # 1. Install dependencies
@@ -115,7 +126,7 @@ python main.py --mode scheduled --interval 3600
 python main.py --mode decoupled --research-interval 14400 --execution-interval 3600
 ```
 
-### Command-line arguments
+### 3.1 Command-line arguments
 
 | Argument | Default | Description |
 |---|---|---|
@@ -124,9 +135,9 @@ python main.py --mode decoupled --research-interval 14400 --execution-interval 3
 | `--research-interval` | `14400` | Seconds between research cycles in `decoupled` mode |
 | `--execution-interval` | `3600` | Seconds between execution cycles in `decoupled` mode |
 
-### Environment variables
+### 3.2 Environment variables
 
-#### IG (default broker)
+#### 3.2.1 IG (default broker)
 
 | Variable | Required | Description |
 |---|---|---|
@@ -136,21 +147,15 @@ python main.py --mode decoupled --research-interval 14400 --execution-interval 3
 | `IG_ACC_TYPE` | No | Must be `DEMO` (default) |
 | `IG_ACC_NUMBER` | No | Specific account number |
 
-#### IBKR (not yet implemented)
+*An abstraction layer allows for easy migration to other brokers — see the [Broker Migration skill](skills/change_brokers.md).*
 
-| Variable | Required | Description |
-|---|---|---|
-| `IBKR_HOST` | No | Gateway host (default `127.0.0.1`) |
-| `IBKR_PORT` | No | Gateway port (default `4002` for paper) |
-| `IBKR_CLIENT_ID` | No | API client ID (default `1`) |
-
-## Configuration
+## 4. Configuration
 
 Major parameters are set in `main.py`:
 
 ```python
 config = {
-    "broker": "ig",                    # "ig" or "ibkr" (ibkr is placeholder)
+    "broker": "ig",
     "env_path": "secrets/.env",
     "universe_path": "data/input/universe.json",
     "universe": [...],                 # loaded from universe.json at startup
@@ -165,7 +170,7 @@ config = {
 
 Minor parameters (indicator windows, risk-free rate, display width, etc.) are listed at the top of each component class.
 
-## Inputs
+## 5. Inputs
 
 Tradinator reads two input files at pipeline startup: a universe definition and a master price series.
 
@@ -176,7 +181,7 @@ Tradinator reads two input files at pipeline startup: a universe definition and 
 | **candidate** | A universe instrument whose epic has not been validated against the IG Demo API |
 | **verified** | A universe instrument confirmed to return price data on the IG Demo API via `discover_universe.py` |
 
-### Observable Universe
+### 5.1 Observable Universe
 
 `data/input/universe.json` defines 30 instruments:
 
@@ -198,17 +203,15 @@ Five are verified; the remaining 25 are candidates. Only verified instruments ar
 
 Epic status is set by running `data/input/discover_universe.py`, which validates each epic against the IG Demo API and **replaces** `universe.json` with only the instruments that pass validation — candidates that fail are removed entirely, not merely flagged. If fewer than 20 epics pass Phase 1, the script runs a second phase that queries the IG search endpoint for approximately 35 terms (indices, forex pairs, commodities) and appends any newly discovered valid epics to the file. Status is not set manually. Duplicate epic variants (e.g. `.DAILY.IP` and `.IFD.IP` for the same base) are deduplicated at pipeline startup.
 
-### Time Series Data
+### 5.2 Time Series Data
 
 `data/input/universe_series.xlsx` is the master price series, written by `DataPipeline` on every run. The current file holds **13 epics** over **125 rows** (2026-02-18 to 2026-05-01).
 
 | Sheet | Content |
 |---|---|
 | `mid_close` | Mid-price close — (bid + ask) / 2 |
-| `bid_close` | Bid close |
-| `mid_open` | Mid-price open — (bid + ask) / 2 |
 
-All three sheets share the same 13 epic columns and 125-row datetime index.
+The single sheet maintains the same 13 epic columns and 125-row datetime index structure.
 
 All 5 verified epics are present in the series. Of the remaining 8 stored epics, 4 are actual universe candidates and 4 are not present in `universe.json` at all:
 
@@ -219,37 +222,14 @@ The 21 remaining universe instruments — all candidates — have no stored seri
 
 On merge, live data takes precedence over existing master values at the same timestamp — stored rows are overwritten by freshly fetched bars. Historic-file data has the lowest precedence: existing master values win over historic-file values on overlap. Precedence order (highest to lowest): live fetched data > existing master values > historic file data.
 
-**Historic series:** `data/input/historic_series/` accepts `.xlsx` files of the same three-sheet schema (`mid_close`, `bid_close`, `mid_open`) to backfill the master series. The folder is currently empty. Files are validated on load; any file that fails a schema check is skipped with a warning. Ingestion runs automatically on every pipeline run.
+### 5.2.1 Historic series files
 
-## Broker Abstraction
+`data/input/historic_series/` accepts `.xlsx` files with a `mid_close` sheet to backfill the master series. The folder is currently empty. Files are validated on load; any file that fails a schema check is skipped with a warning. Ingestion runs automatically on every pipeline run.
 
-The `BrokerAdapter` protocol (`model/model_components/broker_adapter.py`) defines eight methods that every adapter must implement:
-
-| Method | Purpose |
-|---|---|
-| `connect()` | Authenticate and establish a session |
-| `get_account_info()` | Return cash and balance |
-| `get_positions()` | Return normalised open positions |
-| `fetch_historical_prices()` | Return OHLCV bars for an instrument |
-| `fetch_instrument_info()` | Return display name and currency |
-| `open_position()` | Place an order to open a position |
-| `close_position()` | Place an order to close a position |
-| `confirm_deal()` | Check acceptance/rejection of a deal |
-
-### Adding a new broker
-
-1. Create `model/model_components/mybroker_adapter.py` implementing the `BrokerAdapter` protocol
-2. Import it in `model/model_components/__init__.py`
-3. Register it in `model/model_components/broker_connector.py` `_ADAPTER_REGISTRY`
-4. Set `"broker": "mybroker"` in `main.py` config
-
-## Components
+## 6. Components
 
 | Component | Purpose |
 |---|---|
-| **BrokerAdapter** | Protocol defining the normalised broker interface |
-| **IGBrokerAdapter** | IG implementation (trading_ig library) |
-| **IBKRBrokerAdapter** | IBKR placeholder (not yet implemented) |
 | **BrokerConnector** | Selects adapter, connects, builds broker_state |
 | **Reconciliation** | Syncs local orderbook against broker working orders; detects fills, cancellations, and expirations |
 | **DataPipeline** | Fetches historical OHLCV prices via adapter, cleans with forward/back-fill, persists a master xlsx time series, and can ingest historic data files |
@@ -262,23 +242,23 @@ The `BrokerAdapter` protocol (`model/model_components/broker_adapter.py`) define
 | **PortfolioAnalytics** | Computes total return, period return, max drawdown, Sharpe ratio |
 | **PerformanceMonitoring** | Terminal report, text file, and HTML dashboard on port 8742 with JS data polling; metrics configurable per-entry via `METRICS_CONFIG` (enable/disable, label, suffix, colour); includes a positions pie chart |
 
-## Dashboard
+## 7. Dashboard
 
 Served on port 8742, the dashboard auto-opens in the browser on the first run and stays accessible at `http://localhost:8742/performance_dashboard.html` until the process is stopped with Ctrl+C.
 
 ![Performance Dashboard](media_assets/dashboard.png)
 
-## Universe Series
+## 8. Universe Series
 
 `DataPipeline` writes `data/input/universe_series.xlsx` as a non-blocking side effect — a write failure will not interrupt the pipeline.
 
-### File layout
+### 8.1 File layout
 
 Each sheet has a datetime index (rows sorted ascending, oldest at top) and one column per instrument in the universe.
 
-### Historic data ingestion
+### 8.2 Historic data ingestion
 
-To backfill or supplement the master file with external data, place `.xlsx` files in `data/input/historic_series/`. Each file must follow the same schema: three sheets (`mid_close`, `bid_close`, `mid_open`), datetime index, numeric values, one column per instrument.
+To backfill or supplement the master file with external data, place `.xlsx` files in `data/input/historic_series/`. Each file must follow the same schema: a `mid_close` sheet, datetime index, numeric values, one column per instrument.
 
 Historic ingestion can also be triggered standalone:
 
@@ -287,20 +267,6 @@ from model.model_components import DataPipeline
 DataPipeline(config={}).ingest_historic()
 ```
 
-## Phase 1 scope
+## 9. License
 
-- Signal generation uses a simple MA crossover
-- Strategy validation includes Sharpe/volatility stubs
-- Portfolio construction is long-only with proportional weighting
-- No short selling, no backtesting engine, no production-grade risk handling
-- **Paper trading only** — the DEMO constraint is enforced in code
-
-## Adding a new component
-
-1. Create `model/model_components/mycomponent.py` with a class and a `run()` method
-2. Import and export it in `model/model_components/__init__.py`
-3. Instantiate it in `model/model.py` and call it inside `run_research()` or `run_execution()` depending on which phase it belongs to
-
-## License
-
-For personal use only. Not financial advice.
+Public domain. Permitted for research purposes by individuals and commercial entities. Not financial advice.

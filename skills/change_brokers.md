@@ -51,11 +51,8 @@ The `BrokerAdapter` protocol's `confirm_deal(deal_reference) → {status, deal_i
 | Concept | IG | IBKR |
 |---|---|---|
 | Price bars | Returns `{closePrice: {bid, ask}, highPrice: {bid, ask}, ...}` | Returns actual OHLCV `{open, high, low, close, volume}` |
-| `bid_close` field | Available (CFD bid/ask spread) | **Not available** — IBKR returns traded prices, not bid/ask bars |
 | Resolution string | `"DAY"` | `"1 day"`, `"1 hour"`, etc. |
 | Lookback specification | Number of bars | Duration string like `"50 D"` or number of bars (depends on method) |
-
-The `bid_close` field in the adapter protocol and `DataPipeline` will always be `None` for IBKR. This flows into `universe_series.xlsx` (the `bid_close` sheet would be empty).
 
 ### 3d. Connection Model
 
@@ -103,7 +100,6 @@ If you **don't** make the codebase broker-neutral now, the following debt accumu
 | **`universe.json` is IG-only** | No place to store IBKR contract specs. You'll need a format migration or parallel file. | **Medium** |
 | **`_load_universe()` deduplication is IG-specific** | The 3-dot-segment base extraction (`IX.D.FTSE`) is meaningless for IBKR. Any new universe loader will break the old one. | **Medium** |
 | **`discover_universe.py` is throwaway** | 192 lines of IG-only code that can't be reused. | **Low** |
-| **`bid_close` field in protocol and data pipeline** | IBKR can't populate this. If your signal engine or analytics ever use `bid_close`, they'll silently get `None` for IBKR. | **Medium** |
 | **`deal_reference` / `deal_id` / `confirm_deal` pattern** | Shaped around IG's confirmation flow. IBKR has a fundamentally different async order lifecycle. The protocol itself may need extending. | **Medium** |
 | **Existing `universe_series.xlsx` with IG epic columns** | Historical data columns are named by IG epic. After switching, new IBKR data will have different column names, making time series discontinuous. | **High** |
 | **Ledger/trades JSON files (`data/output/`)** | All recorded positions and trades reference IG epics and deal IDs. No way to reconcile post-migration. | **Medium** |
