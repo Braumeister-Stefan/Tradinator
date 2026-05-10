@@ -26,7 +26,7 @@ import yfinance as yf
 # ---------------------------------------------------------------------------
 # Epic → Yahoo Finance ticker mapping
 # ---------------------------------------------------------------------------
-# Covers all 30 instruments in the current universe.json.
+# Covers all instruments in the current universe.json plus extended candidates.
 # Indices use the Yahoo "^" prefix; forex uses the "=X" suffix;
 # futures/commodities use the "=F" suffix for continuous front-month.
 # ---------------------------------------------------------------------------
@@ -75,6 +75,17 @@ EPIC_TO_YH_TICKER: dict[str, str] = {
     "CO.D.C.Month1.IP":      "ZC=F",   # Corn (CBOT)
     "CO.D.CT.Month2.IP":     "CT=F",   # Cotton No.2 (ICE)
     "CO.D.DX.Month1.IP":     "DX-Y.NYB",  # US Dollar Index (ICE)
+    # Forex — exotic GBP pairs in current universe
+    "CS.D.GBPDKK.MINI.IP":  "GBPDKK=X",  # GBP/Danish Krone
+    "CS.D.GBPPLN.MINI.IP":  "GBPPLN=X",  # GBP/Polish Zloty
+    "CS.D.GBPZAR.MINI.IP":  "GBPZAR=X",  # GBP/South African Rand
+    # Metals — COMEX Copper month-2 contract
+    # Yahoo Finance has no persistent second-month continuous ticker;
+    # HG=F (rolling front-month) is the closest free-data proxy.
+    "MT.D.HG.Month2.IP":    "HG=F",   # Copper (COMEX) — front-month proxy
+    # Crypto CFDs
+    "CS.D.BITCOIN.CFD.IP":  "BTC-USD",   # Bitcoin / USD
+    "CS.D.ETHUSD.CFD.IP":   "ETH-USD",   # Ethereum / USD
 }
 
 # ---------------------------------------------------------------------------
