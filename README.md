@@ -211,7 +211,7 @@ Epic status is set by running `data/input/discover_universe.py`, which validates
 |---|---|
 | `mid_close` | Mid-price close — (bid + ask) / 2 |
 
-The sheet holds the same 13 epic columns and 125-row datetime index as before.
+The single sheet maintains the same 13 epic columns and 125-row datetime index structure.
 
 All 5 verified epics are present in the series. Of the remaining 8 stored epics, 4 are actual universe candidates and 4 are not present in `universe.json` at all:
 
