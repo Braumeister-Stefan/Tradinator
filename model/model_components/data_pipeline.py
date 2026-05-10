@@ -26,7 +26,7 @@ class DataPipeline:
     RATE_LIMIT_DELAY = 1.0  # seconds between API calls
     SERIES_FILE = "data/input/universe_series.xlsx"  # master file path
     HISTORIC_DIR = "data/input/historic_series"  # historic ingest folder
-    SHEET_NAMES = ("mid_close", "bid_close", "mid_open")  # the three sheet names
+    SHEET_NAMES = ("mid_close",)  # only mid-price close is stored
 
     def __init__(self, config: dict):
         """Store config for later use by run()."""
@@ -124,26 +124,21 @@ class DataPipeline:
         if not bars:
             return None
 
-        close, high, low, opn, volume = [], [], [], [], []
-        bid_close: list = []
+        close, high, low, volume = [], [], [], []
         timestamps: list = []
 
         for bar in bars:
             close.append(bar.get("close"))
             high.append(bar.get("high"))
             low.append(bar.get("low"))
-            opn.append(bar.get("open"))
             volume.append(bar.get("volume"))
-            bid_close.append(bar.get("bid_close"))
             timestamps.append(bar.get("timestamp"))
 
         return {
             "close": close,
             "high": high,
             "low": low,
-            "open": opn,
             "volume": volume,
-            "bid_close": bid_close,
             "timestamps": timestamps,
         }
 
@@ -165,25 +160,14 @@ class DataPipeline:
     # ------------------------------------------------------------------
 
     def _build_dataframes(self, prices: dict) -> dict:
-        """Convert per-instrument price lists into dict of three DataFrames."""
-        sheet_mapping = {
-            "mid_close": "close",
-            "bid_close": "bid_close",
-            "mid_open": "open",
-        }
-        frames = {}
-        for sheet_name, field_key in sheet_mapping.items():
-            series_dict = {}
-            for instrument_id, fields in prices.items():
-                ts = fields.get("timestamps", [])
-                vals = fields.get(field_key, [])
-                index = pd.to_datetime(ts, utc=True, errors="coerce")
-                series_dict[instrument_id] = pd.Series(vals, index=index, dtype=float)
-            if series_dict:
-                frames[sheet_name] = pd.DataFrame(series_dict)
-            else:
-                frames[sheet_name] = pd.DataFrame()
-        return frames
+        """Convert per-instrument price lists into dict of one DataFrame (mid_close)."""
+        series_dict = {}
+        for instrument_id, fields in prices.items():
+            ts = fields.get("timestamps", [])
+            vals = fields.get("close", [])
+            index = pd.to_datetime(ts, utc=True, errors="coerce")
+            series_dict[instrument_id] = pd.Series(vals, index=index, dtype=float)
+        return {"mid_close": pd.DataFrame(series_dict) if series_dict else pd.DataFrame()}
 
     def _load_series_file(self, path: str) -> dict | None:
         """Read an existing multi-sheet xlsx file into dict-of-DataFrames."""
@@ -215,15 +199,13 @@ class DataPipeline:
         """Check structural validity of a series dict. Return True if valid."""
         valid = True
 
-        # (1) All three expected sheet names present
+        # (1) All expected sheet names present
         for name in self.SHEET_NAMES:
             if name not in series:
                 print(f"[DataPipeline] VALIDATION: missing sheet '{name}'.")
                 valid = False
         if not valid:
             return False
-
-        sheets = [series[name] for name in self.SHEET_NAMES]
 
         for name in self.SHEET_NAMES:
             df = series[name]
@@ -242,26 +224,9 @@ class DataPipeline:
                     )
                     valid = False
 
-            # (5) Index is sorted ascending
+            # (4) Index is sorted ascending
             if not df.index.is_monotonic_increasing:
                 print(f"[DataPipeline] VALIDATION: sheet '{name}' index is not sorted ascending.")
-                valid = False
-
-        # (4) Column names and index values identical across all three sheets
-        ref_cols = sheets[0].columns
-        ref_index = sheets[0].index
-        for name, df in zip(self.SHEET_NAMES[1:], sheets[1:]):
-            if list(df.columns) != list(ref_cols):
-                print(
-                    f"[DataPipeline] VALIDATION: columns of '{name}' differ from "
-                    f"'{self.SHEET_NAMES[0]}'."
-                )
-                valid = False
-            if not df.index.equals(ref_index):
-                print(
-                    f"[DataPipeline] VALIDATION: index of '{name}' differs from "
-                    f"'{self.SHEET_NAMES[0]}'."
-                )
                 valid = False
 
         return valid
@@ -276,8 +241,7 @@ class DataPipeline:
             return {name: primary.get(name, pd.DataFrame()).copy() for name in self.SHEET_NAMES}
 
         merged = {}
-        all_keys = set(primary) | set(secondary)
-        for name in all_keys:
+        for name in self.SHEET_NAMES:
             p = primary.get(name, pd.DataFrame())
             s = secondary.get(name, pd.DataFrame())
             merged[name] = p.combine_first(s)
