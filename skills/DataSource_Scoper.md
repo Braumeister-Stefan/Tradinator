@@ -28,7 +28,7 @@ The scoper MAY read only these files. Everything not on this list must not be re
 |---|---|
 | `data/input/universe.json` | Instrument registry — source of truth for the investible universe |
 | `data/input/universe_series.xlsx` | Stored price series — three sheets of price history |
-| `data/input/historic_series/*.xlsx` | Historic ingest folder — scanned for file names and epic headers only |
+| `data/input/historic_series/*.xlsx` | Historic ingest folder — scanned for file names only |
 
 ### 2.2 Path constants
 
@@ -86,7 +86,7 @@ Current state: 13 epics across columns. Epics in the file do not fully align wit
 
 #### `data/input/historic_series/*.xlsx`
 
-Same schema as `universe_series.xlsx`. The folder is currently empty (contains only `.gitkeep`). The scoper reports file count and names only. If files are present, their column headers (epic names) must be extracted to identify what additional series exist.
+Same schema as `universe_series.xlsx`. The folder is currently empty (contains only `.gitkeep`). The scoper reports file count and names only. If files are present, their filenames are listed in `historic_files_present`; no parsing of their contents is required.
 
 ---
 
@@ -114,7 +114,7 @@ The Scope Report is a structured data object (or equivalent formatted text) with
 | `series_epic_count` | int | Count of unique epics across all sheets |
 | `date_range` | dict[str, dict] | Per-sheet: `{"first": datetime, "last": datetime}` for each of `mid_close`, `bid_close`, `mid_open`; absent if sheet is missing |
 | `sheets_have_consistent_date_range` | bool | True if all three sheets have identical first and last datetime values |
-| `sheets_fully_consistent` | bool | True if all three sheets contain exactly the same set of epic columns |
+| `sheets_fully_consistent` | bool | True if all three sheets contain exactly the same set of epic columns (column set only — ordering is not checked) |
 | `historic_file_count` | int | Number of files found in `data/input/historic_series/` (excluding `.gitkeep`) |
 | `historic_files_present` | list[str] | Filenames found in `data/input/historic_series/` (excluding `.gitkeep`) |
 
@@ -138,7 +138,7 @@ The universe scope answers: *what instruments does the system know about, and wh
 - Source: `data/input/universe.json`
 - A `verified` instrument has been tested against the IG Demo API by `discover_universe.py` and confirmed accessible.
 - A `candidate` instrument is registered but unverified — it may or may not be tradeable.
-- The scoper does NOT make live broker calls. The `verified` status reflects the last run of `discover_universe.py`. The current loaded broker is identified from `config["broker"]` in `main.py` — if this is not `"ig"`, the verified status may not reflect current accessibility.
+- The scoper does NOT make live broker calls. The `verified` status reflects the last run of `discover_universe.py`. For reference, `main.py` currently configures `config["broker"] = "ig"` — the scoper does not read `main.py`; this is background context only.
 - All `verified_epics` entries reflect IG Demo API validation only. If `config["broker"]` is not `"ig"`, the `verified_epics` list has no accessibility guarantee for the current broker.
 
 ### Scope 2 — Series Scope
@@ -149,7 +149,7 @@ The series scope answers: *what price data is actually stored, and for which ins
 - Each column in the xlsx file represents one instrument's price history for one price type.
 - Columns in the series file are IG epic strings — the same identifier space as `universe.json`.
 - A column may exist but contain only `None` values; this is meaningfully different from the column being absent.
-- The `historic_series/` folder supplements the master file. The scoper reports file count and names only.
+- The `historic_series/` folder supplements the master file. The scoper reports file count and names only; it does not parse the contents of historic files.
 
 ### Scope 3 — Discrepancy Analysis
 
@@ -208,7 +208,7 @@ The scoper MAY read only the files listed in Section 2.1. Everything else must n
 | `model/model.py` | Code file | Pipeline orchestration |
 | `model/run_loop.py` | Code file | Pipeline orchestration |
 | `model/handoff.py` | Code file | Pipeline orchestration |
-| `model/__init__.py` | Code file | Package init exports Model and RunLoop — importing triggers broker session setup |
+| `model/__init__.py` | Code file | Package init imports all pipeline component classes and IG adapter code (`trading_ig`, `dotenv`); do not import |
 | `model/model_components/data_pipeline.py` | Code file | Pipeline component |
 | `model/model_components/broker_connector.py` | Code file | Broker session management |
 | `model/model_components/broker_adapter.py` | Code file | Protocol definition |
