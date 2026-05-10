@@ -172,9 +172,8 @@ class IGBrokerAdapter:
         # to that format.  Strip fractional seconds and timezone suffixes first.
         base = from_date.split(".")[0].rstrip("Z")  # drop fractions and Z
         normalised = base.replace("T", " ").replace("-", "/") + ":000"
-        # Use current time as end_date so all new bars up to now are included.
-        import time as _time
-        end_str = _time.strftime("%Y/%m/%d %H:%M:%S:000", _time.gmtime())
+        # Use current UTC time as end_date so all new bars up to now are included.
+        end_str = time.strftime("%Y/%m/%d %H:%M:%S:000", time.gmtime())
         raw = ig.fetch_historical_prices_by_epic_and_date_range(
             instrument_id, resolution, normalised, end_str
         )

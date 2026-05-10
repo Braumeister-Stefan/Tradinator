@@ -137,11 +137,13 @@ def _parse_args():
     return parser.parse_args()
 
 
-def _run_discover(config: dict) -> None:  # noqa: ARG001
+def _run_discover(_config: dict) -> None:
     """Invoke discover_universe.main() to validate and refresh the universe.
 
     Loads ``data/input/discover_universe.py`` via importlib so it is not
     executed at import time and does not pollute the module namespace.
+    The ``_config`` parameter is accepted for forward-compatibility (e.g.,
+    to pass broker credentials in future) but is not used at present.
     """
     discover_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
