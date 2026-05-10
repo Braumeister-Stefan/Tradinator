@@ -18,10 +18,13 @@ maintained in ``universe_candidates.json``:
   incrementally — one or more new bars per run rather than re-fetching the
   same window repeatedly.
 
-If the most-recent fetch returns zero bars the instrument's T2 status is
-set to ``NO`` in ``universe_candidates.json`` and it is removed from
-``universe.json``.  Gaps (NaN values) in an otherwise-populated series do
-**not** disqualify an instrument.
+If the most-recent cold-start fetch returns zero bars, a YH Finance fallback
+is attempted before marking the instrument as T2=NO.  When the broker adapter
+cannot return usable data for an instrument, a secondary fetch via
+``YHFinanceFetcher`` (Yahoo Finance) is attempted.  If both sources fail, the
+instrument is skipped.  A per-run ``candidates_report.csv`` is written to
+``data/output/`` recording the data-source outcome for every universe
+instrument.
 
 DISCLAIMER: Tradinator is a personal experimentation tool for paper trading.
 It does not constitute trading advice, investment recommendation, or financial
@@ -29,11 +32,14 @@ guidance of any kind. Use at your own risk.
 """
 
 
+import csv
 import json
 import os
 import time
 
 import pandas as pd
+
+from .yh_finance_fetcher import YHFinanceFetcher
 
 
 class DataPipeline:
@@ -46,6 +52,9 @@ class DataPipeline:
     SERIES_FILE = "data/input/universe_series.xlsx"  # master file path
     HISTORIC_DIR = "data/input/historic_series"  # historic ingest folder
     SHEET_NAMES = ("mid_close",)  # only mid-price close is stored
+    CANDIDATES_PATH = "data/input/universe_candidates.json"
+    UNIVERSE_PATH = "data/input/universe.json"
+    CANDIDATES_REPORT_FILENAME = "candidates_report.csv"  # written to output_dir
 
     def __init__(self, config: dict):
         """Store config for later use by run()."""
@@ -60,6 +69,8 @@ class DataPipeline:
            last stored timestamp can be determined per instrument.
         2. For instruments with no stored data (cold start): call the fixed-count
            API (``fetch_historical_prices``) with the configured ``lookback``.
+           If the broker returns zero bars, YH Finance is tried as a fallback
+           before marking the instrument as T2=NO.
         3. For instruments with existing stored data: call the date-range API
            (``fetch_historical_prices_by_date_range``) from the last stored
            timestamp + 1 second, retrieving only genuinely new bars.
@@ -76,6 +87,13 @@ class DataPipeline:
         master = self._load_series_file(self.SERIES_FILE)
 
         prices = {}
+        # Track the data source used for each instrument.
+        data_sources: dict[str, str] = {}
+        # Track whether broker / YH succeeded per instrument for the report.
+        broker_available: dict[str, bool] = {}
+        yh_available: dict[str, bool] = {}
+
+        yh_fetcher = YHFinanceFetcher()
 
         for i, instrument_id in enumerate(instruments):
             if i > 0:
@@ -108,6 +126,8 @@ class DataPipeline:
                         )
                         self._update_t2_status(instrument_id, "NO", f"fetch exception: {exc2}")
                         self._remove_from_universe(instrument_id)
+                        broker_available[instrument_id] = False
+                        yh_available[instrument_id] = False
                         continue
 
                 parsed = self._bars_to_columns(bars)
@@ -127,48 +147,96 @@ class DataPipeline:
                             f"[DataPipeline] WARNING: no stored series for {instrument_id},"
                             " skipping this run."
                         )
+                        broker_available[instrument_id] = False
+                        yh_available[instrument_id] = False
                         continue
                 else:
                     self._update_t2_status(
                         instrument_id, "YES", f"{len(bars)} new bar(s) fetched"
                     )
+
+                prices[instrument_id] = parsed
+                data_sources[instrument_id] = "broker"
+                broker_available[instrument_id] = True
+                yh_available[instrument_id] = False
             else:
                 # Cold start — fetch the configured lookback window.
                 print(
                     f"[DataPipeline] Cold-start fetch {instrument_id}"
                     f" ({resolution}, {lookback} bars)…"
                 )
+                broker_ok = False
+                parsed = None
                 try:
                     bars = adapter.fetch_historical_prices(
                         instrument_id, resolution, lookback
                     )
+                    parsed = self._bars_to_columns(bars)
+                    if parsed is not None and not self._all_none(parsed):
+                        broker_ok = True
                 except Exception as exc:
-                    print(f"[DataPipeline] WARNING: skipping {instrument_id} — {exc}")
-                    self._update_t2_status(instrument_id, "NO", f"fetch exception: {exc}")
-                    self._remove_from_universe(instrument_id)
+                    print(f"[DataPipeline] WARNING: broker fetch failed for {instrument_id} — {exc}")
+
+                broker_available[instrument_id] = broker_ok
+
+                if broker_ok:
+                    self._update_t2_status(
+                        instrument_id, "YES", f"{len(bars)} bar(s) fetched (cold-start)"
+                    )
+                    prices[instrument_id] = parsed
+                    data_sources[instrument_id] = "broker"
+                    yh_available[instrument_id] = False
                     continue
 
-                parsed = self._bars_to_columns(bars)
-                if parsed is None:
-                    # Cold-start returning zero bars is a genuine T2 failure:
-                    # the instrument has no data at all on the broker's API.
+                # Cold-start broker fetch failed — try YH Finance fallback.
+                print(
+                    f"[DataPipeline] Broker data unavailable for {instrument_id}, "
+                    "trying YH Finance fallback…"
+                )
+                yh_bars = yh_fetcher.fetch_historical_prices(instrument_id, resolution, lookback)
+                yh_parsed = self._bars_to_columns(yh_bars) if yh_bars else None
+
+                if yh_parsed is not None and not self._all_none(yh_parsed):
+                    print(f"[DataPipeline] YH Finance fallback succeeded for {instrument_id}.")
+                    self._update_t2_status(
+                        instrument_id, "YES",
+                        f"{len(yh_bars)} bar(s) fetched via YH Finance fallback (cold-start)"
+                    )
+                    prices[instrument_id] = yh_parsed
+                    data_sources[instrument_id] = "yh_finance"
+                    yh_available[instrument_id] = True
+                else:
+                    # Both broker and YH Finance failed — remove from universe.
                     print(
                         f"[DataPipeline] WARNING: no usable data for {instrument_id}"
-                        " (cold-start) — removing from universe."
+                        " (cold-start, both broker and YH Finance failed)"
+                        " — removing from universe."
                     )
                     self._update_t2_status(
-                        instrument_id, "NO", "cold-start fetch returned no usable bars"
+                        instrument_id, "NO",
+                        "cold-start fetch returned no usable bars from broker or YH Finance"
                     )
                     self._remove_from_universe(instrument_id)
-                    continue
-
-                self._update_t2_status(
-                    instrument_id, "YES", f"{len(bars)} bar(s) fetched (cold-start)"
-                )
-
-            prices[instrument_id] = parsed
+                    yh_available[instrument_id] = False
 
         prices = self._clean_prices(prices)
+
+        # --- Investable universe log ---
+        universe_size = len(instruments)
+        investable_size = len(prices)
+        pct = (investable_size / universe_size * 100) if universe_size > 0 else 0.0
+        print(
+            f"[DataPipeline] Investable universe: {investable_size} epic(s) "
+            f"({pct:.1f}% of {universe_size} considered candidates)"
+        )
+
+        # --- Candidates report (non-blocking side effect) ---
+        try:
+            self._write_candidates_report(
+                instruments, prices, data_sources, broker_available, yh_available
+            )
+        except Exception as exc:
+            print(f"[DataPipeline] WARNING: candidates report write failed — {exc}")
 
         # --- Fetch instrument metadata with dealing rules ---
         instrument_metadata = {}
@@ -211,6 +279,7 @@ class DataPipeline:
             "metadata": instrument_metadata,
             "resolution": resolution,
             "lookback": lookback,
+            "data_sources": data_sources,
         }
 
     def ingest_historic(self) -> None:
@@ -222,6 +291,58 @@ class DataPipeline:
         if not self._validate_series_schema(master):
             print("[DataPipeline] WARNING: master series failed validation after ingest.")
         self._save_series_file(master, self.SERIES_FILE)
+
+    # ------------------------------------------------------------------
+    # Candidates report
+    # ------------------------------------------------------------------
+
+    def _write_candidates_report(
+        self,
+        instruments: list[str],
+        prices: dict,
+        data_sources: dict,
+        broker_available: dict,
+        yh_available: dict,
+    ) -> None:
+        """Write a CSV report of data-source outcomes for every universe instrument.
+
+        The file is written to ``{output_dir}/candidates_report.csv``.
+        The ``validation_passed`` column is left blank here and filled in
+        later by ``StrategyEval``.
+        """
+        output_dir = self.config.get("output_dir", "data/output")
+        os.makedirs(output_dir, exist_ok=True)
+        report_path = os.path.join(output_dir, self.CANDIDATES_REPORT_FILENAME)
+
+        rows = []
+        for instrument_id in instruments:
+            fields = prices.get(instrument_id, {})
+            close_vals = fields.get("close", [])
+            non_zero_points = sum(
+                1 for v in close_vals if v is not None and v != 0
+            )
+            source = data_sources.get(instrument_id, "none")
+            rows.append({
+                "epic": instrument_id,
+                "data_source": source,
+                "non_zero_data_points": non_zero_points,
+                "broker_data_available": broker_available.get(instrument_id, False),
+                "yh_data_available": yh_available.get(instrument_id, False),
+                "validation_passed": "",  # filled in by StrategyEval
+            })
+
+        fieldnames = [
+            "epic",
+            "data_source",
+            "non_zero_data_points",
+            "broker_data_available",
+            "yh_data_available",
+            "validation_passed",
+        ]
+        with open(report_path, "w", newline="") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
 
     # ------------------------------------------------------------------
     # Incremental fetch helpers
@@ -264,8 +385,6 @@ class DataPipeline:
         if master is None:
             return None
         close_sheet = master.get("mid_close")
-        open_sheet = master.get("mid_open")
-        bid_sheet = master.get("bid_close")
         if close_sheet is None or close_sheet.empty:
             return None
         if instrument_id not in close_sheet.columns:
@@ -274,23 +393,11 @@ class DataPipeline:
         if close_series.empty:
             return None
         timestamps = [ts.strftime("%Y-%m-%dT%H:%M:%S") for ts in close_series.index]
-        open_vals = (
-            open_sheet[instrument_id].reindex(close_series.index).tolist()
-            if open_sheet is not None and instrument_id in open_sheet.columns
-            else [None] * len(timestamps)
-        )
-        bid_vals = (
-            bid_sheet[instrument_id].reindex(close_series.index).tolist()
-            if bid_sheet is not None and instrument_id in bid_sheet.columns
-            else [None] * len(timestamps)
-        )
         return {
             "close": close_series.tolist(),
             "high": [None] * len(timestamps),
             "low": [None] * len(timestamps),
-            "open": open_vals,
             "volume": [None] * len(timestamps),
-            "bid_close": bid_vals,
             "timestamps": timestamps,
         }
 

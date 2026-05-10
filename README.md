@@ -110,7 +110,7 @@ Tradinator/
 ## 3. Setup
 
 ```bash
-# 1. Install dependencies
+# 1. Install dependencies (includes yfinance for the YH Finance fallback data source)
 pip install -r requirements.txt
 
 # 2. Configure broker credentials (default: IG demo)
@@ -222,6 +222,8 @@ The 21 remaining universe instruments — all candidates — have no stored seri
 
 On merge, live data takes precedence over existing master values at the same timestamp — stored rows are overwritten by freshly fetched bars. Historic-file data has the lowest precedence: existing master values win over historic-file values on overlap. Precedence order (highest to lowest): live fetched data > existing master values > historic file data.
 
+**YH Finance fallback:** When the broker adapter cannot return usable price data for an instrument, `DataPipeline` automatically retries via `YHFinanceFetcher` (Yahoo Finance). If the fallback succeeds the bars are stored identically to broker-sourced data, except that `bid_close` is always `None` (Yahoo does not provide bid/ask decomposition). This keeps instruments in the investable universe even when the broker API has gaps. A `data/output/candidates_report.csv` file is written on every run recording the data-source outcome (`broker`, `yh_finance`, or `none`) and `validation_passed` result for every universe instrument.
+
 ### 5.2.1 Historic series files
 
 `data/input/historic_series/` accepts `.xlsx` files with a `mid_close` sheet to backfill the master series. The folder is currently empty. Files are validated on load; any file that fails a schema check is skipped with a warning. Ingestion runs automatically on every pipeline run.
@@ -233,6 +235,7 @@ On merge, live data takes precedence over existing master values at the same tim
 | **BrokerConnector** | Selects adapter, connects, builds broker_state |
 | **Reconciliation** | Syncs local orderbook against broker working orders; detects fills, cancellations, and expirations |
 | **DataPipeline** | Fetches historical OHLCV prices via adapter, cleans with forward/back-fill, persists a master xlsx time series, and can ingest historic data files |
+| **YHFinanceFetcher** | Secondary price source via Yahoo Finance (`yfinance`); fallback when the broker adapter returns no data for an instrument |
 | **SignalEngine** | Dual moving-average crossover → BUY / SELL / HOLD signals |
 | **StrategyEval** | Pre-trade quality gate: data quality, Sharpe estimate, volatility stubs |
 | **PortfolioConstructor** | Converts validated BUY signals into target weights with position caps |
