@@ -96,10 +96,10 @@ class StrategyEval:
         for row in rows:
             epic = row.get("epic", "")
             if epic in validated_signals:
-                row["validation_passed"] = True
+                row["validation_passed"] = "true"
             elif epic:
                 # Epic was in the universe but did not pass (or was not evaluated).
-                row["validation_passed"] = False
+                row["validation_passed"] = "false"
 
         with open(report_path, "w", newline="") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
