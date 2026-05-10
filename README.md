@@ -18,7 +18,7 @@ A modular trading engine for automated **paper trading**, connected to the IG pl
 - [5. Inputs](#5-inputs)
   - [5.1 Observable Universe](#51-observable-universe)
   - [5.2 Time Series Data](#52-time-series-data)
-    - [5.2.1 Historic data ingestion](#521-historic-data-ingestion)
+    - [5.2.1 Historic series files](#521-historic-series-files)
 - [6. Components](#6-components)
 - [7. Dashboard](#7-dashboard)
 - [8. Universe Series](#8-universe-series)
@@ -224,7 +224,7 @@ The 21 remaining universe instruments — all candidates — have no stored seri
 
 On merge, live data takes precedence over existing master values at the same timestamp — stored rows are overwritten by freshly fetched bars. Historic-file data has the lowest precedence: existing master values win over historic-file values on overlap. Precedence order (highest to lowest): live fetched data > existing master values > historic file data.
 
-### 5.2.1 Historic data ingestion
+### 5.2.1 Historic series files
 
 `data/input/historic_series/` accepts `.xlsx` files of the same three-sheet schema (`mid_close`, `bid_close`, `mid_open`) to backfill the master series. The folder is currently empty. Files are validated on load; any file that fails a schema check is skipped with a warning. Ingestion runs automatically on every pipeline run.
 
