@@ -1,0 +1,516 @@
+# IG Paper Trading (Demo) Epic Candidates
+# =========================================
+# Exhaustive list of IG epic codes for paper trading (DEMO account).
+# Sources:
+#   - QuantConnect Lean.Brokerages.IG / IGSymbolMapper.cs (github.com/fabiankliem/Lean.Brokerages.IG)
+#   - ig-python/trading-ig sample_utils.py and test_integration.py (github.com/ig-python/trading-ig)
+#   - HedgeFundAgent ig_market_data.py (github.com/Web3Dobie/HedgeFundAgent)
+#   - Tradinator universe.json (existing validated/candidate epics)
+#
+# Format: EPIC | Instrument Name | Asset Class | Sub-Class | Region
+# NOTE: All epics must be verified against the IG Demo API via discover_universe.py
+#       before being used in live paper trading. Availability may vary.
+#
+# Epic code conventions:
+#   IX.D.xxx.DAILY.IP  -> Spread-bet daily (indices & single stocks)
+#   CS.D.xxx.MINI.IP   -> CFD mini (forex)
+#   CS.D.xxx.TODAY.IP  -> Spread-bet rolling (forex, spot metals, crypto)
+#   CS.D.xxx.CFD.IP    -> CFD (crypto, some forex)
+#   CC.D.xxx.USS.IP    -> Commodity DFB rolling (energy, metals, agri)
+#   CC.D.xxx.UMP.IP    -> Commodity DFB (alternative code, some markets)
+#   MT.D.xxx.MonthN.IP -> Metals futures (near-dated)
+#   EN.D.xxx.MonthN.IP -> Energy futures (near-dated)
+#   IR.D.xxx.MonthN.IP -> Interest rate futures
+#   CO.D.xxx.MonthN.IP -> Agricultural commodity futures
+#   CF.D.xxx.MON.IP    -> FX futures
+#   IX.D.SUN*.DAILY.IP -> Weekend spread-bets
+#
+# ==============================================================================
+# SECTION 1: GLOBAL INDICES — Spreadbet DAILY.IP
+# ==============================================================================
+
+# --- Americas ---
+IX.D.SPTRD.DAILY.IP   | US 500 (S&P 500)              | index      | broad      | US
+IX.D.NASDAQ.DAILY.IP  | US Tech 100 (Nasdaq 100)       | index      | broad      | US
+IX.D.DOW.DAILY.IP     | Wall Street (DJIA)             | index      | broad      | US
+IX.D.RUSSELL.DAILY.IP | Russell 2000                   | index      | small-cap  | US
+IX.D.BOVESPA.DAILY.IP | Brazil Bovespa                 | index      | broad      | LATAM
+IX.D.IPC.DAILY.IP     | Mexico IPC                     | index      | broad      | LATAM
+
+# --- Europe ---
+IX.D.FTSE.DAILY.IP    | FTSE 100                       | index      | broad      | UK
+IX.D.FTSE250.DAILY.IP | FTSE 250                       | index      | mid-cap    | UK
+IX.D.DAX.DAILY.IP     | Germany 40 (DAX)               | index      | broad      | EU
+IX.D.CAC.DAILY.IP     | France 40 (CAC 40)             | index      | broad      | EU
+IX.D.STOXX50.DAILY.IP | Euro Stoxx 50                  | index      | broad      | EU
+IX.D.STXE.DAILY.IP    | Euro Stoxx 50 (alt)            | index      | broad      | EU
+IX.D.AEX.DAILY.IP     | Netherlands 25 (AEX)           | index      | broad      | EU
+IX.D.IBEX.DAILY.IP    | Spain 35 (IBEX 35)             | index      | broad      | EU
+IX.D.SMI.DAILY.IP     | Switzerland Blue Chip (SMI)    | index      | broad      | EU
+IX.D.MIB.DAILY.IP     | Italy 40 (FTSE MIB)            | index      | broad      | EU
+IX.D.ITLY.DAILY.IP    | Italy 40 (alt code)            | index      | broad      | EU
+IX.D.OMX.DAILY.IP     | Sweden OMX                     | index      | broad      | EU
+
+# --- Asia / Pacific ---
+IX.D.NIKKEI.DAILY.IP  | Japan 225 (Nikkei)             | index      | broad      | APAC
+IX.D.HANGSENG.DAILY.IP| Hang Seng (Hong Kong)          | index      | broad      | APAC
+IX.D.HSENG.DAILY.IP   | Hang Seng (alt code)           | index      | broad      | APAC
+IX.D.ASX.DAILY.IP     | Australia 200                  | index      | broad      | APAC
+IX.D.CHINA50.DAILY.IP | China 50                       | index      | broad      | APAC
+IX.D.SHANGHAI.DAILY.IP| Shanghai Composite             | index      | broad      | APAC
+IX.D.INDIA50.DAILY.IP | India 50 (Nifty 50)            | index      | broad      | APAC
+IX.D.NIFTY.DAILY.IP   | Nifty 50                       | index      | broad      | APAC
+IX.D.SENSEX.DAILY.IP  | Sensex (BSE)                   | index      | broad      | APAC
+IX.D.KOSPI.DAILY.IP   | KOSPI (South Korea)            | index      | broad      | APAC
+IX.D.TAIWAN.DAILY.IP  | Taiwan Weighted                | index      | broad      | APAC
+IX.D.NZ50.DAILY.IP    | NZ 50 (New Zealand)            | index      | broad      | APAC
+IX.D.STI.DAILY.IP     | Straits Times (Singapore)      | index      | broad      | APAC
+
+# --- Africa / Middle East ---
+IX.D.JSE40.DAILY.IP   | South Africa JSE 40            | index      | broad      | AFRICA
+
+# --- Rates & Volatility ---
+IX.D.US10Y.DAILY.IP   | US 10-Year Bond Yield          | index      | rates      | US
+IX.D.US13W.DAILY.IP   | US 13-Week T-Bill Yield        | index      | rates      | US
+IX.D.US30Y.DAILY.IP   | US 30-Year Bond Yield          | index      | rates      | US
+IX.D.VIX.DAILY.IP     | VIX Volatility Index           | index      | volatility | US
+
+# --- Rolling Cash / Near-Month Futures ---
+IX.D.NASDAQ.CASH.IP   | US Tech 100 (cash/rolling)     | index      | broad      | US
+IX.D.STXE.CASH.IP     | Euro Stoxx 50 (cash/rolling)   | index      | broad      | EU
+IX.D.ASX.MONTH1.IP    | Australia 200 (near-month)     | index      | broad      | APAC
+IX.D.ASX.IFM.IP       | Australia 200 (IFM contract)   | index      | broad      | APAC
+IX.D.AEX.Month2.IP    | Netherlands AEX (month 2)      | index      | broad      | EU
+IX.D.CAC.Month1.IP    | France CAC (near-month)        | index      | broad      | EU
+IX.D.DAX.FAR.IP       | DAX (far-dated)                | index      | broad      | EU
+IX.D.DOW.MONTH2.IP    | Wall Street (month 2)          | index      | broad      | US
+IX.D.FTSE.MONTH2.IP   | FTSE 100 (month 2)             | index      | broad      | UK
+IX.D.SPTRD.MONTH1.IP  | US 500 (near-month)            | index      | broad      | US
+IX.D.STXE.MONTH2.IP   | Euro Stoxx 50 (month 2)        | index      | broad      | EU
+IX.D.EMGMKT.DFB.IP    | Emerging Markets DFB           | index      | broad      | global
+IX.D.XINHUA.DFB.IP    | Xinhua China 25 DFB            | index      | broad      | APAC
+
+# --- Weekend Spread-Bets ---
+IX.D.SUNDOW.DAILY.IP    | Weekend Dow                  | index      | broad      | US
+IX.D.SUNDAX.DAILY.IP    | Weekend DAX                  | index      | broad      | EU
+IX.D.SUNFUN.DAILY.IP    | Weekend FTSE 100             | index      | broad      | UK
+IX.D.SUNGBPUSD.DAILY.IP | Weekend GBP/USD              | forex      | major      | global
+IX.D.SUNEURUSD.DAILY.IP | Weekend EUR/USD              | forex      | major      | global
+IX.D.SUNUSDJPY.DAILY.IP | Weekend USD/JPY              | forex      | major      | global
+
+# ==============================================================================
+# SECTION 2: INDIVIDUAL EQUITIES — Spreadbet DAILY.IP
+# ==============================================================================
+
+# --- US Technology ---
+IX.D.APPLE.DAILY.IP       | Apple (AAPL)               | equity     | tech       | US
+IX.D.MICROSOFT.DAILY.IP   | Microsoft (MSFT)           | equity     | tech       | US
+IX.D.AMAZON.DAILY.IP      | Amazon (AMZN)              | equity     | tech       | US
+IX.D.ALPHABET.DAILY.IP    | Alphabet / Google (GOOG)   | equity     | tech       | US
+IX.D.META.DAILY.IP        | Meta Platforms (META)      | equity     | tech       | US
+IX.D.NVIDIA.DAILY.IP      | NVIDIA (NVDA)              | equity     | tech       | US
+IX.D.NETFLIX.DAILY.IP     | Netflix (NFLX)             | equity     | tech       | US
+IX.D.TESLA.DAILY.IP       | Tesla (TSLA)               | equity     | tech/auto  | US
+IX.D.AMD.DAILY.IP         | AMD (AMD)                  | equity     | tech       | US
+IX.D.INTEL.DAILY.IP       | Intel (INTC)               | equity     | tech       | US
+IX.D.CISCO.DAILY.IP       | Cisco (CSCO)               | equity     | tech       | US
+IX.D.IBM.DAILY.IP         | IBM (IBM)                  | equity     | tech       | US
+IX.D.ORACLE.DAILY.IP      | Oracle (ORCL)              | equity     | tech       | US
+
+# --- US Consumer / Retail ---
+IX.D.WALMART.DAILY.IP     | Walmart (WMT)              | equity     | retail     | US
+IX.D.DISNEY.DAILY.IP      | Walt Disney (DIS)          | equity     | media      | US
+IX.D.COCACOLA.DAILY.IP    | Coca-Cola (KO)             | equity     | consumer   | US
+IX.D.PEPSI.DAILY.IP       | PepsiCo (PEP)              | equity     | consumer   | US
+
+# --- US Energy ---
+IX.D.EXXON.DAILY.IP       | ExxonMobil (XOM)           | equity     | energy     | US
+IX.D.CHEVRON.DAILY.IP     | Chevron (CVX)              | equity     | energy     | US
+
+# --- US Healthcare ---
+IX.D.JNJ.DAILY.IP         | Johnson & Johnson (JNJ)    | equity     | healthcare | US
+
+# --- US Consumer Staples ---
+IX.D.PG.DAILY.IP          | Procter & Gamble (PG)      | equity     | consumer   | US
+
+# --- US Financials ---
+IX.D.JPM.DAILY.IP         | JPMorgan Chase (JPM)       | equity     | financial  | US
+IX.D.BAC.DAILY.IP         | Bank of America (BAC)      | equity     | financial  | US
+IX.D.GS.DAILY.IP          | Goldman Sachs (GS)         | equity     | financial  | US
+IX.D.MS.DAILY.IP          | Morgan Stanley (MS)        | equity     | financial  | US
+IX.D.MASTERCARD.DAILY.IP  | Mastercard (MA)            | equity     | financial  | US
+IX.D.VISA.DAILY.IP        | Visa (V)                   | equity     | financial  | US
+
+# --- US Industrials ---
+IX.D.BOEING.DAILY.IP      | Boeing (BA)                | equity     | industrial | US
+
+# --- UK Equities ---
+IX.D.VODAFONE.DAILY.IP    | Vodafone (VOD)             | equity     | telecom    | UK
+IX.D.BARCLAYS.DAILY.IP    | Barclays (BARC)            | equity     | financial  | UK
+IX.D.LLOYDS.DAILY.IP      | Lloyds Banking (LLOY)      | equity     | financial  | UK
+IX.D.HSBC.DAILY.IP        | HSBC (HSBA)                | equity     | financial  | UK/global
+IX.D.BP.DAILY.IP          | BP (BP.)                   | equity     | energy     | UK
+IX.D.GSK.DAILY.IP         | GSK (GSK)                  | equity     | healthcare | UK
+IX.D.ASTRAZENECA.DAILY.IP | AstraZeneca (AZN)          | equity     | healthcare | UK
+IX.D.DIAGEO.DAILY.IP      | Diageo (DGE)               | equity     | consumer   | UK
+IX.D.UNILEVER.DAILY.IP    | Unilever (ULVR)            | equity     | consumer   | UK
+IX.D.RIO.DAILY.IP         | Rio Tinto (RIO)            | equity     | mining     | UK
+IX.D.BHP.DAILY.IP         | BHP Group (BHP)            | equity     | mining     | AU/UK
+
+# --- European Equities ---
+IX.D.NOVARTIS.DAILY.IP    | Novartis (NOVN.SW)         | equity     | healthcare | EU
+IX.D.ROCHE.DAILY.IP       | Roche (ROG.SW)             | equity     | healthcare | EU
+IX.D.NESTLE.DAILY.IP      | Nestlé (NESN.SW)           | equity     | consumer   | EU
+IX.D.SAP.DAILY.IP         | SAP (SAP)                  | equity     | tech       | EU
+IX.D.SIEMENS.DAILY.IP     | Siemens (SIE.DE)           | equity     | industrial | EU
+IX.D.ASML.DAILY.IP        | ASML (ASML)                | equity     | tech       | EU
+IX.D.LOREAL.DAILY.IP      | L'Oréal (OR.PA)            | equity     | consumer   | EU
+IX.D.LVMH.DAILY.IP        | LVMH (MC.PA)               | equity     | luxury     | EU
+IX.D.TOTAL.DAILY.IP       | TotalEnergies (TTE)        | equity     | energy     | EU
+IX.D.SANTANDER.DAILY.IP   | Santander (SAN.MC)         | equity     | financial  | EU
+
+# --- Asia Pacific Equities ---
+IX.D.ALIBABA.DAILY.IP     | Alibaba (BABA)             | equity     | tech       | APAC
+IX.D.NOVONORDISK.DAILY.IP | Novo Nordisk (NOVO-B.CO)   | equity     | healthcare | EU
+
+# ==============================================================================
+# SECTION 3: FOREX — CFD Mini (CS.D.xxx.MINI.IP)
+# ==============================================================================
+
+# --- Major Pairs ---
+CS.D.EURUSD.MINI.IP  | EUR/USD Mini              | forex | major   | global
+CS.D.GBPUSD.MINI.IP  | GBP/USD Mini              | forex | major   | global
+CS.D.USDJPY.MINI.IP  | USD/JPY Mini              | forex | major   | global
+CS.D.USDCHF.MINI.IP  | USD/CHF Mini              | forex | major   | global
+CS.D.AUDUSD.MINI.IP  | AUD/USD Mini              | forex | major   | global
+CS.D.USDCAD.MINI.IP  | USD/CAD Mini              | forex | major   | global
+CS.D.NZDUSD.MINI.IP  | NZD/USD Mini              | forex | major   | global
+
+# --- Euro Cross ---
+CS.D.EURGBP.MINI.IP  | EUR/GBP Mini              | forex | major cross | global
+CS.D.EURJPY.MINI.IP  | EUR/JPY Mini              | forex | major cross | global
+CS.D.EURCHF.MINI.IP  | EUR/CHF Mini              | forex | major cross | global
+CS.D.EURAUD.MINI.IP  | EUR/AUD Mini              | forex | cross   | global
+CS.D.EURCAD.MINI.IP  | EUR/CAD Mini              | forex | cross   | global
+CS.D.EURNZD.MINI.IP  | EUR/NZD Mini              | forex | cross   | global
+CS.D.EURNOK.MINI.IP  | EUR/NOK Mini              | forex | cross   | global
+CS.D.EURSEK.MINI.IP  | EUR/SEK Mini              | forex | cross   | global
+CS.D.EURDKK.MINI.IP  | EUR/DKK Mini              | forex | cross   | global
+CS.D.EURPLN.MINI.IP  | EUR/PLN Mini              | forex | exotic  | global
+CS.D.EURCZK.MINI.IP  | EUR/CZK Mini              | forex | exotic  | global
+CS.D.EURHUF.MINI.IP  | EUR/HUF Mini              | forex | exotic  | global
+CS.D.EURTRY.MINI.IP  | EUR/TRY Mini              | forex | exotic  | global
+CS.D.EURZAR.MINI.IP  | EUR/ZAR Mini              | forex | exotic  | global
+
+# --- GBP Cross ---
+CS.D.GBPJPY.MINI.IP  | GBP/JPY Mini              | forex | major cross | global
+CS.D.GBPCHF.MINI.IP  | GBP/CHF Mini              | forex | cross   | global
+CS.D.GBPAUD.MINI.IP  | GBP/AUD Mini              | forex | cross   | global
+CS.D.GBPCAD.MINI.IP  | GBP/CAD Mini              | forex | cross   | global
+CS.D.GBPNZD.MINI.IP  | GBP/NZD Mini              | forex | cross   | global
+CS.D.GBPNOK.MINI.IP  | GBP/NOK Mini              | forex | cross   | global
+CS.D.GBPSEK.MINI.IP  | GBP/SEK Mini              | forex | cross   | global
+CS.D.GBPDKK.MINI.IP  | GBP/DKK Mini              | forex | cross   | global
+CS.D.GBPPLN.MINI.IP  | GBP/PLN Mini              | forex | exotic  | global
+CS.D.GBPZAR.MINI.IP  | GBP/ZAR Mini              | forex | exotic  | global
+
+# --- AUD Cross ---
+CS.D.AUDJPY.MINI.IP  | AUD/JPY Mini              | forex | cross   | global
+CS.D.AUDCAD.MINI.IP  | AUD/CAD Mini              | forex | cross   | global
+CS.D.AUDCHF.MINI.IP  | AUD/CHF Mini              | forex | cross   | global
+CS.D.AUDNZD.MINI.IP  | AUD/NZD Mini              | forex | cross   | global
+CS.D.AUDSEK.MINI.IP  | AUD/SEK Mini              | forex | cross   | global
+CS.D.AUDNOK.MINI.IP  | AUD/NOK Mini              | forex | cross   | global
+CS.D.AUDDKK.MINI.IP  | AUD/DKK Mini              | forex | cross   | global
+CS.D.AUDSGD.MINI.IP  | AUD/SGD Mini              | forex | cross   | global
+CS.D.AUDHKD.MINI.IP  | AUD/HKD Mini              | forex | cross   | global
+
+# --- NZD Cross ---
+CS.D.NZDJPY.MINI.IP  | NZD/JPY Mini              | forex | cross   | global
+CS.D.NZDCAD.MINI.IP  | NZD/CAD Mini              | forex | cross   | global
+CS.D.NZDCHF.MINI.IP  | NZD/CHF Mini              | forex | cross   | global
+CS.D.NZDSEK.MINI.IP  | NZD/SEK Mini              | forex | cross   | global
+CS.D.NZDNOK.MINI.IP  | NZD/NOK Mini              | forex | cross   | global
+CS.D.NZDSGD.MINI.IP  | NZD/SGD Mini              | forex | cross   | global
+CS.D.NZDHKD.MINI.IP  | NZD/HKD Mini              | forex | cross   | global
+
+# --- CAD Cross ---
+CS.D.CADJPY.MINI.IP  | CAD/JPY Mini              | forex | cross   | global
+CS.D.CADCHF.MINI.IP  | CAD/CHF Mini              | forex | cross   | global
+CS.D.CADSEK.MINI.IP  | CAD/SEK Mini              | forex | cross   | global
+CS.D.CADNOK.MINI.IP  | CAD/NOK Mini              | forex | cross   | global
+CS.D.CADSGD.MINI.IP  | CAD/SGD Mini              | forex | cross   | global
+
+# --- CHF Cross ---
+CS.D.CHFJPY.MINI.IP  | CHF/JPY Mini              | forex | cross   | global
+CS.D.CHFNOK.MINI.IP  | CHF/NOK Mini              | forex | cross   | global
+CS.D.CHFSEK.MINI.IP  | CHF/SEK Mini              | forex | cross   | global
+CS.D.CHFSGD.MINI.IP  | CHF/SGD Mini              | forex | cross   | global
+
+# --- USD Exotic ---
+CS.D.USDMXN.MINI.IP  | USD/MXN Mini              | forex | exotic  | global
+CS.D.USDTRY.MINI.IP  | USD/TRY Mini              | forex | exotic  | global
+CS.D.USDZAR.MINI.IP  | USD/ZAR Mini              | forex | exotic  | global
+CS.D.USDPLN.MINI.IP  | USD/PLN Mini              | forex | exotic  | global
+CS.D.USDCZK.MINI.IP  | USD/CZK Mini              | forex | exotic  | global
+CS.D.USDHUF.MINI.IP  | USD/HUF Mini              | forex | exotic  | global
+CS.D.USDCNH.MINI.IP  | USD/CNH Mini              | forex | exotic  | global
+CS.D.USDSGD.MINI.IP  | USD/SGD Mini              | forex | exotic  | global
+CS.D.USDHKD.MINI.IP  | USD/HKD Mini              | forex | exotic  | global
+CS.D.USDSEK.MINI.IP  | USD/SEK Mini              | forex | cross   | global
+CS.D.USDNOK.MINI.IP  | USD/NOK Mini              | forex | cross   | global
+CS.D.USDDKK.MINI.IP  | USD/DKK Mini              | forex | cross   | global
+CS.D.USDBRL.MINI.IP  | USD/BRL Mini              | forex | exotic  | global
+CS.D.USDARS.MINI.IP  | USD/ARS Mini              | forex | exotic  | global
+CS.D.USDCLP.MINI.IP  | USD/CLP Mini              | forex | exotic  | global
+CS.D.USDCOP.MINI.IP  | USD/COP Mini              | forex | exotic  | global
+CS.D.USDRUB.MINI.IP  | USD/RUB Mini              | forex | exotic  | global
+CS.D.USDINR.MINI.IP  | USD/INR Mini              | forex | exotic  | global
+CS.D.USDIDR.MINI.IP  | USD/IDR Mini              | forex | exotic  | global
+CS.D.USDTHB.MINI.IP  | USD/THB Mini              | forex | exotic  | global
+CS.D.USDKRW.MINI.IP  | USD/KRW Mini              | forex | exotic  | global
+
+# --- Other Minor Crosses ---
+CS.D.HKDJPY.MINI.IP  | HKD/JPY Mini              | forex | exotic  | global
+CS.D.NOKJPY.MINI.IP  | NOK/JPY Mini              | forex | exotic  | global
+CS.D.SEKJPY.MINI.IP  | SEK/JPY Mini              | forex | exotic  | global
+CS.D.SGDJPY.MINI.IP  | SGD/JPY Mini              | forex | exotic  | global
+CS.D.ZARJPY.MINI.IP  | ZAR/JPY Mini              | forex | exotic  | global
+
+# --- Forex Spread-bet Rolling TODAY.IP ---
+CS.D.EURUSD.TODAY.IP | EUR/USD (spreadbet)       | forex | major   | global
+CS.D.GBPUSD.TODAY.IP | GBP/USD (spreadbet)       | forex | major   | global
+CS.D.USDJPY.TODAY.IP | USD/JPY (spreadbet)       | forex | major   | global
+CS.D.AUDUSD.TODAY.IP | AUD/USD (spreadbet)       | forex | major   | global
+CS.D.USDCAD.TODAY.IP | USD/CAD (spreadbet)       | forex | major   | global
+CS.D.USDCHF.TODAY.IP | USD/CHF (spreadbet)       | forex | major   | global
+CS.D.EURGBP.TODAY.IP | EUR/GBP (spreadbet)       | forex | cross   | global
+CS.D.EURJPY.TODAY.IP | EUR/JPY (spreadbet)       | forex | cross   | global
+CS.D.EURCHF.TODAY.IP | EUR/CHF (spreadbet)       | forex | cross   | global
+CS.D.CHFJPY.TODAY.IP | CHF/JPY (spreadbet)       | forex | cross   | global
+CS.D.GBPJPY.TODAY.IP | GBP/JPY (spreadbet)       | forex | cross   | global
+CS.D.CADJPY.TODAY.IP | CAD/JPY (spreadbet)       | forex | cross   | global
+CS.D.GBPCAD.TODAY.IP | GBP/CAD (spreadbet)       | forex | cross   | global
+
+# --- Forex CFD ---
+CS.D.GBPUSD.CFD.IP   | GBP/USD (CFD)             | forex | major   | global
+CS.D.USDJPY.CFD.IP   | USD/JPY (CFD)             | forex | major   | global
+
+# --- Forex Futures (CF.D) ---
+CF.D.EURUSD.SEP.IP   | EUR/USD Futures (Sep)     | forex | futures | global
+CF.D.EURGBP.SEP.IP   | EUR/GBP Futures (Sep)     | forex | futures | global
+CF.D.AUDJPY.SEP.IP   | AUD/JPY Futures (Sep)     | forex | futures | global
+CF.D.AUD.SEP.IP      | AUD Futures (Sep)         | forex | futures | global
+CF.D.USDCAD.SEP.IP   | USD/CAD Futures (Sep)     | forex | futures | global
+CF.D.USDCHF.SEP.IP   | USD/CHF Futures (Sep)     | forex | futures | global
+
+# ==============================================================================
+# SECTION 4: COMMODITIES — Rolling DFB (CC.D.xxx.USS.IP)
+# ==============================================================================
+
+# --- Energy ---
+CC.D.CL.USS.IP      | Oil - US Crude (WTI)        | commodity | energy  | global
+CC.D.LCO.USS.IP     | Oil - Brent Crude           | commodity | energy  | global
+CC.D.NG.USS.IP      | Natural Gas                 | commodity | energy  | global
+CC.D.HO.USS.IP      | Heating Oil                 | commodity | energy  | global
+CC.D.RB.USS.IP      | RBOB Gasoline               | commodity | energy  | global
+CC.D.GASOIL.USS.IP  | Gas Oil                     | commodity | energy  | global
+
+# --- Precious Metals ---
+CC.D.GC.USS.IP      | Gold (rolling)              | commodity | metal   | global
+CC.D.SI.USS.IP      | Silver (rolling)            | commodity | metal   | global
+CC.D.PA.USS.IP      | Palladium (rolling)         | commodity | metal   | global
+CC.D.PL.USS.IP      | Platinum (rolling)          | commodity | metal   | global
+
+# --- Industrial / Base Metals ---
+CC.D.HG.USS.IP      | High Grade Copper (HG)      | commodity | metal   | global
+CC.D.ALI.USS.IP     | Aluminium (LME)             | commodity | metal   | global
+CC.D.LEAD.USS.IP    | Lead (LME)                  | commodity | metal   | global
+CC.D.NICKEL.USS.IP  | Nickel (LME)                | commodity | metal   | global
+CC.D.ZINC.USS.IP    | Zinc (LME)                  | commodity | metal   | global
+
+# --- Agricultural ---
+CC.D.W.USS.IP       | Wheat (CBOT)                | commodity | agri    | global
+CC.D.C.USS.IP       | Corn (CBOT)                 | commodity | agri    | global
+CC.D.S.USS.IP       | Soybeans (CBOT)             | commodity | agri    | global
+CC.D.SM.USS.IP      | Soybean Meal                | commodity | agri    | global
+CC.D.BO.USS.IP      | Soybean Oil                 | commodity | agri    | global
+CC.D.KE.USS.IP      | Kansas City Wheat           | commodity | agri    | global
+CC.D.KC.USS.IP      | Coffee (Arabica)            | commodity | agri    | global
+CC.D.CC.USS.IP      | Cocoa                       | commodity | agri    | global
+CC.D.SB.USS.IP      | Sugar No. 11                | commodity | agri    | global
+CC.D.OJ.USS.IP      | Orange Juice                | commodity | agri    | global
+CC.D.CT.USS.IP      | Cotton No. 2                | commodity | agri    | global
+CC.D.RR.USS.IP      | Rough Rice                  | commodity | agri    | global
+CC.D.LBS.USS.IP     | Lumber                      | commodity | agri    | global
+CC.D.LE.USS.IP      | Live Cattle                 | commodity | agri    | global
+CC.D.LH.USS.IP      | Lean Hogs                   | commodity | agri    | global
+
+# --- Alternative/Legacy Commodity Codes (UMP) ---
+CC.D.GC.UMP.IP      | Gold (UMP code)             | commodity | metal   | global
+CC.D.LCO.UMP.IP     | Oil - Brent Crude (UMP)     | commodity | energy  | global
+CC.D.SILVER.UMP.IP  | Silver (UMP code)           | commodity | metal   | global
+CC.D.NGAS.UMP.IP    | Natural Gas (UMP code)      | commodity | energy  | global
+CC.D.COPPER.UMP.IP  | Copper (UMP code)           | commodity | metal   | global
+CC.D.CL.UMP.IP      | Oil - US Crude (UMP)        | commodity | energy  | global
+
+# ==============================================================================
+# SECTION 5: SPOT METALS — Spreadbet TODAY.IP
+# ==============================================================================
+
+CS.D.USCGC.TODAY.IP | Gold (spot spreadbet)       | commodity | metal   | global
+CS.D.USCSI.TODAY.IP | Silver (spot spreadbet)     | commodity | metal   | global
+CS.D.USCPD.TODAY.IP | Palladium (spot spreadbet)  | commodity | metal   | global
+CS.D.USCPT.TODAY.IP | Platinum (spot spreadbet)   | commodity | metal   | global
+
+# ==============================================================================
+# SECTION 6: METALS FUTURES (MT.D.xxx.MonthN.IP)
+# ==============================================================================
+
+MT.D.GC.Month2.IP   | Gold Futures (near-month)   | commodity | metal   | global
+MT.D.HG.Month1.IP   | Copper Futures (month 1)    | commodity | metal   | global
+MT.D.HG.Month2.IP   | Copper Futures (month 2)    | commodity | metal   | global
+MT.D.PL.Month2.IP   | Platinum Futures (month 2)  | commodity | metal   | global
+MT.D.PA.Month1.IP   | Palladium Futures (month 1) | commodity | metal   | global
+
+# ==============================================================================
+# SECTION 7: ENERGY FUTURES (EN.D.xxx.MonthN.IP)
+# ==============================================================================
+
+EN.D.CL.Month1.IP   | WTI Crude Oil Futures (M1)  | commodity | energy  | global
+EN.D.LCO.Month4.IP  | Brent Crude Futures (M4)    | commodity | energy  | global
+
+# ==============================================================================
+# SECTION 8: INTEREST RATE FUTURES (IR.D.xxx.MonthN.IP)
+# ==============================================================================
+
+IR.D.FGBM.Month1.IP | Euro-Bobl 5Y (German bond)  | rates     | futures | EU
+IR.D.FGBL.Month1.IP | Euro-Bund 10Y (German bond) | rates     | futures | EU
+IR.D.FGBX.Month1.IP | Euro-Buxl 30Y (German bond) | rates     | futures | EU
+IR.D.FBTS.Month1.IP | Euro-Schatz 2Y (German bond)| rates     | futures | EU
+IR.D.FBTP.Month1.IP | BTP Italian Gov Bond        | rates     | futures | EU
+IR.D.FEI.MONTH6.IP  | Euribor 3M Futures (M6)     | rates     | futures | EU
+IR.D.FF.Month10.IP  | Fed Funds Futures (M10)     | rates     | futures | US
+
+# ==============================================================================
+# SECTION 9: AGRICULTURAL COMMODITY FUTURES (CO.D.xxx.MonthN.IP)
+# ==============================================================================
+
+CO.D.CC.Month1.IP   | Cocoa Futures (month 1)     | commodity | agri    | global
+CO.D.KC.Month1.IP   | Coffee Futures (month 1)    | commodity | agri    | global
+CO.D.C.Month1.IP    | Corn Futures (month 1)      | commodity | agri    | global
+CO.D.CT.Month2.IP   | Cotton Futures (month 2)    | commodity | agri    | global
+CO.D.LCC.Month3.IP  | LCC Futures (month 3)       | commodity | agri    | global
+CO.D.DX.Month1.IP   | US Dollar Index Futures     | forex     | futures | global
+CO.D.CFI.Month3.IP  | CFI Commodity Futures       | commodity | agri    | global
+
+# ==============================================================================
+# SECTION 10: CRYPTOCURRENCIES
+# ==============================================================================
+
+# --- Bitcoin ---
+CS.D.BITCOIN.TODAY.IP  | Bitcoin / USD (spreadbet)       | crypto | major   | global
+CS.D.BITCOIN.CFD.IP    | Bitcoin / USD (CFD)             | crypto | major   | global
+CS.D.BITCOINEU.CFD.IP  | Bitcoin / EUR (CFD)             | crypto | major   | global
+CS.D.BITCOINGB.CFD.IP  | Bitcoin / GBP (CFD)             | crypto | major   | global
+
+# --- Ethereum ---
+CS.D.ETHUSD.TODAY.IP   | Ethereum / USD (spreadbet)      | crypto | major   | global
+CS.D.ETHUSD.CFD.IP     | Ethereum / USD (CFD)            | crypto | major   | global
+CS.D.ETHEUR.CFD.IP     | Ethereum / EUR (CFD)            | crypto | major   | global
+CS.D.ETHGBP.CFD.IP     | Ethereum / GBP (CFD)            | crypto | major   | global
+CS.D.ETHEREUM.CFD.IP   | Ethereum (alt epic)             | crypto | major   | global
+CS.D.ETHXBT.TODAY.IP   | Ethereum / Bitcoin (ratio)      | crypto | cross   | global
+
+# --- Litecoin ---
+CS.D.LTCUSD.TODAY.IP   | Litecoin / USD (spreadbet)      | crypto | altcoin | global
+CS.D.LTCUSD.CFD.IP     | Litecoin / USD (CFD)            | crypto | altcoin | global
+CS.D.LTCEUR.CFD.IP     | Litecoin / EUR (CFD)            | crypto | altcoin | global
+
+# --- Ripple / XRP ---
+CS.D.XRPUSD.CFD.IP     | XRP / USD (CFD)                 | crypto | altcoin | global
+CS.D.XRPEUR.CFD.IP     | XRP / EUR (CFD)                 | crypto | altcoin | global
+CS.D.RIPPLE.CFD.IP     | XRP / USD (alt epic)            | crypto | altcoin | global
+
+# --- Bitcoin Cash ---
+CS.D.BCHUSD.TODAY.IP   | Bitcoin Cash / USD (spreadbet)  | crypto | altcoin | global
+CS.D.BCHXBT.TODAY.IP   | Bitcoin Cash / BTC (spreadbet)  | crypto | cross   | global
+CS.D.BCHUSD.CFD.IP     | Bitcoin Cash / USD (CFD)        | crypto | altcoin | global
+CS.D.BCHEUR.CFD.IP     | Bitcoin Cash / EUR (CFD)        | crypto | altcoin | global
+
+# --- Cardano ---
+CS.D.ADAUSD.TODAY.IP   | Cardano / USD (spreadbet)       | crypto | altcoin | global
+CS.D.CARDANO.CFD.IP    | Cardano / USD (CFD)             | crypto | altcoin | global
+CS.D.CARDANOEU.CFD.IP  | Cardano / EUR (CFD)             | crypto | altcoin | global
+
+# --- Polkadot ---
+CS.D.DOTUSD.TODAY.IP   | Polkadot / USD (spreadbet)      | crypto | altcoin | global
+CS.D.POLKADOT.CFD.IP   | Polkadot / USD (CFD)            | crypto | altcoin | global
+CS.D.POLKADOTEU.CFD.IP | Polkadot / EUR (CFD)            | crypto | altcoin | global
+
+# --- Solana ---
+CS.D.SOLANA.CFD.IP     | Solana / USD (CFD)              | crypto | altcoin | global
+CS.D.SOLANAEU.CFD.IP   | Solana / EUR (CFD)              | crypto | altcoin | global
+
+# --- Dogecoin ---
+CS.D.DOGUSD.TODAY.IP   | Dogecoin / USD (spreadbet)      | crypto | meme    | global
+CS.D.DOGE.CFD.IP       | Dogecoin / USD (CFD)            | crypto | meme    | global
+CS.D.DOGEEUR.CFD.IP    | Dogecoin / EUR (CFD)            | crypto | meme    | global
+CS.D.SHIB.CFD.IP       | Shiba Inu / USD (CFD)           | crypto | meme    | global
+
+# --- Chainlink ---
+CS.D.LNKUSD.TODAY.IP   | Chainlink / USD (spreadbet)     | crypto | altcoin | global
+CS.D.CHAINLINK.CFD.IP  | Chainlink / USD (CFD)           | crypto | altcoin | global
+CS.D.CHAINLINKEU.CFD.IP| Chainlink / EUR (CFD)           | crypto | altcoin | global
+
+# --- Uniswap ---
+CS.D.UNIUSD.TODAY.IP   | Uniswap / USD (spreadbet)       | crypto | defi    | global
+CS.D.UNISWAP.CFD.IP    | Uniswap / USD (CFD)             | crypto | defi    | global
+
+# --- EOS ---
+CS.D.EOSUSD.TODAY.IP   | EOS / USD (spreadbet)           | crypto | altcoin | global
+CS.D.EOSUSD.CFD.IP     | EOS / USD (CFD)                 | crypto | altcoin | global
+
+# --- Stellar ---
+CS.D.XLMUSD.TODAY.IP   | Stellar / USD (spreadbet)       | crypto | altcoin | global
+CS.D.XLMUSD.CFD.IP     | Stellar / USD (CFD)             | crypto | altcoin | global
+
+# --- NEO ---
+CS.D.NEOUSD.TODAY.IP   | NEO / USD (spreadbet)           | crypto | altcoin | global
+
+# --- Polygon ---
+CS.D.POLYGON.CFD.IP    | Polygon (MATIC) / USD (CFD)     | crypto | altcoin | global
+
+# --- Cosmos ---
+CS.D.COSMOS.CFD.IP     | Cosmos (ATOM) / USD (CFD)       | crypto | altcoin | global
+
+# --- Tron ---
+CS.D.TRON.CFD.IP       | Tron (TRX) / USD (CFD)          | crypto | altcoin | global
+
+# --- Tezos ---
+CS.D.TEZOS.CFD.IP      | Tezos (XTZ) / USD (CFD)         | crypto | altcoin | global
+
+# --- VeChain ---
+CS.D.VECHAIN.CFD.IP    | VeChain (VET) / USD (CFD)       | crypto | altcoin | global
+
+# --- Filecoin ---
+CS.D.FILECOIN.CFD.IP   | Filecoin (FIL) / USD (CFD)      | crypto | altcoin | global
+
+# --- Algorand ---
+CS.D.ALGO.CFD.IP       | Algorand (ALGO) / USD (CFD)     | crypto | altcoin | global
+
+# --- Aptos ---
+CS.D.APTOS.CFD.IP      | Aptos (APT) / USD (CFD)         | crypto | altcoin | global
+
+# --- Avalanche ---
+CS.D.AVALANCHE.CFD.IP  | Avalanche (AVAX) / USD (CFD)    | crypto | altcoin | global
+
+# --- Crypto Basket ---
+CS.D.CRYPTOB10.TODAY.IP| Crypto Basket Top 10 (spreadbet)| crypto | basket  | global
+
+# ==============================================================================
+# END OF FILE
+# Total entries: ~270 epics
+# Last updated: 2026-05-10
+# Next step: feed into discover_universe.py to validate against IG Demo API
+# ==============================================================================
