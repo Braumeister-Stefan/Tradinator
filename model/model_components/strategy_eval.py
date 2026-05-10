@@ -10,7 +10,9 @@ It does not constitute trading advice, investment recommendation, or financial
 guidance of any kind. Use at your own risk.
 """
 
+import csv
 import math
+import os
 
 
 class StrategyEval:
@@ -21,6 +23,7 @@ class StrategyEval:
     MAX_SIGNALS_PCT = 1.0       # max fraction of universe (reserved for Phase 2)
     RISK_FREE_RATE = 0.04       # annual risk-free rate for Sharpe stub
     MIN_DATA_POINTS = 20        # minimum price history length for validation
+    CANDIDATES_REPORT_FILENAME = "candidates_report.csv"
 
     def __init__(self, config: dict):
         """Store config for later use by run()."""
@@ -50,6 +53,12 @@ class StrategyEval:
         total = passed_count + rejected_count
         print(f"[StrategyEval] Validation: {passed_count}/{total} signals passed")
 
+        # Update candidates report with validation results (non-blocking).
+        try:
+            self._update_candidates_report(validated)
+        except Exception as exc:
+            print(f"[StrategyEval] WARNING: candidates report update failed — {exc}")
+
         return {
             "signals": validated,
             "timestamp": signals.get("timestamp", ""),
@@ -63,6 +72,39 @@ class StrategyEval:
     # ------------------------------------------------------------------
     # Internal methods
     # ------------------------------------------------------------------
+
+    def _update_candidates_report(self, validated_signals: dict) -> None:
+        """Update the ``validation_passed`` column in ``candidates_report.csv``.
+
+        Reads the existing report written by DataPipeline, sets
+        ``validation_passed`` for each epic that appears in *validated_signals*
+        (passed = True means the signal survived ``_apply_filters``), and
+        re-writes the file.  Epics that were not evaluated (e.g. had no
+        signal generated) are left with an empty ``validation_passed`` value.
+        """
+        output_dir = self.config.get("output_dir", "data/output")
+        report_path = os.path.join(output_dir, self.CANDIDATES_REPORT_FILENAME)
+
+        if not os.path.isfile(report_path):
+            return
+
+        with open(report_path, newline="") as csvfile:
+            reader = csv.DictReader(csvfile)
+            rows = list(reader)
+            fieldnames = reader.fieldnames or []
+
+        for row in rows:
+            epic = row.get("epic", "")
+            if epic in validated_signals:
+                row["validation_passed"] = True
+            elif epic:
+                # Epic was in the universe but did not pass (or was not evaluated).
+                row["validation_passed"] = False
+
+        with open(report_path, "w", newline="") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
 
     def _validate_signal(self, epic: str, signal: dict, close_prices: list) -> dict:
         """Run all checks on a single signal and augment it with validation info."""

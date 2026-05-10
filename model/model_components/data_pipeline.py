@@ -5,16 +5,25 @@ Downloads historical market data for each instrument via the broker adapter
 and performs basic cleaning (forward-fill).  Persists consolidated series to
 an xlsx master file as a side effect.
 
+When the broker adapter cannot return usable data for an instrument, a
+secondary fetch via ``YHFinanceFetcher`` (Yahoo Finance) is attempted.
+If both sources fail, the instrument is skipped.  A per-run
+``candidates_report.csv`` is written to ``data/output/`` recording the
+data-source outcome for every universe instrument.
+
 DISCLAIMER: Tradinator is a personal experimentation tool for paper trading.
 It does not constitute trading advice, investment recommendation, or financial
 guidance of any kind. Use at your own risk.
 """
 
 
+import csv
 import os
 import time
 
 import pandas as pd
+
+from .yh_finance_fetcher import YHFinanceFetcher
 
 
 class DataPipeline:
@@ -27,6 +36,7 @@ class DataPipeline:
     SERIES_FILE = "data/input/universe_series.xlsx"  # master file path
     HISTORIC_DIR = "data/input/historic_series"  # historic ingest folder
     SHEET_NAMES = ("mid_close", "bid_close", "mid_open")  # the three sheet names
+    CANDIDATES_REPORT_FILENAME = "candidates_report.csv"  # written to output_dir
 
     def __init__(self, config: dict):
         """Store config for later use by run()."""
@@ -40,28 +50,76 @@ class DataPipeline:
         lookback = self.config.get("lookback", self.DEFAULT_LOOKBACK)
 
         prices = {}
+        # Track the data source used for each instrument.
+        data_sources: dict[str, str] = {}
+        # Track whether broker / YH succeeded per instrument for the report.
+        broker_available: dict[str, bool] = {}
+        yh_available: dict[str, bool] = {}
+
+        yh_fetcher = YHFinanceFetcher()
 
         for i, instrument_id in enumerate(instruments):
             if i > 0:
                 time.sleep(self.RATE_LIMIT_DELAY)
 
             print(f"[DataPipeline] Fetching {instrument_id} ({resolution}, {lookback} bars)…")
+
+            # --- Primary: broker adapter ---
+            broker_ok = False
+            parsed = None
             try:
                 bars = adapter.fetch_historical_prices(
                     instrument_id, resolution, lookback
                 )
+                parsed = self._bars_to_columns(bars)
+                if parsed is not None and not self._all_none(parsed):
+                    broker_ok = True
             except Exception as exc:
-                print(f"[DataPipeline] WARNING: skipping {instrument_id} — {exc}")
+                print(f"[DataPipeline] WARNING: broker fetch failed for {instrument_id} — {exc}")
+
+            broker_available[instrument_id] = broker_ok
+
+            if broker_ok:
+                prices[instrument_id] = parsed
+                data_sources[instrument_id] = "broker"
+                yh_available[instrument_id] = False
                 continue
 
-            parsed = self._bars_to_columns(bars)
-            if parsed is None:
+            # --- Fallback: YH Finance ---
+            print(
+                f"[DataPipeline] Broker data unavailable for {instrument_id}, "
+                "trying YH Finance fallback…"
+            )
+            yh_bars = yh_fetcher.fetch_historical_prices(instrument_id, resolution, lookback)
+            yh_parsed = self._bars_to_columns(yh_bars) if yh_bars else None
+
+            if yh_parsed is not None and not self._all_none(yh_parsed):
+                prices[instrument_id] = yh_parsed
+                data_sources[instrument_id] = "yh_finance"
+                yh_available[instrument_id] = True
+                print(f"[DataPipeline] YH Finance fallback succeeded for {instrument_id}.")
+            else:
+                yh_available[instrument_id] = False
                 print(f"[DataPipeline] WARNING: no usable data for {instrument_id}, skipping.")
-                continue
-
-            prices[instrument_id] = parsed
 
         prices = self._clean_prices(prices)
+
+        # --- Investable universe log ---
+        universe_size = len(instruments)
+        investable_size = len(prices)
+        pct = (investable_size / universe_size * 100) if universe_size > 0 else 0.0
+        print(
+            f"[DataPipeline] Investable universe: {investable_size} epic(s) "
+            f"({pct:.1f}% of {universe_size} considered candidates)"
+        )
+
+        # --- Candidates report (non-blocking side effect) ---
+        try:
+            self._write_candidates_report(
+                instruments, prices, data_sources, broker_available, yh_available
+            )
+        except Exception as exc:
+            print(f"[DataPipeline] WARNING: candidates report write failed — {exc}")
 
         # --- Fetch instrument metadata with dealing rules (REQ-3) ---
         instrument_metadata = {}
@@ -102,6 +160,7 @@ class DataPipeline:
             "metadata": instrument_metadata,
             "resolution": resolution,
             "lookback": lookback,
+            "data_sources": data_sources,
         }
 
     def ingest_historic(self) -> None:
@@ -113,6 +172,58 @@ class DataPipeline:
         if not self._validate_series_schema(master):
             print("[DataPipeline] WARNING: master series failed validation after ingest.")
         self._save_series_file(master, self.SERIES_FILE)
+
+    # ------------------------------------------------------------------
+    # Candidates report
+    # ------------------------------------------------------------------
+
+    def _write_candidates_report(
+        self,
+        instruments: list[str],
+        prices: dict,
+        data_sources: dict,
+        broker_available: dict,
+        yh_available: dict,
+    ) -> None:
+        """Write a CSV report of data-source outcomes for every universe instrument.
+
+        The file is written to ``{output_dir}/candidates_report.csv``.
+        The ``validation_passed`` column is left blank here and filled in
+        later by ``StrategyEval``.
+        """
+        output_dir = self.config.get("output_dir", "data/output")
+        os.makedirs(output_dir, exist_ok=True)
+        report_path = os.path.join(output_dir, self.CANDIDATES_REPORT_FILENAME)
+
+        rows = []
+        for instrument_id in instruments:
+            fields = prices.get(instrument_id, {})
+            close_vals = fields.get("close", [])
+            non_zero_points = sum(
+                1 for v in close_vals if v is not None and v != 0
+            )
+            source = data_sources.get(instrument_id, "none")
+            rows.append({
+                "epic": instrument_id,
+                "data_source": source,
+                "non_zero_data_points": non_zero_points,
+                "broker_data_available": broker_available.get(instrument_id, False),
+                "yh_data_available": yh_available.get(instrument_id, False),
+                "validation_passed": "",  # filled in by StrategyEval
+            })
+
+        fieldnames = [
+            "epic",
+            "data_source",
+            "non_zero_data_points",
+            "broker_data_available",
+            "yh_data_available",
+            "validation_passed",
+        ]
+        with open(report_path, "w", newline="") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
 
     # ------------------------------------------------------------------
     # Internal methods
