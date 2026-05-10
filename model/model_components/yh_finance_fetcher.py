@@ -60,13 +60,21 @@ EPIC_TO_YH_TICKER: dict[str, str] = {
     "CS.D.EURJPY.MINI.IP":   "EURJPY=X",
     "CS.D.USDCHF.MINI.IP":   "USDCHF=X",
     "CS.D.NZDUSD.MINI.IP":   "NZDUSD=X",
-    # Commodities
+    # Commodities (CME/NYMEX/COMEX hard commodities)
     "CC.D.CL.UMP.IP":        "CL=F",   # WTI Crude Oil
     "CC.D.LCO.UMP.IP":       "BZ=F",   # Brent Crude Oil
     "CC.D.GC.UMP.IP":        "GC=F",   # Gold
     "CC.D.SILVER.UMP.IP":    "SI=F",   # Silver
     "CC.D.NGAS.UMP.IP":      "NG=F",   # Natural Gas
     "CC.D.COPPER.UMP.IP":    "HG=F",   # Copper
+    # Soft commodities (ICE/CBOT) — CO.D.* prefix (P6-fix)
+    # Note: month-specific contracts (Month1/Month2/Month3) map to the
+    # continuous front-month Yahoo ticker; exact contract rollover differs.
+    "CO.D.CC.Month1.IP":     "CC=F",   # Cocoa (ICE)
+    "CO.D.KC.Month1.IP":     "KC=F",   # Coffee Arabica (ICE)
+    "CO.D.C.Month1.IP":      "ZC=F",   # Corn (CBOT)
+    "CO.D.CT.Month2.IP":     "CT=F",   # Cotton No.2 (ICE)
+    "CO.D.DX.Month1.IP":     "DX-Y.NYB",  # US Dollar Index (ICE)
 }
 
 # ---------------------------------------------------------------------------
@@ -124,6 +132,7 @@ class YHFinanceFetcher:
         """
         ticker = EPIC_TO_YH_TICKER.get(epic)
         if ticker is None:
+            print(f"[YHFinanceFetcher] No ticker mapping for {epic} — skipping YH Finance fallback.")
             return []
 
         interval = _RESOLUTION_TO_INTERVAL.get(resolution.upper(), "1d")

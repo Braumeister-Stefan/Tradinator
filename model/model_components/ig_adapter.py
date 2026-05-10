@@ -250,7 +250,7 @@ class IGBrokerAdapter:
         except Exception as exc:
             print(
                 f"[IGBrokerAdapter] WARNING: metadata fetch failed for "
-                f"{instrument_id} — {exc}"
+                f"{instrument_id} — {type(exc).__name__}: {repr(exc)}"
             )
             return defaults
 

@@ -90,6 +90,27 @@ class TestSectionA(unittest.TestCase):
         self.assertEqual(result["verified_count"], 0)
         self.assertEqual(result["candidate_count"], 0)
 
+    def test_valid_flag_fallback_when_status_absent(self):
+        """P9: instruments without a status field fall back to the valid flag.
+
+        valid=true  → treated as verified (discover_universe.py output schema).
+        valid=false → treated as candidate.
+        Instruments without either field are flagged in unknown_status.
+        """
+        data = json.dumps({"instruments": [
+            {"epic": "A.B.C.D.IP", "name": "verified one", "valid": True},
+            {"epic": "E.F.G.H.IP", "name": "candidate one", "valid": False},
+            {"epic": "I.J.K.L.IP", "name": "neither", "region": "UK"},
+        ]})
+        with patch("builtins.open", mock_open(read_data=data)):
+            result = scoper._load_section_a("fake/path.json")
+        self.assertIsNone(result["error"])
+        self.assertIn("A.B.C.D.IP", result["verified_epics"])
+        self.assertIn("E.F.G.H.IP", result["candidate_epics"])
+        self.assertIn("I.J.K.L.IP", result["unknown_status"])
+        self.assertEqual(result["verified_count"], 1)
+        self.assertEqual(result["candidate_count"], 1)
+
     def test_missing_file_returns_error(self):
         """FileNotFoundError is caught and reported in the error field."""
         with patch("builtins.open", side_effect=FileNotFoundError("no file")):

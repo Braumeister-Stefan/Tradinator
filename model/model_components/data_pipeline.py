@@ -86,12 +86,26 @@ class DataPipeline:
         # Load master series before the fetch loop (needed for last-date lookup).
         master = self._load_series_file(self.SERIES_FILE)
 
+        # P1-log/P2: load all candidates once for reporting and logging.
+        all_candidates: list = []
+        candidates_total = 0
+        try:
+            if os.path.isfile(self.CANDIDATES_PATH):
+                with open(self.CANDIDATES_PATH) as f:
+                    _cdata = json.load(f)
+                all_candidates = _cdata.get("candidates", [])
+                candidates_total = len(all_candidates)
+        except Exception as _exc:
+            print(f"[DataPipeline] WARNING: could not load candidates file — {_exc}")
+
         prices = {}
         # Track the data source used for each instrument.
         data_sources: dict[str, str] = {}
         # Track whether broker / YH succeeded per instrument for the report.
         broker_available: dict[str, bool] = {}
         yh_available: dict[str, bool] = {}
+        # P10: track instruments removed from universe this run (for series cleanup).
+        removed_instruments: list[str] = []
 
         yh_fetcher = YHFinanceFetcher()
 
@@ -121,11 +135,13 @@ class DataPipeline:
                             instrument_id, resolution, lookback
                         )
                     except Exception as exc2:
+                        last_t2 = self._get_candidate_t2_status(instrument_id)  # P7-log
                         print(
-                            f"[DataPipeline] WARNING: skipping {instrument_id} — {exc2}"
+                            f"[DataPipeline] WARNING: skipping {instrument_id} — {exc2} (last known T2={last_t2})"
                         )
                         self._update_t2_status(instrument_id, "NO", f"fetch exception: {exc2}")
                         self._remove_from_universe(instrument_id)
+                        removed_instruments.append(instrument_id)
                         broker_available[instrument_id] = False
                         yh_available[instrument_id] = False
                         continue
@@ -217,23 +233,29 @@ class DataPipeline:
                         "cold-start fetch returned no usable bars from broker or YH Finance"
                     )
                     self._remove_from_universe(instrument_id)
+                    removed_instruments.append(instrument_id)
                     yh_available[instrument_id] = False
 
         prices = self._clean_prices(prices)
 
-        # --- Investable universe log ---
+        # --- Investable universe log (P1) ---
         universe_size = len(instruments)
         investable_size = len(prices)
-        pct = (investable_size / universe_size * 100) if universe_size > 0 else 0.0
-        print(
-            f"[DataPipeline] Investable universe: {investable_size} epic(s) "
-            f"({pct:.1f}% of {universe_size} considered candidates)"
+        pct_active = (investable_size / universe_size * 100) if universe_size > 0 else 0.0
+        log_msg = (
+            f"[DataPipeline] Investable universe: {investable_size}/{universe_size} active"
+            f" ({pct_active:.1f}%)"
         )
+        if candidates_total > 0:
+            pct_total = investable_size / candidates_total * 100
+            log_msg += f", {investable_size}/{candidates_total} across all candidates ({pct_total:.1f}%)"
+        print(log_msg)
 
         # --- Candidates report (non-blocking side effect) ---
         try:
             self._write_candidates_report(
-                instruments, prices, data_sources, broker_available, yh_available
+                instruments, prices, data_sources, broker_available, yh_available,
+                master=master, all_candidates=all_candidates,
             )
         except Exception as exc:
             print(f"[DataPipeline] WARNING: candidates report write failed — {exc}")
@@ -267,6 +289,16 @@ class DataPipeline:
                 master = {name: pd.DataFrame() for name in self.SHEET_NAMES}
             master = self._ingest_historic_files(master, self.HISTORIC_DIR)
             master = self._merge_series(live_frames, master)
+            # P10: drop series columns for instruments removed from universe this run
+            # so the scoper's in_series_not_in_universe list does not grow unbounded.
+            # Collect all columns to drop first, then drop per sheet in one call.
+            if removed_instruments:
+                for sheet_name, df in master.items():
+                    cols_to_drop = [e for e in removed_instruments if e in df.columns]
+                    if cols_to_drop:
+                        master[sheet_name] = df.drop(columns=cols_to_drop)
+                        for epic in cols_to_drop:
+                            print(f"[DataPipeline] Dropped stale series column for {epic} (T2=NO).")
             if not self._validate_series_schema(master):
                 print("[DataPipeline] WARNING: master series failed validation.")
             self._save_series_file(master, self.SERIES_FILE)
@@ -303,10 +335,21 @@ class DataPipeline:
         data_sources: dict,
         broker_available: dict,
         yh_available: dict,
+        master: "dict | None" = None,
+        all_candidates: "list | None" = None,
     ) -> None:
-        """Write a CSV report of data-source outcomes for every universe instrument.
+        """Write a CSV report of data-source outcomes for every candidate instrument.
 
-        The file is written to ``{output_dir}/candidates_report.csv``.
+        P2: All entries from ``universe_candidates.json`` are included, not only
+        instruments currently in ``universe.json``.  Candidates that failed T1 or T2
+        appear with ``data_source=none`` and zero bar counts so the full funnel is
+        visible without dropping failures from the sheet.
+
+        P3: ``bars_fetched_this_run`` replaces the old ``non_zero_data_points`` column
+        (which reflected the current run's fetched bars, not the master series total).
+        A new ``total_bars_in_master`` column counts the non-NaN rows stored in the
+        master series for each epic, making the discrepancy explicit.
+
         The ``validation_passed`` column is left blank here and filled in
         later by ``StrategyEval``.
         """
@@ -314,27 +357,70 @@ class DataPipeline:
         os.makedirs(output_dir, exist_ok=True)
         report_path = os.path.join(output_dir, self.CANDIDATES_REPORT_FILENAME)
 
+        def _bars_fetched(instrument_id: str) -> int:
+            """Count non-zero close values fetched this run for instrument_id."""
+            close_vals = prices.get(instrument_id, {}).get("close", [])
+            return sum(1 for v in close_vals if v is not None and v != 0)
+
+        def _bars_in_master(instrument_id: str) -> int:
+            """Count non-NaN rows in the master series for instrument_id."""
+            if master is None:
+                return 0
+            ref_sheet = master.get(self.SHEET_NAMES[0])
+            if ref_sheet is None or ref_sheet.empty:
+                return 0
+            if instrument_id not in ref_sheet.columns:
+                return 0
+            return int(ref_sheet[instrument_id].notna().sum())
+
         rows = []
+        seen_epics: set[str] = set()
+
+        # P2: iterate ALL candidates from universe_candidates.json first,
+        # so failures are not silently dropped from the output sheet.
+        for candidate in (all_candidates or []):
+            cand_epic = candidate.get("epic", "")
+            if not cand_epic:
+                continue
+            seen_epics.add(cand_epic)
+            rows.append({
+                "epic": cand_epic,
+                "name": candidate.get("name", ""),
+                "t1_status": candidate.get("t1_status", ""),
+                "t2_status": candidate.get("t2_status", ""),
+                "data_source": data_sources.get(cand_epic, "none"),
+                "bars_fetched_this_run": _bars_fetched(cand_epic),
+                "total_bars_in_master": _bars_in_master(cand_epic),
+                "broker_data_available": broker_available.get(cand_epic, False),
+                "yh_data_available": yh_available.get(cand_epic, False),
+                "validation_passed": "",  # filled in by StrategyEval
+            })
+
+        # Include any active-universe instruments not present in candidates.json.
         for instrument_id in instruments:
-            fields = prices.get(instrument_id, {})
-            close_vals = fields.get("close", [])
-            non_zero_points = sum(
-                1 for v in close_vals if v is not None and v != 0
-            )
-            source = data_sources.get(instrument_id, "none")
+            if instrument_id in seen_epics:
+                continue
             rows.append({
                 "epic": instrument_id,
-                "data_source": source,
-                "non_zero_data_points": non_zero_points,
+                "name": "",
+                "t1_status": "",
+                "t2_status": "",
+                "data_source": data_sources.get(instrument_id, "none"),
+                "bars_fetched_this_run": _bars_fetched(instrument_id),
+                "total_bars_in_master": _bars_in_master(instrument_id),
                 "broker_data_available": broker_available.get(instrument_id, False),
                 "yh_data_available": yh_available.get(instrument_id, False),
-                "validation_passed": "",  # filled in by StrategyEval
+                "validation_passed": "",
             })
 
         fieldnames = [
             "epic",
+            "name",
+            "t1_status",
+            "t2_status",
             "data_source",
-            "non_zero_data_points",
+            "bars_fetched_this_run",
+            "total_bars_in_master",
             "broker_data_available",
             "yh_data_available",
             "validation_passed",
@@ -347,6 +433,25 @@ class DataPipeline:
     # ------------------------------------------------------------------
     # Incremental fetch helpers
     # ------------------------------------------------------------------
+
+    def _get_candidate_t2_status(self, instrument_id: str) -> str:
+        """Return the last known T2 status for instrument_id from universe_candidates.json.
+
+        Used in P7-log to surface the previous T2 status alongside a skip warning,
+        distinguishing a first-time failure (previously PENDING_T2) from a regression
+        (previously YES).  Returns ``"UNKNOWN"`` when the file is absent or unreadable.
+        """
+        if not os.path.isfile(self.CANDIDATES_PATH):
+            return "UNKNOWN"
+        try:
+            with open(self.CANDIDATES_PATH) as f:
+                data = json.load(f)
+            for candidate in data.get("candidates", []):
+                if candidate.get("epic") == instrument_id:
+                    return candidate.get("t2_status", "UNKNOWN")
+        except Exception:
+            pass
+        return "UNKNOWN"
 
     def _get_last_stored_date(
         self, instrument_id: str, master: "dict | None"
