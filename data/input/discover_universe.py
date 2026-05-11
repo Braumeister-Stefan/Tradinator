@@ -56,6 +56,11 @@ RATE_LIMIT_DELAY = 2   # seconds between API calls (two calls per epic: T1 + T2)
 LOOKBACK_BARS = 10
 RESOLUTION = "DAY"
 
+# Retry settings for live IG API calls in this script.
+_API_MAX_RETRIES = 3
+_API_EXCEEDED_BASE_WAIT = 60    # seconds base wait on ApiExceededException
+_API_TRANSIENT_BASE_WAIT = 5    # seconds base wait on other transient errors
+
 # Search terms to discover additional markets via IG's search endpoint.
 SEARCH_TERMS = [
     # Indices — Americas
@@ -75,6 +80,38 @@ SEARCH_TERMS = [
     "Meta", "Alphabet", "Netflix",
     "Vodafone", "Barclays", "AstraZeneca", "BP",
 ]
+
+
+def _api_call_with_retry(fn, *args, **kwargs):
+    """Call an IGService method with automatic retry on transient failures.
+
+    ``ApiExceededException`` is retried with a long backoff (60 s, 120 s, …)
+    to give the IG rate-limit window time to reset.  Other unexpected exceptions
+    use a shorter backoff (5 s, 10 s, …).  Returns the call result on success,
+    or re-raises after all retries are exhausted.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(_API_MAX_RETRIES):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as exc:
+            exc_name = type(exc).__name__
+            is_exceeded = exc_name == "ApiExceededException" or "Exceeded" in exc_name
+            base_wait = _API_EXCEEDED_BASE_WAIT if is_exceeded else _API_TRANSIENT_BASE_WAIT
+            wait = base_wait * (2 ** attempt)
+            last_exc = exc
+            if attempt < _API_MAX_RETRIES - 1:
+                print(
+                    f"[discover_universe] {exc_name} on attempt {attempt + 1}/"
+                    f"{_API_MAX_RETRIES} — retrying in {wait}s"
+                )
+                time.sleep(wait)
+            else:
+                print(
+                    f"[discover_universe] {exc_name} on attempt {attempt + 1}/"
+                    f"{_API_MAX_RETRIES} — all retries exhausted"
+                )
+    raise last_exc  # type: ignore[misc]
 
 
 def _connect() -> "IGService":
@@ -204,7 +241,7 @@ def _validate_tier1(ig: "IGService", epic: str) -> tuple[str, str]:
                                 that does NOT indicate the epic is invalid
     """
     try:
-        market = ig.fetch_market_by_epic(epic)
+        market = _api_call_with_retry(ig.fetch_market_by_epic, epic)
     except Exception as exc:
         exc_str = str(exc).lower()
         # IG returns a 404 / error.security.notFound for unknown epics.
@@ -254,7 +291,8 @@ def _validate_tier2(ig: "IGService", epic: str) -> tuple[str, str]:
       ``NO``  — 0 bars returned, all prices None, or exception during fetch
     """
     try:
-        raw = ig.fetch_historical_prices_by_epic_and_num_points(
+        raw = _api_call_with_retry(
+            ig.fetch_historical_prices_by_epic_and_num_points,
             epic, RESOLUTION, LOOKBACK_BARS
         )
         bars = raw.get("prices", [])

@@ -1,0 +1,20 @@
+file,function,line,ig_method,category,has_retry,notes,validation_status,remediation_needed,validator_notes
+data/input/discover_universe.py,_connect,172,create_session,session,True,,OK,False,
+data/input/discover_universe.py,_validate_tier1,244,fetch_market_by_epic,market_data,True,,OK,False,
+data/input/discover_universe.py,_validate_tier2,295,fetch_historical_prices_by_epic_and_num_points,market_data,True,,OK,False,
+data/input/discover_universe.py,_discover_via_search,385,search_markets,market_data,True,,OK,False,
+model/model_components/ig_adapter.py,get_account_info,60,fetch_accounts,account,True,,OK,False,
+model/model_components/ig_adapter.py,get_positions,87,fetch_open_positions,account,True,,OK,False,
+model/model_components/ig_adapter.py,fetch_historical_prices,126,fetch_historical_prices_by_epic_and_num_points,market_data,True,,OK,False,
+model/model_components/ig_adapter.py,fetch_historical_prices_by_date_range,179,fetch_historical_prices_by_epic_and_date_range,market_data,True,,OK,False,
+model/model_components/ig_adapter.py,fetch_instrument_info,223,fetch_market_by_epic,market_data,True,,OK,False,
+model/model_components/ig_adapter.py,open_position,276,create_open_position,order,True,,OK,False,
+model/model_components/ig_adapter.py,close_position,307,close_open_position,order,True,,OK,False,
+model/model_components/ig_adapter.py,confirm_deal,322,fetch_deal_by_deal_reference,order,True,,OK,False,
+model/model_components/ig_adapter.py,_create_session,442,create_session,session,True,,OK,False,
+# VERDICT: PASS
+# Total rows: 13
+# OK: 13
+# NEEDS_RETRY: 0
+# DUPLICATE: 0
+# Missing expected methods: none

@@ -33,6 +33,12 @@ class IGBrokerAdapter:
     EXPIRY = "-"                    # DFB / no expiry for CFDs
     DEFAULT_CURRENCY_CODE = "GBP"
 
+    # Retry settings for live API calls (excluding session creation, which has its
+    # own retry loop in _create_session).
+    API_MAX_RETRIES = 3
+    API_EXCEEDED_BASE_WAIT = 60     # seconds base wait on ApiExceededException
+    API_TRANSIENT_BASE_WAIT = 2     # seconds base wait on other transient errors
+
     def __init__(self, config: dict):
         self.config = config
         self._ig: IGService | None = None
@@ -51,7 +57,7 @@ class IGBrokerAdapter:
     def get_account_info(self) -> dict:
         """Fetch account balance and available cash from IG."""
         ig = self._require_session()
-        data = ig.fetch_accounts()
+        data = self._call_ig_api(ig.fetch_accounts)
         accounts = data.get("accounts", [])
         if not accounts:
             raise RuntimeError("IGBrokerAdapter: No accounts returned by IG API")
@@ -78,7 +84,7 @@ class IGBrokerAdapter:
     def get_positions(self) -> list[dict]:
         """Fetch open positions from IG and normalise into adapter schema."""
         ig = self._require_session()
-        data = ig.fetch_open_positions()
+        data = self._call_ig_api(ig.fetch_open_positions)
         raw_positions = data.get("positions", [])
 
         positions: list[dict] = []
@@ -116,7 +122,8 @@ class IGBrokerAdapter:
     ) -> list[dict]:
         """Fetch historical OHLCV bars from IG for a single instrument."""
         ig = self._require_session()
-        raw = ig.fetch_historical_prices_by_epic_and_num_points(
+        raw = self._call_ig_api(
+            ig.fetch_historical_prices_by_epic_and_num_points,
             instrument_id, resolution, lookback
         )
         bars = raw.get("prices", [])
@@ -168,7 +175,8 @@ class IGBrokerAdapter:
         normalised = base.replace("T", " ").replace("-", "/") + ":000"
         # Use current UTC time as end_date so all new bars up to now are included.
         end_str = time.strftime("%Y/%m/%d %H:%M:%S:000", time.gmtime())
-        raw = ig.fetch_historical_prices_by_epic_and_date_range(
+        raw = self._call_ig_api(
+            ig.fetch_historical_prices_by_epic_and_date_range,
             instrument_id, resolution, normalised, end_str
         )
         bars = raw.get("prices", [])
@@ -212,7 +220,7 @@ class IGBrokerAdapter:
             "sell_allowed": True,
         }
         try:
-            market = ig.fetch_market_by_epic(instrument_id)
+            market = self._call_ig_api(ig.fetch_market_by_epic, instrument_id)
             instrument = market.get("instrument", {})
             dealing_rules = market.get("dealingRules", {})
             snapshot = market.get("snapshot", {})
@@ -264,7 +272,8 @@ class IGBrokerAdapter:
     ) -> dict:
         """Open a position via the IG API."""
         ig = self._require_session()
-        response = ig.create_open_position(
+        response = self._call_ig_api(
+            ig.create_open_position,
             currency_code=currency_code,
             direction=direction,
             epic=instrument_id,
@@ -294,7 +303,8 @@ class IGBrokerAdapter:
     ) -> dict:
         """Close a position via the IG API."""
         ig = self._require_session()
-        response = ig.close_open_position(
+        response = self._call_ig_api(
+            ig.close_open_position,
             deal_id=deal_id,
             direction=direction,
             epic=instrument_id,
@@ -309,7 +319,7 @@ class IGBrokerAdapter:
     def confirm_deal(self, deal_reference: str) -> dict:
         """Confirm whether a deal was accepted or rejected."""
         ig = self._require_session()
-        confirmation = ig.fetch_deal_by_deal_reference(deal_reference)
+        confirmation = self._call_ig_api(ig.fetch_deal_by_deal_reference, deal_reference)
         return {
             "status": confirmation.get("dealStatus", "REJECTED"),
             "deal_id": confirmation.get("dealId"),
@@ -319,6 +329,45 @@ class IGBrokerAdapter:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def _call_ig_api(self, fn, *args, **kwargs):
+        """Call an IGService method with automatic retry on transient failures.
+
+        Handles two distinct failure modes:
+        - ``ApiExceededException``: IG rate-limit / concurrent-session cap.
+          Waits ``API_EXCEEDED_BASE_WAIT * 2^attempt`` seconds before retrying
+          (60 s, 120 s, 240 s …).  This gives the IG servers time to reset the
+          allowance window.
+        - Other exceptions: treated as transient network/server errors.
+          Waits ``API_TRANSIENT_BASE_WAIT * 2^attempt`` seconds (2 s, 4 s, 8 s …).
+
+        Raises the original exception if all retries are exhausted.
+        """
+        last_exc: Exception | None = None
+        for attempt in range(self.API_MAX_RETRIES):
+            try:
+                return fn(*args, **kwargs)
+            except Exception as exc:
+                exc_name = type(exc).__name__
+                is_exceeded = exc_name == "ApiExceededException" or "Exceeded" in exc_name
+                base_wait = (
+                    self.API_EXCEEDED_BASE_WAIT if is_exceeded
+                    else self.API_TRANSIENT_BASE_WAIT
+                )
+                wait = base_wait * (2 ** attempt)
+                last_exc = exc
+                if attempt < self.API_MAX_RETRIES - 1:
+                    print(
+                        f"[IGBrokerAdapter] {exc_name} on attempt {attempt + 1}/"
+                        f"{self.API_MAX_RETRIES} — retrying in {wait}s"
+                    )
+                    time.sleep(wait)
+                else:
+                    print(
+                        f"[IGBrokerAdapter] {exc_name} on attempt {attempt + 1}/"
+                        f"{self.API_MAX_RETRIES} — all retries exhausted"
+                    )
+        raise last_exc  # type: ignore[misc]
 
     def _require_session(self) -> IGService:
         """Return the active IGService or raise if not connected."""
