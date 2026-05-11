@@ -1,5 +1,5 @@
 {
-  "description": "Tradinator instrument universe \u2014 IG Demo epics that have passed Tier 1 validation (broker recognition + dealing enabled). Tier 2 (data availability) is validated continuously by DataPipeline; instruments that return zero bars on a cold-start fetch are removed automatically. Last T1 validation: 2026-05-10T22:25:03Z.",
+  "description": "Tradinator instrument universe \u2014 IG Demo epics that have passed Tier 1 validation (broker recognition + dealing enabled). Tier 2 (data availability) is validated continuously by DataPipeline; instruments that return zero bars on a cold-start fetch are removed automatically. Last T1 validation: 2026-05-10T23:20:27Z.",
   "instruments": [
     {
       "epic": "IX.D.FTSE.DAILY.IP",
@@ -44,23 +44,135 @@
       "valid": true
     },
     {
-      "epic": "CS.D.GBPDKK.MINI.IP",
-      "name": "GBP/DKK Mini",
+      "epic": "IX.D.DOW.DAILY.IP",
+      "name": "Wall Street (DJIA)",
+      "asset_class": "index",
+      "region": "US",
+      "valid": true
+    },
+    {
+      "epic": "CS.D.EURUSD.TODAY.IP",
+      "name": "EUR/USD (spreadbet)",
       "asset_class": "forex",
       "region": "global",
       "valid": true
     },
     {
-      "epic": "CS.D.GBPPLN.MINI.IP",
-      "name": "GBP/PLN Mini",
+      "epic": "CS.D.GBPUSD.TODAY.IP",
+      "name": "GBP/USD (spreadbet)",
       "asset_class": "forex",
       "region": "global",
       "valid": true
     },
     {
-      "epic": "CS.D.GBPZAR.MINI.IP",
-      "name": "GBP/ZAR Mini",
+      "epic": "CS.D.USDJPY.TODAY.IP",
+      "name": "USD/JPY (spreadbet)",
       "asset_class": "forex",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CS.D.AUDUSD.TODAY.IP",
+      "name": "AUD/USD (spreadbet)",
+      "asset_class": "forex",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CS.D.USDCAD.TODAY.IP",
+      "name": "USD/CAD (spreadbet)",
+      "asset_class": "forex",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CS.D.EURGBP.TODAY.IP",
+      "name": "EUR/GBP (spreadbet)",
+      "asset_class": "forex",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CC.D.S.USS.IP",
+      "name": "Soybeans (CBOT)",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CC.D.SM.USS.IP",
+      "name": "Soybean Meal",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CC.D.BO.USS.IP",
+      "name": "Soybean Oil",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CC.D.KC.USS.IP",
+      "name": "Coffee (Arabica)",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CC.D.CC.USS.IP",
+      "name": "Cocoa",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CC.D.SB.USS.IP",
+      "name": "Sugar No. 11",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CC.D.OJ.USS.IP",
+      "name": "Orange Juice",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CC.D.CT.USS.IP",
+      "name": "Cotton No. 2",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CS.D.USCGC.TODAY.IP",
+      "name": "Gold (spot spreadbet)",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CS.D.USCSI.TODAY.IP",
+      "name": "Silver (spot spreadbet)",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "MT.D.GC.Month2.IP",
+      "name": "Gold Futures (near-month)",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "MT.D.HG.Month1.IP",
+      "name": "Copper Futures (month 1)",
+      "asset_class": "commodity",
       "region": "global",
       "valid": true
     },
@@ -72,15 +184,43 @@
       "valid": true
     },
     {
-      "epic": "CS.D.BITCOIN.CFD.IP",
-      "name": "Bitcoin / USD (CFD)",
+      "epic": "MT.D.PL.Month2.IP",
+      "name": "Platinum Futures (month 2)",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "MT.D.PA.Month1.IP",
+      "name": "Palladium Futures (month 1)",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "EN.D.CL.Month1.IP",
+      "name": "WTI Crude Oil Futures (M1)",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "EN.D.LCO.Month4.IP",
+      "name": "Brent Crude Futures (M4)",
+      "asset_class": "commodity",
+      "region": "global",
+      "valid": true
+    },
+    {
+      "epic": "CS.D.EOSUSD.CFD.IP",
+      "name": "EOS / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
       "valid": true
     },
     {
-      "epic": "CS.D.ETHUSD.CFD.IP",
-      "name": "Ethereum / USD (CFD)",
+      "epic": "CS.D.XLMUSD.CFD.IP",
+      "name": "Stellar / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
       "valid": true

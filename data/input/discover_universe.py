@@ -52,7 +52,7 @@ from trading_ig import IGService
 
 UNIVERSE_PATH = os.path.join(PROJECT_ROOT, "data", "input", "universe.json")
 CANDIDATES_PATH = os.path.join(PROJECT_ROOT, "data", "input", "universe_candidates.json")
-RATE_LIMIT_DELAY = 0.5   # seconds between API calls (two calls per epic: T1 + T2)
+RATE_LIMIT_DELAY = 2   # seconds between API calls (two calls per epic: T1 + T2)
 LOOKBACK_BARS = 10
 RESOLUTION = "DAY"
 
