@@ -58,8 +58,8 @@ RESOLUTION = "DAY"
 
 # Retry settings for live IG API calls in this script.
 _API_MAX_RETRIES = 3
-_API_EXCEEDED_BASE_WAIT = 60    # seconds base wait on ApiExceededException
-_API_TRANSIENT_BASE_WAIT = 5    # seconds base wait on other transient errors
+_API_EXCEEDED_WAITS  = [60, 120, 240]   # seconds per attempt on ApiExceededException
+_API_TRANSIENT_WAITS = [30,  60, 240]   # seconds per attempt on other transient errors
 
 # Search terms to discover additional markets via IG's search endpoint.
 SEARCH_TERMS = [
@@ -96,19 +96,33 @@ def _api_call_with_retry(fn, *args, **kwargs):
             return fn(*args, **kwargs)
         except Exception as exc:
             exc_name = type(exc).__name__
+            exc_msg = str(exc)
+            # Weekly historical-data allowance exhausted — retrying won't help
+            # until the IG weekly window resets (typically Monday UTC).
+            if "exceeded-account-historical-data-allowance" in exc_msg:
+                print(
+                    f"[discover_universe] FATAL: IG weekly historical-data allowance exhausted.\n"
+                    "  This resets on a weekly basis (typically Monday UTC).\n"
+                    "  No point retrying — aborting."
+                )
+                raise
             is_exceeded = exc_name == "ApiExceededException" or "Exceeded" in exc_name
-            base_wait = _API_EXCEEDED_BASE_WAIT if is_exceeded else _API_TRANSIENT_BASE_WAIT
-            wait = base_wait * (2 ** attempt)
+            wait_list = _API_EXCEEDED_WAITS if is_exceeded else _API_TRANSIENT_WAITS
+            wait = wait_list[min(attempt, len(wait_list) - 1)]
             last_exc = exc
             if attempt < _API_MAX_RETRIES - 1:
                 print(
-                    f"[discover_universe] {exc_name} on attempt {attempt + 1}/"
-                    f"{_API_MAX_RETRIES} — retrying in {wait}s"
+                    f"[discover_universe] {exc_name}('{exc_msg}') on attempt {attempt + 1}/"
+                    f"{_API_MAX_RETRIES} — retrying in {wait}s",
+                    flush=True,
                 )
-                time.sleep(wait)
+                for remaining in range(wait, 0, -1):
+                    print(f"\r  waiting {remaining:3d}s ...  ", end="", flush=True)
+                    time.sleep(1)
+                print("\r" + " " * 30 + "\r", end="", flush=True)  # clear the line
             else:
                 print(
-                    f"[discover_universe] {exc_name} on attempt {attempt + 1}/"
+                    f"[discover_universe] {exc_name}('{exc_msg}') on attempt {attempt + 1}/"
                     f"{_API_MAX_RETRIES} — all retries exhausted"
                 )
     raise last_exc  # type: ignore[misc]
