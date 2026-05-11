@@ -39,7 +39,7 @@ import time
 
 import pandas as pd
 
-from .yh_finance_fetcher import YHFinanceFetcher
+from .yh_finance_fetcher import EPIC_TO_YH_TICKER, YHFinanceFetcher
 
 
 class DataPipeline:
@@ -385,6 +385,7 @@ class DataPipeline:
             seen_epics.add(cand_epic)
             rows.append({
                 "epic": cand_epic,
+                "yh_ticker": EPIC_TO_YH_TICKER.get(cand_epic, ""),
                 "name": candidate.get("name", ""),
                 "t1_status": candidate.get("t1_status", ""),
                 "t2_status": candidate.get("t2_status", ""),
@@ -402,6 +403,7 @@ class DataPipeline:
                 continue
             rows.append({
                 "epic": instrument_id,
+                "yh_ticker": EPIC_TO_YH_TICKER.get(instrument_id, ""),
                 "name": "",
                 "t1_status": "",
                 "t2_status": "",
@@ -415,6 +417,7 @@ class DataPipeline:
 
         fieldnames = [
             "epic",
+            "yh_ticker",
             "name",
             "t1_status",
             "t2_status",
