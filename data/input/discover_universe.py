@@ -61,6 +61,14 @@ _API_MAX_RETRIES = 3
 _API_EXCEEDED_WAITS  = [60, 120, 240]   # seconds per attempt on ApiExceededException
 _API_TRANSIENT_WAITS = [30,  60, 240]   # seconds per attempt on other transient errors
 
+# IG error substrings that are deterministic and must never be retried.
+# These indicate the epic/instrument does not exist on the broker — retrying
+# wastes time and burns API quota, which can cascade into ApiExceededException
+# on subsequent (potentially valid) candidates.
+_NON_RETRYABLE_PATTERNS: tuple[str, ...] = (
+    "instrument.epic.unavailable",   # epic does not exist on this broker
+)
+
 # Search terms to discover additional markets via IG's search endpoint.
 SEARCH_TERMS = [
     # Indices — Americas
@@ -97,6 +105,11 @@ def _api_call_with_retry(fn, *args, **kwargs):
         except Exception as exc:
             exc_name = type(exc).__name__
             exc_msg = str(exc)
+            # Fast-fail on deterministic non-transient IG errors — re-raise
+            # immediately without sleeping so that the caller's exception handler
+            # can classify them and we don't burn API quota on pointless retries.
+            if any(p in exc_msg.lower() for p in _NON_RETRYABLE_PATTERNS):
+                raise
             # Weekly historical-data allowance exhausted — retrying won't help
             # until the IG weekly window resets (typically Monday UTC).
             if "exceeded-account-historical-data-allowance" in exc_msg:
@@ -262,7 +275,7 @@ def _validate_tier1(ig: "IGService", epic: str) -> tuple[str, str]:
         # Any other exception (timeout, auth, rate-limit) is API_ERROR to
         # avoid permanently blacklisting valid epics due to transient faults.
         exc_detail = f"{type(exc).__name__}: {repr(exc)}"  # P5-log: always non-empty
-        if any(kw in exc_str for kw in ("not found", "404", "invalid epic", "notfound")):
+        if any(kw in exc_str for kw in ("not found", "404", "invalid epic", "notfound", "epic.unavailable")):
             return "EPIC_NOT_RECOGNIZED", exc_detail
         return "API_ERROR", exc_detail
 

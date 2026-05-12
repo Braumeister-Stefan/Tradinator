@@ -26,7 +26,7 @@ import yfinance as yf
 # ---------------------------------------------------------------------------
 # Epic → Yahoo Finance ticker mapping
 # ---------------------------------------------------------------------------
-# Covers all 30 instruments in the current universe.json.
+# Covers all 32 instruments in the current universe.json.
 # Indices use the Yahoo "^" prefix; forex uses the "=X" suffix;
 # futures/commodities use the "=F" suffix for continuous front-month.
 # ---------------------------------------------------------------------------
@@ -117,7 +117,7 @@ EPIC_TO_YH_TICKER: dict[str, str] = {
     "CC.D.NGAS.UMP.IP":      "NG=F",   # Natural Gas
     "CC.D.COPPER.UMP.IP":    "HG=F",   # Copper
     # Commodities (USS rolling DFB — agricultural/soft)
-    "CC.D.BO.USS.IP":        "BO=F",   # Soybean Oil (CBOT)
+    "CC.D.BO.USS.IP":        "ZL=F",   # Soybean Oil (CBOT)
     "CC.D.C.USS.IP":         "ZC=F",   # Corn (CBOT)
     "CC.D.CC.USS.IP":        "CC=F",   # Cocoa (ICE)
     "CC.D.CT.USS.IP":        "CT=F",   # Cotton No.2 (ICE)
