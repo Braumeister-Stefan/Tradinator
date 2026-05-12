@@ -12,7 +12,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:43:51Z"
+      "last_validated": "2026-05-11T23:08:56Z"
     },
     {
       "epic": "IX.D.SPTRD.DAILY.IP",
@@ -24,7 +24,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:43:52Z"
+      "last_validated": "2026-05-11T23:09:04Z"
     },
     {
       "epic": "CS.D.EURUSD.MINI.IP",
@@ -36,7 +36,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:43:53Z"
+      "last_validated": "2026-05-11T23:09:11Z"
     },
     {
       "epic": "CS.D.GBPUSD.MINI.IP",
@@ -48,7 +48,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:43:54Z"
+      "last_validated": "2026-05-11T23:09:18Z"
     },
     {
       "epic": "CC.D.CL.UMP.IP",
@@ -60,7 +60,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:43:56Z"
+      "last_validated": "2026-05-11T23:09:26Z"
     },
     {
       "epic": "IX.D.DAX.DAILY.IP",
@@ -72,7 +72,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:43:57Z"
+      "last_validated": "2026-05-11T23:09:33Z"
     },
     {
       "epic": "IX.D.DOW.DAILY.IP",
@@ -84,7 +84,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:43:58Z"
+      "last_validated": "2026-05-11T23:09:40Z"
     },
     {
       "epic": "CS.D.USDJPY.MINI.IP",
@@ -2362,9 +2362,9 @@
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
       "t2_status": "YES",
-      "t2_reason": "5 bar(s) fetched (cold-start)",
+      "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:43:59Z"
+      "last_validated": "2026-05-11T23:09:47Z"
     },
     {
       "epic": "CS.D.AUDUSD.TODAY.IP",
@@ -2374,9 +2374,9 @@
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
       "t2_status": "YES",
-      "t2_reason": "5 bar(s) fetched (cold-start)",
+      "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:00Z"
+      "last_validated": "2026-05-11T23:09:55Z"
     },
     {
       "epic": "CS.D.USDCAD.TODAY.IP",
