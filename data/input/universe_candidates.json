@@ -1,6 +1,6 @@
 {
   "description": "Tradinator universe candidate registry. Contains all candidate instruments with two-tier validation metadata. Edit this file to add new candidates; do not edit universe.json directly.",
-  "last_discover_run": "2026-05-10T23:20:27Z",
+  "last_discover_run": "2026-05-12T21:15:38Z",
   "candidates": [
     {
       "epic": "IX.D.FTSE.DAILY.IP",
@@ -12,7 +12,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T23:08:56Z"
+      "last_validated": "2026-05-12T22:50:23Z"
     },
     {
       "epic": "IX.D.SPTRD.DAILY.IP",
@@ -24,7 +24,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T23:09:04Z"
+      "last_validated": "2026-05-12T22:50:31Z"
     },
     {
       "epic": "CS.D.EURUSD.MINI.IP",
@@ -36,7 +36,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T23:09:11Z"
+      "last_validated": "2026-05-12T22:50:43Z"
     },
     {
       "epic": "CS.D.GBPUSD.MINI.IP",
@@ -48,7 +48,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T23:09:18Z"
+      "last_validated": "2026-05-12T22:50:51Z"
     },
     {
       "epic": "CC.D.CL.UMP.IP",
@@ -60,7 +60,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T23:09:26Z"
+      "last_validated": "2026-05-12T22:50:59Z"
     },
     {
       "epic": "IX.D.DAX.DAILY.IP",
@@ -72,7 +72,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T23:09:33Z"
+      "last_validated": "2026-05-12T22:51:06Z"
     },
     {
       "epic": "IX.D.DOW.DAILY.IP",
@@ -84,7 +84,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T23:09:40Z"
+      "last_validated": "2026-05-12T22:51:14Z"
     },
     {
       "epic": "CS.D.USDJPY.MINI.IP",
@@ -93,22 +93,22 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:31Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:51:23Z"
     },
     {
       "epic": "CC.D.GC.UMP.IP",
       "name": "Gold",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CC.D.LCO.UMP.IP",
@@ -117,22 +117,22 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:32Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:51:33Z"
     },
     {
       "epic": "IX.D.NASDAQ.DAILY.IP",
       "name": "US Tech 100 (Nasdaq)",
       "asset_class": "index",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.CAC.DAILY.IP",
@@ -141,10 +141,10 @@
       "region": "EU",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:33Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:51:43Z"
     },
     {
       "epic": "IX.D.NIKKEI.DAILY.IP",
@@ -153,22 +153,22 @@
       "region": "APAC",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:34Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:51:51Z"
     },
     {
       "epic": "CC.D.SILVER.UMP.IP",
       "name": "Silver",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.AUDUSD.MINI.IP",
@@ -177,46 +177,46 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:35Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:51:58Z"
     },
     {
       "epic": "IX.D.ASX.DAILY.IP",
       "name": "Australia 200",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.HSENG.DAILY.IP",
       "name": "Hang Seng",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.STXE.DAILY.IP",
       "name": "Euro Stoxx 50",
       "asset_class": "index",
       "region": "EU",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.EURGBP.MINI.IP",
@@ -225,22 +225,22 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:36Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:52:06Z"
     },
     {
       "epic": "CC.D.NGAS.UMP.IP",
       "name": "Natural Gas",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.RUSSELL.DAILY.IP",
@@ -249,10 +249,10 @@
       "region": "US",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:37Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:52:14Z"
     },
     {
       "epic": "CS.D.USDCAD.MINI.IP",
@@ -261,22 +261,22 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:39Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:52:21Z"
     },
     {
       "epic": "CC.D.COPPER.UMP.IP",
       "name": "Copper",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.EURJPY.MINI.IP",
@@ -285,490 +285,490 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:40Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:52:29Z"
     },
     {
       "epic": "IX.D.AEX.DAILY.IP",
       "name": "Netherlands 25 (AEX)",
       "asset_class": "index",
       "region": "EU",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.IBEX.DAILY.IP",
       "name": "Spain 35 (IBEX 35)",
       "asset_class": "index",
       "region": "EU",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.SMI.DAILY.IP",
       "name": "Switzerland Blue Chip (SMI)",
       "asset_class": "index",
       "region": "EU",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.ITLY.DAILY.IP",
       "name": "Italy 40 (FTSE MIB)",
       "asset_class": "index",
       "region": "EU",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.USDCHF.MINI.IP",
       "name": "USD/CHF Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:52:36Z"
     },
     {
       "epic": "CS.D.NZDUSD.MINI.IP",
       "name": "NZD/USD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:52:47Z"
     },
     {
       "epic": "IX.D.BOVESPA.DAILY.IP",
       "name": "Brazil Bovespa",
       "asset_class": "index",
       "region": "LATAM",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.IPC.DAILY.IP",
       "name": "Mexico IPC",
       "asset_class": "index",
       "region": "LATAM",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.FTSE250.DAILY.IP",
       "name": "FTSE 250",
       "asset_class": "index",
       "region": "UK",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.STOXX50.DAILY.IP",
       "name": "Euro Stoxx 50",
       "asset_class": "index",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.MIB.DAILY.IP",
       "name": "Italy 40 (FTSE MIB)",
       "asset_class": "index",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.OMX.DAILY.IP",
       "name": "Sweden OMX",
       "asset_class": "index",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.HANGSENG.DAILY.IP",
       "name": "Hang Seng (Hong Kong)",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:52:55Z"
     },
     {
       "epic": "IX.D.CHINA50.DAILY.IP",
       "name": "China 50",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.SHANGHAI.DAILY.IP",
       "name": "Shanghai Composite",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.INDIA50.DAILY.IP",
       "name": "India 50 (Nifty 50)",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.NIFTY.DAILY.IP",
       "name": "Nifty 50",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.SENSEX.DAILY.IP",
       "name": "Sensex (BSE)",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.KOSPI.DAILY.IP",
       "name": "KOSPI (South Korea)",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.TAIWAN.DAILY.IP",
       "name": "Taiwan Weighted",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.NZ50.DAILY.IP",
       "name": "NZ 50 (New Zealand)",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.STI.DAILY.IP",
       "name": "Straits Times (Singapore)",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.JSE40.DAILY.IP",
       "name": "South Africa JSE 40",
       "asset_class": "index",
       "region": "AFRICA",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.US10Y.DAILY.IP",
       "name": "US 10-Year Bond Yield",
       "asset_class": "index",
       "region": "US",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.US13W.DAILY.IP",
       "name": "US 13-Week T-Bill Yield",
       "asset_class": "index",
       "region": "US",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.US30Y.DAILY.IP",
       "name": "US 30-Year Bond Yield",
       "asset_class": "index",
       "region": "US",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.VIX.DAILY.IP",
       "name": "VIX Volatility Index",
       "asset_class": "index",
       "region": "US",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.NASDAQ.CASH.IP",
       "name": "US Tech 100 (cash/rolling)",
       "asset_class": "index",
       "region": "US",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:53:07Z"
     },
     {
       "epic": "IX.D.STXE.CASH.IP",
       "name": "Euro Stoxx 50 (cash/rolling)",
       "asset_class": "index",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:53:24Z"
     },
     {
       "epic": "IX.D.ASX.MONTH1.IP",
       "name": "Australia 200 (near-month)",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:53:33Z"
     },
     {
       "epic": "IX.D.ASX.IFM.IP",
       "name": "Australia 200 (IFM contract)",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.AEX.Month2.IP",
       "name": "Netherlands AEX (month 2)",
       "asset_class": "index",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:53:41Z"
     },
     {
       "epic": "IX.D.CAC.Month1.IP",
       "name": "France CAC (near-month)",
       "asset_class": "index",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.DAX.FAR.IP",
       "name": "DAX (far-dated)",
       "asset_class": "index",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.DOW.MONTH2.IP",
       "name": "Wall Street (month 2)",
       "asset_class": "index",
       "region": "US",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.FTSE.MONTH2.IP",
       "name": "FTSE 100 (month 2)",
       "asset_class": "index",
       "region": "UK",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.SPTRD.MONTH1.IP",
       "name": "US 500 (near-month)",
       "asset_class": "index",
       "region": "US",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.STXE.MONTH2.IP",
       "name": "Euro Stoxx 50 (month 2)",
       "asset_class": "index",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.EMGMKT.DFB.IP",
       "name": "Emerging Markets DFB",
       "asset_class": "index",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:53:51Z"
     },
     {
       "epic": "IX.D.XINHUA.DFB.IP",
       "name": "Xinhua China 25 DFB",
       "asset_class": "index",
       "region": "APAC",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "NO",
+      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:42:55Z"
     },
     {
       "epic": "IX.D.SUNDOW.DAILY.IP",
@@ -777,10 +777,10 @@
       "region": "US",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:41Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:53:59Z"
     },
     {
       "epic": "IX.D.SUNDAX.DAILY.IP",
@@ -789,10 +789,10 @@
       "region": "EU",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:42Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:54:06Z"
     },
     {
       "epic": "IX.D.SUNFUN.DAILY.IP",
@@ -801,10 +801,10 @@
       "region": "UK",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:43Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:54:14Z"
     },
     {
       "epic": "IX.D.SUNGBPUSD.DAILY.IP",
@@ -813,10 +813,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:44Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:54:51Z"
     },
     {
       "epic": "IX.D.SUNEURUSD.DAILY.IP",
@@ -825,10 +825,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:45Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:55:00Z"
     },
     {
       "epic": "IX.D.SUNUSDJPY.DAILY.IP",
@@ -837,1234 +837,1234 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:46Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:48:51Z"
     },
     {
       "epic": "IX.D.APPLE.DAILY.IP",
       "name": "Apple (AAPL)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.MICROSOFT.DAILY.IP",
       "name": "Microsoft (MSFT)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.AMAZON.DAILY.IP",
       "name": "Amazon (AMZN)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.ALPHABET.DAILY.IP",
       "name": "Alphabet / Google (GOOG)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.META.DAILY.IP",
       "name": "Meta Platforms (META)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.NVIDIA.DAILY.IP",
       "name": "NVIDIA (NVDA)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.NETFLIX.DAILY.IP",
       "name": "Netflix (NFLX)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.TESLA.DAILY.IP",
       "name": "Tesla (TSLA)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.AMD.DAILY.IP",
       "name": "AMD (AMD)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.INTEL.DAILY.IP",
       "name": "Intel (INTC)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.CISCO.DAILY.IP",
       "name": "Cisco (CSCO)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.IBM.DAILY.IP",
       "name": "IBM (IBM)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.ORACLE.DAILY.IP",
       "name": "Oracle (ORCL)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.WALMART.DAILY.IP",
       "name": "Walmart (WMT)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.DISNEY.DAILY.IP",
       "name": "Walt Disney (DIS)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.COCACOLA.DAILY.IP",
       "name": "Coca-Cola (KO)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.PEPSI.DAILY.IP",
       "name": "PepsiCo (PEP)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.EXXON.DAILY.IP",
       "name": "ExxonMobil (XOM)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.CHEVRON.DAILY.IP",
       "name": "Chevron (CVX)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.JNJ.DAILY.IP",
       "name": "Johnson & Johnson (JNJ)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.PG.DAILY.IP",
       "name": "Procter & Gamble (PG)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.JPM.DAILY.IP",
       "name": "JPMorgan Chase (JPM)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.BAC.DAILY.IP",
       "name": "Bank of America (BAC)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.GS.DAILY.IP",
       "name": "Goldman Sachs (GS)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.MS.DAILY.IP",
       "name": "Morgan Stanley (MS)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.MASTERCARD.DAILY.IP",
       "name": "Mastercard (MA)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.VISA.DAILY.IP",
       "name": "Visa (V)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.BOEING.DAILY.IP",
       "name": "Boeing (BA)",
       "asset_class": "equity",
       "region": "US",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.VODAFONE.DAILY.IP",
       "name": "Vodafone (VOD)",
       "asset_class": "equity",
       "region": "UK",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.BARCLAYS.DAILY.IP",
       "name": "Barclays (BARC)",
       "asset_class": "equity",
       "region": "UK",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.LLOYDS.DAILY.IP",
       "name": "Lloyds Banking (LLOY)",
       "asset_class": "equity",
       "region": "UK",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.HSBC.DAILY.IP",
       "name": "HSBC (HSBA)",
       "asset_class": "equity",
       "region": "UK/global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.BP.DAILY.IP",
       "name": "BP (BP.)",
       "asset_class": "equity",
       "region": "UK",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.GSK.DAILY.IP",
       "name": "GSK (GSK)",
       "asset_class": "equity",
       "region": "UK",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.ASTRAZENECA.DAILY.IP",
       "name": "AstraZeneca (AZN)",
       "asset_class": "equity",
       "region": "UK",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.DIAGEO.DAILY.IP",
       "name": "Diageo (DGE)",
       "asset_class": "equity",
       "region": "UK",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.UNILEVER.DAILY.IP",
       "name": "Unilever (ULVR)",
       "asset_class": "equity",
       "region": "UK",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.RIO.DAILY.IP",
       "name": "Rio Tinto (RIO)",
       "asset_class": "equity",
       "region": "UK",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.BHP.DAILY.IP",
       "name": "BHP Group (BHP)",
       "asset_class": "equity",
       "region": "AU/UK",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.NOVARTIS.DAILY.IP",
       "name": "Novartis (NOVN.SW)",
       "asset_class": "equity",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.ROCHE.DAILY.IP",
       "name": "Roche (ROG.SW)",
       "asset_class": "equity",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.NESTLE.DAILY.IP",
       "name": "Nestl\u00e9 (NESN.SW)",
       "asset_class": "equity",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.SAP.DAILY.IP",
       "name": "SAP (SAP)",
       "asset_class": "equity",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.SIEMENS.DAILY.IP",
       "name": "Siemens (SIE.DE)",
       "asset_class": "equity",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.ASML.DAILY.IP",
       "name": "ASML (ASML)",
       "asset_class": "equity",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.LOREAL.DAILY.IP",
       "name": "L'Or\u00e9al (OR.PA)",
       "asset_class": "equity",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.LVMH.DAILY.IP",
       "name": "LVMH (MC.PA)",
       "asset_class": "equity",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.TOTAL.DAILY.IP",
       "name": "TotalEnergies (TTE)",
       "asset_class": "equity",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.SANTANDER.DAILY.IP",
       "name": "Santander (SAN.MC)",
       "asset_class": "equity",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.ALIBABA.DAILY.IP",
       "name": "Alibaba (BABA)",
       "asset_class": "equity",
       "region": "APAC",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "IX.D.NOVONORDISK.DAILY.IP",
       "name": "Novo Nordisk (NOVO-B.CO)",
       "asset_class": "equity",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.EURCHF.MINI.IP",
       "name": "EUR/CHF Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:48:59Z"
     },
     {
       "epic": "CS.D.EURAUD.MINI.IP",
       "name": "EUR/AUD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:49:06Z"
     },
     {
       "epic": "CS.D.EURCAD.MINI.IP",
       "name": "EUR/CAD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:49:13Z"
     },
     {
       "epic": "CS.D.EURNZD.MINI.IP",
       "name": "EUR/NZD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:49:21Z"
     },
     {
       "epic": "CS.D.EURNOK.MINI.IP",
       "name": "EUR/NOK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:49:28Z"
     },
     {
       "epic": "CS.D.EURSEK.MINI.IP",
       "name": "EUR/SEK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:49:36Z"
     },
     {
       "epic": "CS.D.EURDKK.MINI.IP",
       "name": "EUR/DKK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:49:43Z"
     },
     {
       "epic": "CS.D.EURPLN.MINI.IP",
       "name": "EUR/PLN Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:49:53Z"
     },
     {
       "epic": "CS.D.EURCZK.MINI.IP",
       "name": "EUR/CZK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:34:52Z"
     },
     {
       "epic": "CS.D.EURHUF.MINI.IP",
       "name": "EUR/HUF Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:34:59Z"
     },
     {
       "epic": "CS.D.EURTRY.MINI.IP",
       "name": "EUR/TRY Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:22:53Z"
     },
     {
       "epic": "CS.D.EURZAR.MINI.IP",
       "name": "EUR/ZAR Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:23:00Z"
     },
     {
       "epic": "CS.D.GBPJPY.MINI.IP",
       "name": "GBP/JPY Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:23:07Z"
     },
     {
       "epic": "CS.D.GBPCHF.MINI.IP",
       "name": "GBP/CHF Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:23:14Z"
     },
     {
       "epic": "CS.D.GBPAUD.MINI.IP",
       "name": "GBP/AUD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:23:22Z"
     },
     {
       "epic": "CS.D.GBPCAD.MINI.IP",
       "name": "GBP/CAD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:23:29Z"
     },
     {
       "epic": "CS.D.GBPNZD.MINI.IP",
       "name": "GBP/NZD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:23:36Z"
     },
     {
       "epic": "CS.D.GBPNOK.MINI.IP",
       "name": "GBP/NOK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:23:43Z"
     },
     {
       "epic": "CS.D.GBPSEK.MINI.IP",
       "name": "GBP/SEK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:23:51Z"
     },
     {
       "epic": "CS.D.GBPDKK.MINI.IP",
       "name": "GBP/DKK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:23:58Z"
     },
     {
       "epic": "CS.D.GBPPLN.MINI.IP",
       "name": "GBP/PLN Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:24:05Z"
     },
     {
       "epic": "CS.D.GBPZAR.MINI.IP",
       "name": "GBP/ZAR Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:24:12Z"
     },
     {
       "epic": "CS.D.AUDJPY.MINI.IP",
       "name": "AUD/JPY Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:24:20Z"
     },
     {
       "epic": "CS.D.AUDCAD.MINI.IP",
       "name": "AUD/CAD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:24:27Z"
     },
     {
       "epic": "CS.D.AUDCHF.MINI.IP",
       "name": "AUD/CHF Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:24:34Z"
     },
     {
       "epic": "CS.D.AUDNZD.MINI.IP",
       "name": "AUD/NZD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:24:41Z"
     },
     {
       "epic": "CS.D.AUDSEK.MINI.IP",
       "name": "AUD/SEK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.AUDNOK.MINI.IP",
       "name": "AUD/NOK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.AUDDKK.MINI.IP",
       "name": "AUD/DKK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.AUDSGD.MINI.IP",
       "name": "AUD/SGD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:24:49Z"
     },
     {
       "epic": "CS.D.AUDHKD.MINI.IP",
       "name": "AUD/HKD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.NZDJPY.MINI.IP",
       "name": "NZD/JPY Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:24:56Z"
     },
     {
       "epic": "CS.D.NZDCAD.MINI.IP",
       "name": "NZD/CAD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:25:03Z"
     },
     {
       "epic": "CS.D.NZDCHF.MINI.IP",
       "name": "NZD/CHF Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:25:11Z"
     },
     {
       "epic": "CS.D.NZDSEK.MINI.IP",
       "name": "NZD/SEK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.NZDNOK.MINI.IP",
       "name": "NZD/NOK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.NZDSGD.MINI.IP",
       "name": "NZD/SGD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.NZDHKD.MINI.IP",
       "name": "NZD/HKD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.CADJPY.MINI.IP",
       "name": "CAD/JPY Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:25:18Z"
     },
     {
       "epic": "CS.D.CADCHF.MINI.IP",
       "name": "CAD/CHF Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:25:25Z"
     },
     {
       "epic": "CS.D.CADSEK.MINI.IP",
       "name": "CAD/SEK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.CADNOK.MINI.IP",
       "name": "CAD/NOK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:25:32Z"
     },
     {
       "epic": "CS.D.CADSGD.MINI.IP",
       "name": "CAD/SGD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.CHFJPY.MINI.IP",
       "name": "CHF/JPY Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:25:40Z"
     },
     {
       "epic": "CS.D.CHFNOK.MINI.IP",
       "name": "CHF/NOK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:25:47Z"
     },
     {
       "epic": "CS.D.CHFSEK.MINI.IP",
       "name": "CHF/SEK Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.CHFSGD.MINI.IP",
       "name": "CHF/SGD Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.USDMXN.MINI.IP",
       "name": "USD/MXN Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:25:54Z"
     },
     {
       "epic": "CS.D.USDTRY.MINI.IP",
       "name": "USD/TRY Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:26:01Z"
     },
     {
       "epic": "CS.D.USDZAR.MINI.IP",
       "name": "USD/ZAR Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:26:09Z"
     },
     {
       "epic": "CS.D.USDPLN.MINI.IP",
       "name": "USD/PLN Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:26:16Z"
     },
     {
       "epic": "CS.D.USDCZK.MINI.IP",
@@ -2073,10 +2073,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:47Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:26:23Z"
     },
     {
       "epic": "CS.D.USDHUF.MINI.IP",
@@ -2085,10 +2085,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:48Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:26:30Z"
     },
     {
       "epic": "CS.D.USDCNH.MINI.IP",
@@ -2097,10 +2097,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:49Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:26:38Z"
     },
     {
       "epic": "CS.D.USDSGD.MINI.IP",
@@ -2109,10 +2109,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:50Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:26:45Z"
     },
     {
       "epic": "CS.D.USDHKD.MINI.IP",
@@ -2121,10 +2121,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:52Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:26:52Z"
     },
     {
       "epic": "CS.D.USDSEK.MINI.IP",
@@ -2133,10 +2133,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:53Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:27:00Z"
     },
     {
       "epic": "CS.D.USDNOK.MINI.IP",
@@ -2145,10 +2145,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:54Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:27:07Z"
     },
     {
       "epic": "CS.D.USDDKK.MINI.IP",
@@ -2157,10 +2157,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:55Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:27:14Z"
     },
     {
       "epic": "CS.D.USDBRL.MINI.IP",
@@ -2169,22 +2169,22 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:56Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:27:21Z"
     },
     {
       "epic": "CS.D.USDARS.MINI.IP",
       "name": "USD/ARS Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.USDCLP.MINI.IP",
@@ -2193,22 +2193,22 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:57Z"
+      "t2_status": "YES",
+      "t2_reason": "5 bar(s) fetched via YH Finance fallback (cold-start)",
+      "valid": true,
+      "last_validated": "2026-05-12T21:47:08Z"
     },
     {
       "epic": "CS.D.USDCOP.MINI.IP",
       "name": "USD/COP Mini",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.USDRUB.MINI.IP",
@@ -2217,10 +2217,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:58Z"
+      "t2_status": "YES",
+      "t2_reason": "5 bar(s) fetched via YH Finance fallback (cold-start)",
+      "valid": true,
+      "last_validated": "2026-05-12T21:47:09Z"
     },
     {
       "epic": "CS.D.USDINR.MINI.IP",
@@ -2229,10 +2229,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:24:59Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:27:43Z"
     },
     {
       "epic": "CS.D.USDIDR.MINI.IP",
@@ -2241,10 +2241,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:25:00Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:27:50Z"
     },
     {
       "epic": "CS.D.USDTHB.MINI.IP",
@@ -2253,10 +2253,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:25:01Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:27:58Z"
     },
     {
       "epic": "CS.D.USDKRW.MINI.IP",
@@ -2265,10 +2265,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:25:02Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:28:05Z"
     },
     {
       "epic": "CS.D.HKDJPY.MINI.IP",
@@ -2277,10 +2277,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:25:04Z"
+      "t2_status": "YES",
+      "t2_reason": "5 bar(s) fetched via YH Finance fallback (cold-start)",
+      "valid": true,
+      "last_validated": "2026-05-12T21:47:15Z"
     },
     {
       "epic": "CS.D.NOKJPY.MINI.IP",
@@ -2289,10 +2289,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:25:05Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:28:20Z"
     },
     {
       "epic": "CS.D.SEKJPY.MINI.IP",
@@ -2301,10 +2301,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:25:06Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:28:27Z"
     },
     {
       "epic": "CS.D.SGDJPY.MINI.IP",
@@ -2313,10 +2313,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:25:07Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:28:34Z"
     },
     {
       "epic": "CS.D.ZARJPY.MINI.IP",
@@ -2325,10 +2325,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:25:08Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:28:41Z"
     },
     {
       "epic": "CS.D.EURUSD.TODAY.IP",
@@ -2340,7 +2340,7 @@
       "t2_status": "PENDING_T2",
       "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.GBPUSD.TODAY.IP",
@@ -2352,7 +2352,7 @@
       "t2_status": "PENDING_T2",
       "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.USDJPY.TODAY.IP",
@@ -2361,10 +2361,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "YES",
-      "t2_reason": "5 new bar(s) fetched",
-      "valid": true,
-      "last_validated": "2026-05-11T23:09:47Z"
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
+      "valid": false,
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.AUDUSD.TODAY.IP",
@@ -2373,10 +2373,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "YES",
-      "t2_reason": "5 new bar(s) fetched",
-      "valid": true,
-      "last_validated": "2026-05-11T23:09:55Z"
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
+      "valid": false,
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.USDCAD.TODAY.IP",
@@ -2385,10 +2385,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "YES",
-      "t2_reason": "5 bar(s) fetched (cold-start)",
-      "valid": true,
-      "last_validated": "2026-05-11T19:44:02Z"
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
+      "valid": false,
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.USDCHF.TODAY.IP",
@@ -2397,10 +2397,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:25:09Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.EURGBP.TODAY.IP",
@@ -2409,370 +2409,370 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "YES",
-      "t2_reason": "5 new bar(s) fetched",
-      "valid": true,
-      "last_validated": "2026-05-11T19:44:03Z"
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
+      "valid": false,
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.EURJPY.TODAY.IP",
       "name": "EUR/JPY (spreadbet)",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.EURCHF.TODAY.IP",
       "name": "EUR/CHF (spreadbet)",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.CHFJPY.TODAY.IP",
       "name": "CHF/JPY (spreadbet)",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.GBPJPY.TODAY.IP",
       "name": "GBP/JPY (spreadbet)",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.CADJPY.TODAY.IP",
       "name": "CAD/JPY (spreadbet)",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.GBPCAD.TODAY.IP",
       "name": "GBP/CAD (spreadbet)",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.GBPUSD.CFD.IP",
       "name": "GBP/USD (CFD)",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.USDJPY.CFD.IP",
       "name": "USD/JPY (CFD)",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CF.D.EURUSD.SEP.IP",
       "name": "EUR/USD Futures (Sep)",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:28:49Z"
     },
     {
       "epic": "CF.D.EURGBP.SEP.IP",
       "name": "EUR/GBP Futures (Sep)",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:28:56Z"
     },
     {
       "epic": "CF.D.AUDJPY.SEP.IP",
       "name": "AUD/JPY Futures (Sep)",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:29:03Z"
     },
     {
       "epic": "CF.D.AUD.SEP.IP",
       "name": "AUD Futures (Sep)",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:29:10Z"
     },
     {
       "epic": "CF.D.USDCAD.SEP.IP",
       "name": "USD/CAD Futures (Sep)",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:29:18Z"
     },
     {
       "epic": "CF.D.USDCHF.SEP.IP",
       "name": "USD/CHF Futures (Sep)",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:29:25Z"
     },
     {
       "epic": "CC.D.CL.USS.IP",
       "name": "Oil - US Crude (WTI)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CC.D.LCO.USS.IP",
       "name": "Oil - Brent Crude",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CC.D.NG.USS.IP",
       "name": "Natural Gas",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:29:32Z"
     },
     {
       "epic": "CC.D.HO.USS.IP",
       "name": "Heating Oil",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:29:39Z"
     },
     {
       "epic": "CC.D.RB.USS.IP",
       "name": "RBOB Gasoline",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:29:47Z"
     },
     {
       "epic": "CC.D.GASOIL.USS.IP",
       "name": "Gas Oil",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CC.D.GC.USS.IP",
       "name": "Gold (rolling)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CC.D.SI.USS.IP",
       "name": "Silver (rolling)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CC.D.PA.USS.IP",
       "name": "Palladium (rolling)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "NO",
+      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:48:30Z"
     },
     {
       "epic": "CC.D.PL.USS.IP",
       "name": "Platinum (rolling)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "NO",
+      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:48:31Z"
     },
     {
       "epic": "CC.D.HG.USS.IP",
       "name": "High Grade Copper (HG)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:29:54Z"
     },
     {
       "epic": "CC.D.ALI.USS.IP",
       "name": "Aluminium (LME)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CC.D.LEAD.USS.IP",
       "name": "Lead (LME)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CC.D.NICKEL.USS.IP",
       "name": "Nickel (LME)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CC.D.ZINC.USS.IP",
       "name": "Zinc (LME)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CC.D.W.USS.IP",
       "name": "Wheat (CBOT)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:30:01Z"
     },
     {
       "epic": "CC.D.C.USS.IP",
@@ -2781,10 +2781,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:25:10Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:30:09Z"
     },
     {
       "epic": "CC.D.S.USS.IP",
@@ -2796,7 +2796,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:04Z"
+      "last_validated": "2026-05-12T22:30:16Z"
     },
     {
       "epic": "CC.D.SM.USS.IP",
@@ -2808,7 +2808,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:05Z"
+      "last_validated": "2026-05-12T22:30:23Z"
     },
     {
       "epic": "CC.D.BO.USS.IP",
@@ -2820,19 +2820,19 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:07Z"
+      "last_validated": "2026-05-12T22:30:31Z"
     },
     {
       "epic": "CC.D.KE.USS.IP",
       "name": "Kansas City Wheat",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CC.D.KC.USS.IP",
@@ -2844,7 +2844,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:08Z"
+      "last_validated": "2026-05-12T22:30:38Z"
     },
     {
       "epic": "CC.D.CC.USS.IP",
@@ -2856,7 +2856,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:09Z"
+      "last_validated": "2026-05-12T22:30:45Z"
     },
     {
       "epic": "CC.D.SB.USS.IP",
@@ -2868,7 +2868,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:10Z"
+      "last_validated": "2026-05-12T22:30:52Z"
     },
     {
       "epic": "CC.D.OJ.USS.IP",
@@ -2880,7 +2880,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:12Z"
+      "last_validated": "2026-05-12T22:31:00Z"
     },
     {
       "epic": "CC.D.CT.USS.IP",
@@ -2892,7 +2892,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:13Z"
+      "last_validated": "2026-05-12T22:31:07Z"
     },
     {
       "epic": "CC.D.RR.USS.IP",
@@ -2901,34 +2901,34 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:25:20Z"
+      "t2_status": "YES",
+      "t2_reason": "5 bar(s) fetched via YH Finance fallback (cold-start)",
+      "valid": true,
+      "last_validated": "2026-05-12T21:51:35Z"
     },
     {
       "epic": "CC.D.LBS.USS.IP",
       "name": "Lumber",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CC.D.LE.USS.IP",
       "name": "Live Cattle",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CC.D.LH.USS.IP",
@@ -2937,10 +2937,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
-      "valid": false,
-      "last_validated": "2026-05-10T23:25:21Z"
+      "t2_status": "YES",
+      "t2_reason": "5 bar(s) fetched via YH Finance fallback (cold-start)",
+      "valid": true,
+      "last_validated": "2026-05-12T21:51:36Z"
     },
     {
       "epic": "CS.D.USCGC.TODAY.IP",
@@ -2952,7 +2952,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:14Z"
+      "last_validated": "2026-05-12T22:31:29Z"
     },
     {
       "epic": "CS.D.USCSI.TODAY.IP",
@@ -2964,31 +2964,31 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:15Z"
+      "last_validated": "2026-05-12T22:31:36Z"
     },
     {
       "epic": "CS.D.USCPD.TODAY.IP",
       "name": "Palladium (spot spreadbet)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.USCPT.TODAY.IP",
       "name": "Platinum (spot spreadbet)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "MT.D.GC.Month2.IP",
@@ -3000,7 +3000,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:17Z"
+      "last_validated": "2026-05-12T22:31:43Z"
     },
     {
       "epic": "MT.D.HG.Month1.IP",
@@ -3012,7 +3012,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:18Z"
+      "last_validated": "2026-05-12T22:31:51Z"
     },
     {
       "epic": "MT.D.HG.Month2.IP",
@@ -3024,7 +3024,7 @@
       "t2_status": "PENDING_T2",
       "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "MT.D.PL.Month2.IP",
@@ -3036,7 +3036,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:19Z"
+      "last_validated": "2026-05-12T22:31:58Z"
     },
     {
       "epic": "MT.D.PA.Month1.IP",
@@ -3048,7 +3048,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:20Z"
+      "last_validated": "2026-05-12T22:32:05Z"
     },
     {
       "epic": "EN.D.CL.Month1.IP",
@@ -3060,7 +3060,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:21Z"
+      "last_validated": "2026-05-12T22:32:13Z"
     },
     {
       "epic": "EN.D.LCO.Month4.IP",
@@ -3072,7 +3072,7 @@
       "t2_status": "YES",
       "t2_reason": "5 new bar(s) fetched",
       "valid": true,
-      "last_validated": "2026-05-11T19:44:23Z"
+      "last_validated": "2026-05-12T22:32:20Z"
     },
     {
       "epic": "IR.D.FGBM.Month1.IP",
@@ -3084,7 +3084,7 @@
       "t2_status": "NO",
       "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
       "valid": false,
-      "last_validated": "2026-05-10T23:25:31Z"
+      "last_validated": "2026-05-12T21:53:42Z"
     },
     {
       "epic": "IR.D.FGBL.Month1.IP",
@@ -3096,7 +3096,7 @@
       "t2_status": "NO",
       "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
       "valid": false,
-      "last_validated": "2026-05-10T23:25:33Z"
+      "last_validated": "2026-05-12T21:53:49Z"
     },
     {
       "epic": "IR.D.FGBX.Month1.IP",
@@ -3108,7 +3108,7 @@
       "t2_status": "NO",
       "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
       "valid": false,
-      "last_validated": "2026-05-10T23:25:34Z"
+      "last_validated": "2026-05-12T21:53:57Z"
     },
     {
       "epic": "IR.D.FBTS.Month1.IP",
@@ -3120,463 +3120,463 @@
       "t2_status": "NO",
       "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
       "valid": false,
-      "last_validated": "2026-05-10T23:25:35Z"
+      "last_validated": "2026-05-12T21:55:02Z"
     },
     {
       "epic": "IR.D.FBTP.Month1.IP",
       "name": "BTP Italian Gov Bond",
       "asset_class": "rates",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "NO",
+      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:55:09Z"
     },
     {
       "epic": "IR.D.FEI.MONTH6.IP",
       "name": "Euribor 3M Futures (M6)",
       "asset_class": "rates",
       "region": "EU",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:32:27Z"
     },
     {
       "epic": "IR.D.FF.Month10.IP",
       "name": "Fed Funds Futures (M10)",
       "asset_class": "rates",
       "region": "US",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "NO",
+      "t2_reason": "cold-start fetch returned no usable bars from broker or YH Finance",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:55:11Z"
     },
     {
       "epic": "CO.D.CC.Month1.IP",
       "name": "Cocoa Futures (month 1)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:32:34Z"
     },
     {
       "epic": "CO.D.KC.Month1.IP",
       "name": "Coffee Futures (month 1)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:32:42Z"
     },
     {
       "epic": "CO.D.C.Month1.IP",
       "name": "Corn Futures (month 1)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:32:49Z"
     },
     {
       "epic": "CO.D.CT.Month2.IP",
       "name": "Cotton Futures (month 2)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:32:56Z"
     },
     {
       "epic": "CO.D.LCC.Month3.IP",
       "name": "LCC Futures (month 3)",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:33:03Z"
     },
     {
       "epic": "CO.D.DX.Month1.IP",
       "name": "US Dollar Index Futures",
       "asset_class": "forex",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:33:11Z"
     },
     {
       "epic": "CO.D.CFI.Month3.IP",
       "name": "CFI Commodity Futures",
       "asset_class": "commodity",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:33:18Z"
     },
     {
       "epic": "CS.D.BITCOIN.TODAY.IP",
       "name": "Bitcoin / USD (spreadbet)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:33:25Z"
     },
     {
       "epic": "CS.D.BITCOIN.CFD.IP",
       "name": "Bitcoin / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.BITCOINEU.CFD.IP",
       "name": "Bitcoin / EUR (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.BITCOINGB.CFD.IP",
       "name": "Bitcoin / GBP (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.ETHUSD.TODAY.IP",
       "name": "Ethereum / USD (spreadbet)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:33:33Z"
     },
     {
       "epic": "CS.D.ETHUSD.CFD.IP",
       "name": "Ethereum / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.ETHEUR.CFD.IP",
       "name": "Ethereum / EUR (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.ETHGBP.CFD.IP",
       "name": "Ethereum / GBP (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.ETHEREUM.CFD.IP",
       "name": "Ethereum (alt epic)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.ETHXBT.TODAY.IP",
       "name": "Ethereum / Bitcoin (ratio)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:33:40Z"
     },
     {
       "epic": "CS.D.LTCUSD.TODAY.IP",
       "name": "Litecoin / USD (spreadbet)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:33:47Z"
     },
     {
       "epic": "CS.D.LTCUSD.CFD.IP",
       "name": "Litecoin / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.LTCEUR.CFD.IP",
       "name": "Litecoin / EUR (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.XRPUSD.CFD.IP",
       "name": "XRP / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:33:54Z"
     },
     {
       "epic": "CS.D.XRPEUR.CFD.IP",
       "name": "XRP / EUR (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.RIPPLE.CFD.IP",
       "name": "XRP / USD (alt epic)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.BCHUSD.TODAY.IP",
       "name": "Bitcoin Cash / USD (spreadbet)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:34:02Z"
     },
     {
       "epic": "CS.D.BCHXBT.TODAY.IP",
       "name": "Bitcoin Cash / BTC (spreadbet)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:34:09Z"
     },
     {
       "epic": "CS.D.BCHUSD.CFD.IP",
       "name": "Bitcoin Cash / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "PENDING_T2",
+      "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.BCHEUR.CFD.IP",
       "name": "Bitcoin Cash / EUR (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.ADAUSD.TODAY.IP",
       "name": "Cardano / USD (spreadbet)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:34:16Z"
     },
     {
       "epic": "CS.D.CARDANO.CFD.IP",
       "name": "Cardano / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.CARDANOEU.CFD.IP",
       "name": "Cardano / EUR (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.DOTUSD.TODAY.IP",
       "name": "Polkadot / USD (spreadbet)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
-      "t2_status": "NEVER_TRIED",
-      "t2_reason": null,
-      "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "t1_status": "PASS",
+      "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:34:23Z"
     },
     {
       "epic": "CS.D.POLKADOT.CFD.IP",
       "name": "Polkadot / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
-      "t1_reason": "ApiExceededException: ApiExceededException()",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
+      "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.POLKADOTEU.CFD.IP",
       "name": "Polkadot / EUR (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.SOLANA.CFD.IP",
       "name": "Solana / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.SOLANAEU.CFD.IP",
       "name": "Solana / EUR (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.DOGUSD.TODAY.IP",
@@ -3585,46 +3585,46 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-11T19:44:24Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:34:30Z"
     },
     {
       "epic": "CS.D.DOGE.CFD.IP",
       "name": "Dogecoin / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.DOGEEUR.CFD.IP",
       "name": "Dogecoin / EUR (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.SHIB.CFD.IP",
       "name": "Shiba Inu / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.LNKUSD.TODAY.IP",
@@ -3633,34 +3633,34 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-11T19:44:25Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:34:38Z"
     },
     {
       "epic": "CS.D.CHAINLINK.CFD.IP",
       "name": "Chainlink / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.CHAINLINKEU.CFD.IP",
       "name": "Chainlink / EUR (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.UNIUSD.TODAY.IP",
@@ -3669,22 +3669,22 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-11T19:44:26Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:34:45Z"
     },
     {
       "epic": "CS.D.UNISWAP.CFD.IP",
       "name": "Uniswap / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.EOSUSD.TODAY.IP",
@@ -3693,10 +3693,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-11T19:44:27Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:34:52Z"
     },
     {
       "epic": "CS.D.EOSUSD.CFD.IP",
@@ -3708,7 +3708,7 @@
       "t2_status": "PENDING_T2",
       "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.XLMUSD.TODAY.IP",
@@ -3717,10 +3717,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-11T19:44:29Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:35:00Z"
     },
     {
       "epic": "CS.D.XLMUSD.CFD.IP",
@@ -3732,7 +3732,7 @@
       "t2_status": "PENDING_T2",
       "t2_reason": "awaiting DataPipeline data fetch",
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.NEOUSD.TODAY.IP",
@@ -3741,118 +3741,118 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-11T19:44:30Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:35:07Z"
     },
     {
       "epic": "CS.D.POLYGON.CFD.IP",
       "name": "Polygon (MATIC) / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.COSMOS.CFD.IP",
       "name": "Cosmos (ATOM) / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.TRON.CFD.IP",
       "name": "Tron (TRX) / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.TEZOS.CFD.IP",
       "name": "Tezos (XTZ) / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.VECHAIN.CFD.IP",
       "name": "VeChain (VET) / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.FILECOIN.CFD.IP",
       "name": "Filecoin (FIL) / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.ALGO.CFD.IP",
       "name": "Algorand (ALGO) / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.APTOS.CFD.IP",
       "name": "Aptos (APT) / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.AVALANCHE.CFD.IP",
       "name": "Avalanche (AVAX) / USD (CFD)",
       "asset_class": "crypto",
       "region": "global",
-      "t1_status": "API_ERROR",
+      "t1_status": "EPIC_NOT_RECOGNIZED",
       "t1_reason": "Exception: Exception('error.service.marketdata.instrument.epic.unavailable')",
       "t2_status": "NEVER_TRIED",
       "t2_reason": null,
       "valid": false,
-      "last_validated": "2026-05-10T23:20:27Z"
+      "last_validated": "2026-05-12T21:15:38Z"
     },
     {
       "epic": "CS.D.CRYPTOB10.TODAY.IP",
@@ -3861,10 +3861,10 @@
       "region": "global",
       "t1_status": "PASS",
       "t1_reason": "dealingEnabled field absent \u2014 assumed tradeable",
-      "t2_status": "NO",
-      "t2_reason": "fetch exception: ",
-      "valid": false,
-      "last_validated": "2026-05-11T19:44:31Z"
+      "t2_status": "YES",
+      "t2_reason": "5 new bar(s) fetched",
+      "valid": true,
+      "last_validated": "2026-05-12T22:35:14Z"
     }
   ]
 }

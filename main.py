@@ -198,7 +198,7 @@ config = {
     # Universe -----------------------------------------------------------
     "universe_path": UNIVERSE_PATH,     # path to universe JSON file
     "universe": _load_universe(UNIVERSE_PATH),
-    "run_discover": True,     # set True or use --discover to re-validate universe
+    "run_discover": False,     # set True or use --discover to re-validate universe
 
     # Market data --------------------------------------------------------
     "resolution": "DAY",                # price bar resolution

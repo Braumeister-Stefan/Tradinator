@@ -168,13 +168,13 @@ class IGBrokerAdapter:
             ``{close, high, low, open, volume, bid_close, timestamp}``.
         """
         ig = self._require_session()
-        # trading_ig expects "YYYY/MM/DD HH:MM:SS:000" format for date-range calls.
+        # trading_ig v2 expects "YYYY-MM-DD HH:MM:SS" format for date-range calls.
         # Normalise from ISO-8601 (e.g. "2026-01-15T00:00:01" or "2026-01-15T00:00:01.123Z")
-        # to that format.  Strip fractional seconds and timezone suffixes first.
+        # by stripping fractional seconds and timezone suffixes, then replacing T with a space.
         base = from_date.split(".")[0].rstrip("Z")  # drop fractions and Z
-        normalised = base.replace("T", " ").replace("-", "/") + ":000"
+        normalised = base.replace("T", " ")
         # Use current UTC time as end_date so all new bars up to now are included.
-        end_str = time.strftime("%Y/%m/%d %H:%M:%S:000", time.gmtime())
+        end_str = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
         raw = self._call_ig_api(
             ig.fetch_historical_prices_by_epic_and_date_range,
             instrument_id, resolution, normalised, end_str
@@ -184,16 +184,13 @@ class IGBrokerAdapter:
         for bar in bars:
             ts = bar.get("snapshotTimeUTC") or bar.get("snapshotTime")
             close_price = bar.get("closePrice")
-            bid_close_val = None
-            if close_price is not None:
-                bid_close_val = close_price.get("bid")
             result.append({
-                "close": self._mid(bar.get("closePrice")),
+                "close": self._mid(close_price),
                 "high": self._mid(bar.get("highPrice")),
                 "low": self._mid(bar.get("lowPrice")),
                 "open": self._mid(bar.get("openPrice")),
                 "volume": bar.get("lastTradedVolume"),
-                "bid_close": bid_close_val,
+                "bid_close": close_price.get("bid") if close_price is not None else None,
                 "timestamp": ts,
             })
         return result
