@@ -59,7 +59,7 @@ class BrokerConnector:
     # ------------------------------------------------------------------
 
     def _create_adapter(self):
-        """Instantiate the broker adapter named in config (default ``ig``)."""
+        """Instantiate the broker adapter named in config; supports ``ig`` and ``ibkr`` (default ``ig``)."""
         broker_name = self.config.get("broker", "ig").lower()
         adapter_cls = _ADAPTER_REGISTRY.get(broker_name)
         if adapter_cls is None:

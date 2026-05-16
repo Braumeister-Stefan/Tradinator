@@ -31,9 +31,9 @@ def _make_universe_json(verified: list = None, candidates: list = None, extra: l
     """Return a universe.json string with given verified and candidate epics."""
     instruments = []
     for e in (verified or []):
-        instruments.append({"epic": e, "name": e, "asset_class": "index", "region": "UK", "status": "verified"})
+        instruments.append({"instrument_id": e, "name": e, "asset_class": "index", "region": "UK", "status": "verified"})
     for e in (candidates or []):
-        instruments.append({"epic": e, "name": e, "asset_class": "index", "region": "UK", "status": "candidate"})
+        instruments.append({"instrument_id": e, "name": e, "asset_class": "index", "region": "UK", "status": "candidate"})
     for entry in (extra or []):
         instruments.append(entry)
     return json.dumps({"description": "test", "instruments": instruments})
@@ -188,14 +188,14 @@ class TestSectionB(unittest.TestCase):
 class TestSectionC(unittest.TestCase):
     """Tests for _compute_section_c and _find_variant_orphans."""
 
-    def _make_sections(self, verified_epics, candidate_epics, series_epics):
+    def _make_sections(self, verified_instruments, candidate_instruments, series_epics):
         section_a = {
             "error": None,
-            "verified_epics": verified_epics,
-            "candidate_epics": candidate_epics,
+            "verified_epics": verified_instruments,
+            "candidate_epics": candidate_instruments,
             "unknown_status": [],
         }
-        section_b = {"error": None, "series_epics": series_epics}
+        section_b = {"error": None, "series_instruments": series_epics}
         return section_a, section_b
 
     def test_in_universe_not_in_series(self):
