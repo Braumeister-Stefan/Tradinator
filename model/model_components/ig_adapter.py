@@ -323,6 +323,23 @@ class IGBrokerAdapter:
             "reason": confirmation.get("reason", ""),
         }
 
+    def fetch_working_orders(self) -> list[dict]:
+        """Fetch all open/working (not-yet-filled) limit orders via the IG API."""
+        ig = self._require_session()
+        raw = self._call_ig_api(ig.fetch_working_orders)
+        result = []
+        for wo in (raw or {}).get("workingOrders", []):
+            wd  = wo.get("workingOrderData", {})
+            mkt = wo.get("marketData", {})
+            result.append({
+                "order_id":      wd.get("dealId", ""),
+                "instrument_id": mkt.get("epic", ""),
+                "direction":     wd.get("direction", ""),
+                "size":          float(wd.get("orderSize") or 0),
+                "order_type":    "LIMIT",
+            })
+        return result
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
