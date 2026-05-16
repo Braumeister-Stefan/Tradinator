@@ -378,7 +378,7 @@ class IGBrokerAdapter:
         """Load IG credentials from environment variables (via .env if present)."""
         env_path = self.config.get("env_path")
         if env_path and os.path.isfile(env_path):
-            load_dotenv(env_path)
+            load_dotenv(env_path, override=True)  # override=True: .env wins over system env vars
 
         username = self._normalise_credential(os.environ.get("IG_USERNAME"))
         password = self._normalise_credential(os.environ.get("IG_PASSWORD"))

@@ -37,7 +37,10 @@ def _load_universe(path: str) -> list[str]:
             data = json.load(f)
     except FileNotFoundError:
         print(f"ERROR: Universe file not found: {path}")
-        print("Create data/input/universe.json or run data/input/discover_universe.py")
+        print(
+            "Run diagnostic_tools/refresh_universe.py to populate it, "
+            "or set refresh_universe=True in the model config."
+        )
         raise SystemExit(1) from None
     except json.JSONDecodeError as exc:
         print(f"ERROR: Universe file contains invalid JSON: {path}")
@@ -48,7 +51,7 @@ def _load_universe(path: str) -> list[str]:
     if not instruments:
         print(
             f"WARNING: No instruments found in {path} — pipeline will run with an empty universe. "
-            "Run discover_universe.py (or use --discover) to populate it."
+            "Run diagnostic_tools/refresh_universe.py (or use --refresh-universe) to populate it."
         )
 
     seen_bases: set[str] = set()
@@ -60,7 +63,7 @@ def _load_universe(path: str) -> list[str]:
         if not inst.get("valid", True):
             print(
                 f"WARNING: universe.json contains invalid instrument '{epic}' — skipping. "
-                "Run discover_universe.py or edit universe_candidates.json."
+                "Run diagnostic_tools/refresh_universe.py or edit universe_candidates.json."
             )
             continue
         # Base = first three dot-segments, e.g. "IX.D.FTSE" from
@@ -123,66 +126,42 @@ def _parse_args():
         help="Seconds between execution cycles for decoupled mode (default: 3600)",
     )
     parser.add_argument(
-        "--discover",
+        "--refresh-universe",
         action="store_true",
         default=False,
+        dest="refresh_universe",
         help=(
-            "Run universe discovery and validation before the main pipeline. "
-            "Validates all candidates in universe_candidates.json against the IG API "
-            "(Tier 1: broker recognition + dealing enabled; Tier 2: price data available) "
-            "and updates universe.json with only the valid instruments. "
-            "Equivalent to setting run_discover=True in config."
+            "Run universe refresh before the main pipeline. "
+            "Discovers all SP500 and FTSE100 instruments via IG search-drilldown, "
+            "resolves Yahoo Finance tickers, performs Tier 1 broker validation, "
+            "and rewrites universe_candidates.json and universe.json. "
+            "Equivalent to setting refresh_universe=True in config."
         ),
     )
     return parser.parse_args()
 
 
-def _run_discover(_config: dict) -> bool:
-    """Invoke discover_universe.main() to validate and refresh the universe.
+def _run_refresh_universe(_config: dict) -> bool:
+    """Invoke refresh_universe.run() to discover and validate the instrument universe.
 
-    Loads ``data/input/discover_universe.py`` via importlib so it is not
-    executed at import time and does not pollute the module namespace.
-    The ``_config`` parameter is accepted for forward-compatibility (e.g.,
-    to pass broker credentials in future) but is not used at present.
+    Loads ``diagnostic_tools/refresh_universe.py`` via importlib
+    (diagnostic_tools/ has no __init__.py so a normal import is not possible).
 
-    Returns True if discovery completed successfully, False if the broker API
+    Returns True if the pipeline completed successfully, False if the broker API
     was unavailable (503/500 after retries) and the run was skipped.  In the
     False case the existing universe.json on disk is used unchanged.
     """
-    discover_path = os.path.join(
+    refresh_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
-        "data", "input", "discover_universe.py",
+        "diagnostic_tools", "refresh_universe.py",
     )
-    spec = importlib.util.spec_from_file_location("discover_universe", discover_path)
+    spec = importlib.util.spec_from_file_location("refresh_universe", refresh_path)
     if spec is None or spec.loader is None:
-        print(f"ERROR: cannot load discover_universe from {discover_path}")
+        print(f"ERROR: cannot load refresh_universe from {refresh_path}")
         raise SystemExit(1)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    try:
-        module.main()
-        return True
-    except Exception as exc:
-        exc_str = str(exc)
-        exc_type = type(exc).__name__
-        # Catch transient broker-side failures and fall back to the existing
-        # universe.json rather than crashing the run:
-        #   - 503/500 after retries: IG server unavailable / maintenance
-        #   - ApiExceededException: rate limit or concurrent session cap hit;
-        #     has no message body so the status-code check alone won't catch it
-        _is_transient = (
-            any(code in exc_str for code in ("503", "500"))
-            or exc_type == "ApiExceededException"
-        )
-        if _is_transient:
-            print(
-                f"\n[_run_discover] WARNING: universe discovery skipped -- "
-                f"IG broker API unavailable ({exc_type}: {exc_str or '(no message)'}).\n"
-                "  Continuing with the existing universe.json on disk.\n"
-                "  Re-run with --discover once the IG servers are back online."
-            )
-            return False
-        raise
+    return module.run(_config)
 
 
 # ---------------------------------------------------------------------------
@@ -197,8 +176,8 @@ config = {
 
     # Universe -----------------------------------------------------------
     "universe_path": UNIVERSE_PATH,     # path to universe JSON file
-    "universe": _load_universe(UNIVERSE_PATH),
-    "run_discover": False,     # set True or use --discover to re-validate universe
+    "universe": [],          # populated in __main__ after optional refresh
+    "refresh_universe": True,  # set True or use --refresh-universe to refresh universe
 
     # Market data --------------------------------------------------------
     "resolution": "DAY",                # price bar resolution
@@ -238,37 +217,34 @@ config = {
 if __name__ == "__main__":
     args = _parse_args()
 
-    # Merge CLI --discover flag into config
-    if args.discover:
-        config["run_discover"] = True
+    # Merge CLI --refresh-universe flag into config
+    if args.refresh_universe:
+        config["refresh_universe"] = True
 
     try:
-        # --- Universe discovery (optional, gated by config key or --discover) ---
-        if config.get("run_discover", False):
-            print("\n[main] run_discover=True -- running universe validation...")
-            discovered = _run_discover(config)
-            if discovered:
-                # Reload universe after discover updates universe.json
-                config["universe"] = _load_universe(UNIVERSE_PATH)
-                print(f"[main] Universe reloaded: {len(config['universe'])} valid instrument(s).\n")
-            else:
-                print(
-                    f"[main] Using cached universe: {len(config['universe'])} instrument(s) "
-                    "(discover skipped -- broker unavailable).\n"
-                )
+        # --- Universe refresh (optional, gated by config key or --refresh-universe) ---
+        if config.get("refresh_universe", False):
+            print("\n[main] refresh_universe=True -- running universe refresh...")
+            refreshed = _run_refresh_universe(config)
+            if not refreshed:
+                print("[main] Refresh skipped — broker unavailable. Using existing universe.json.\n")
+
+        # Always load universe after optional refresh (errors here if file still missing).
+        config["universe"] = _load_universe(UNIVERSE_PATH)
+        print(f"[main] Universe loaded: {len(config['universe'])} valid instrument(s).\n")
 
         model = Model(config)
         run_loop = RunLoop(
-            model,
-            args.mode,
+            model=model,
+            mode=args.mode,
             interval=args.interval,
             research_interval=args.research_interval,
             execution_interval=args.execution_interval,
         )
         run_loop.start()
     except NotImplementedError as error:
-        print(f"The selected broker adapter is not yet implemented: {error}")
-        raise SystemExit(1) from None
+        print(f"Selected broker adapter not implemented yet. {error}")
+
     except RuntimeError as error:
         msg = str(error)
         if "Missing required IG credentials" in msg:

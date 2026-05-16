@@ -383,18 +383,22 @@ class DataPipeline:
             if not cand_epic:
                 continue
             seen_epics.add(cand_epic)
+            t1 = candidate.get("t1_status", "")
+            t2 = candidate.get("t2_status", "")
+            pre_passed = "" if (t1 == "PASS" and t2 == "YES") else "false"
             rows.append({
                 "epic": cand_epic,
                 "yh_ticker": EPIC_TO_YH_TICKER.get(cand_epic, ""),
                 "name": candidate.get("name", ""),
-                "t1_status": candidate.get("t1_status", ""),
-                "t2_status": candidate.get("t2_status", ""),
+                "ig_type": candidate.get("ig_type", ""),
+                "t1_status": t1,
+                "t2_status": t2,
                 "data_source": data_sources.get(cand_epic, "none"),
                 "bars_fetched_this_run": _bars_fetched(cand_epic),
                 "total_bars_in_master": _bars_in_master(cand_epic),
                 "broker_data_available": broker_available.get(cand_epic, False),
                 "yh_data_available": yh_available.get(cand_epic, False),
-                "validation_passed": "",  # filled in by StrategyEval
+                "validation_passed": pre_passed,
             })
 
         # Include any active-universe instruments not present in candidates.json.
@@ -405,6 +409,7 @@ class DataPipeline:
                 "epic": instrument_id,
                 "yh_ticker": EPIC_TO_YH_TICKER.get(instrument_id, ""),
                 "name": "",
+                "ig_type": "",
                 "t1_status": "",
                 "t2_status": "",
                 "data_source": data_sources.get(instrument_id, "none"),
@@ -419,6 +424,7 @@ class DataPipeline:
             "epic",
             "yh_ticker",
             "name",
+            "ig_type",
             "t1_status",
             "t2_status",
             "data_source",
