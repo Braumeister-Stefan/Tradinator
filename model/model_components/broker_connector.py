@@ -14,13 +14,18 @@ It does not constitute trading advice, investment recommendation, or financial
 guidance of any kind. Use at your own risk.
 """
 
-from .ig_adapter import IGBrokerAdapter
+# Optional adapter — import succeeds only when trading-ig is installed.
+try:
+    from .ig_adapter import IGBrokerAdapter  # noqa: F401
+    _IG_AVAILABLE = True
+except ImportError:
+    _IG_AVAILABLE = False
 
 
 # Registry of supported brokers — add new adapters here.
-_ADAPTER_REGISTRY = {
-    "ig": IGBrokerAdapter,
-}
+_ADAPTER_REGISTRY: dict = {}
+if _IG_AVAILABLE:
+    _ADAPTER_REGISTRY["ig"] = IGBrokerAdapter  # type: ignore[name-defined]
 
 # Lazy import guard for optional IBKR adapter so that ``ib_async`` is not
 # required unless the user explicitly selects the ``ibkr`` broker.
