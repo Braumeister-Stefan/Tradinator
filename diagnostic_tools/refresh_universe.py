@@ -23,7 +23,7 @@ Pipeline phases
                          API itself determines what instruments are discoverable.
 
   Phase 2 — Enrich    : Resolve a Yahoo Finance ticker for each discovered
-                         epic.  Priority: curated EPIC_TO_YH_TICKER map (no
+                         epic.  Priority: curated INSTRUMENT_TO_YH_TICKER map (no
                          API call), then Yahoo Search API with Jaccard
                          name-matching as a fallback.
 
@@ -69,7 +69,7 @@ from dotenv import load_dotenv          # noqa: E402
 from trading_ig import IGService        # noqa: E402
 import yfinance as yf                   # noqa: E402
 
-from model.model_components.yh_finance_fetcher import EPIC_TO_YH_TICKER  # noqa: E402
+from model.model_components.yh_finance_fetcher import INSTRUMENT_TO_YH_TICKER  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Output paths
@@ -580,10 +580,10 @@ def _search_yahoo(name: str, prefer_lse: bool) -> str | None:
 def _find_ticker(epic: str, ig_type: str, name: str) -> tuple[str, bool]:
     """Return *(ticker_or_NONE, did_search)* for one instrument.
 
-    Priority: curated EPIC_TO_YH_TICKER map (no API call) → Yahoo Search API.
+    Priority: curated INSTRUMENT_TO_YH_TICKER map (no API call) → Yahoo Search API.
     """
-    if epic in EPIC_TO_YH_TICKER:
-        return EPIC_TO_YH_TICKER[epic], False
+    if epic in INSTRUMENT_TO_YH_TICKER:
+        return INSTRUMENT_TO_YH_TICKER[epic], False
     if ig_type not in _INCLUDED_TYPES:
         return "NONE", False
     prefer_lse = "LN." in epic   # London-listed share epic

@@ -35,10 +35,10 @@ class OrderGenerator:
 
         latest_prices = {}
         if market_data:
-            for epic, fields in market_data.get("prices", {}).items():
+            for instrument_id, fields in market_data.get("prices", {}).items():
                 closes = fields.get("close", [])
                 if closes and closes[-1] is not None:
-                    latest_prices[epic] = closes[-1]
+                    latest_prices[instrument_id] = closes[-1]
 
         current_holdings = self._get_current_holdings(positions)
         target_sizes = self._compute_target_sizes(weights, total_value, latest_prices, metadata)
@@ -89,8 +89,7 @@ class OrderGenerator:
         """Convert weights to target sizes in contract units.
 
         target_size = (weight * total_value) / (latest_price * scaling_factor).
-        The scaling_factor converts mid-prices to the IG "points" price
-        (e.g. EURUSD 1.1350 → 11350 with scalingFactor=10000).
+        scaling_factor is 1.0 for IBKR (raw price units).
         Falls back to notional value when no price is available.
         """
         if latest_prices is None:

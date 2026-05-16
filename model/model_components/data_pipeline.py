@@ -39,7 +39,7 @@ import time
 
 import pandas as pd
 
-from .yh_finance_fetcher import EPIC_TO_YH_TICKER, YHFinanceFetcher
+from .yh_finance_fetcher import INSTRUMENT_TO_YH_TICKER, YHFinanceFetcher
 
 
 class DataPipeline:
@@ -297,8 +297,8 @@ class DataPipeline:
                     cols_to_drop = [e for e in removed_instruments if e in df.columns]
                     if cols_to_drop:
                         master[sheet_name] = df.drop(columns=cols_to_drop)
-                        for epic in cols_to_drop:
-                            print(f"[DataPipeline] Dropped stale series column for {epic} (T2=NO).")
+                        for instrument_id in cols_to_drop:
+                            print(f"[DataPipeline] Dropped stale series column for {instrument_id} (T2=NO).")
             if not self._validate_series_schema(master):
                 print("[DataPipeline] WARNING: master series failed validation.")
             self._save_series_file(master, self.SERIES_FILE)
@@ -348,7 +348,7 @@ class DataPipeline:
         P3: ``bars_fetched_this_run`` replaces the old ``non_zero_data_points`` column
         (which reflected the current run's fetched bars, not the master series total).
         A new ``total_bars_in_master`` column counts the non-NaN rows stored in the
-        master series for each epic, making the discrepancy explicit.
+        master series for each instrument_id, making the discrepancy explicit.
 
         The ``validation_passed`` column is left blank here and filled in
         later by ``StrategyEval``.
@@ -374,7 +374,7 @@ class DataPipeline:
             return int(ref_sheet[instrument_id].notna().sum())
 
         rows = []
-        seen_epics: set[str] = set()
+        seen_instruments: set[str] = set()
 
         # P2: iterate ALL candidates from universe_candidates.json first,
         # so failures are not silently dropped from the output sheet.
@@ -382,15 +382,14 @@ class DataPipeline:
             cand_epic = candidate.get("epic", "")
             if not cand_epic:
                 continue
-            seen_epics.add(cand_epic)
+            seen_instruments.add(cand_epic)
             t1 = candidate.get("t1_status", "")
             t2 = candidate.get("t2_status", "")
             pre_passed = "" if (t1 == "PASS" and t2 == "YES") else "false"
             rows.append({
-                "epic": cand_epic,
-                "yh_ticker": EPIC_TO_YH_TICKER.get(cand_epic, ""),
+                "instrument_id": cand_epic,
+                "yh_ticker": INSTRUMENT_TO_YH_TICKER.get(cand_epic, ""),
                 "name": candidate.get("name", ""),
-                "ig_type": candidate.get("ig_type", ""),
                 "t1_status": t1,
                 "t2_status": t2,
                 "data_source": data_sources.get(cand_epic, "none"),
@@ -403,13 +402,12 @@ class DataPipeline:
 
         # Include any active-universe instruments not present in candidates.json.
         for instrument_id in instruments:
-            if instrument_id in seen_epics:
+            if instrument_id in seen_instruments:
                 continue
             rows.append({
-                "epic": instrument_id,
-                "yh_ticker": EPIC_TO_YH_TICKER.get(instrument_id, ""),
+                "instrument_id": instrument_id,
+                "yh_ticker": INSTRUMENT_TO_YH_TICKER.get(instrument_id, ""),
                 "name": "",
-                "ig_type": "",
                 "t1_status": "",
                 "t2_status": "",
                 "data_source": data_sources.get(instrument_id, "none"),
@@ -421,10 +419,9 @@ class DataPipeline:
             })
 
         fieldnames = [
-            "epic",
+            "instrument_id",
             "yh_ticker",
             "name",
-            "ig_type",
             "t1_status",
             "t2_status",
             "data_source",
@@ -456,7 +453,7 @@ class DataPipeline:
             with open(self.CANDIDATES_PATH) as f:
                 data = json.load(f)
             for candidate in data.get("candidates", []):
-                if candidate.get("epic") == instrument_id:
+                if candidate.get("instrument_id") == instrument_id:
                     return candidate.get("t2_status", "UNKNOWN")
         except Exception:
             pass
@@ -532,7 +529,7 @@ class DataPipeline:
             now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             updated = False
             for candidate in data.get("candidates", []):
-                if candidate.get("epic") == instrument_id:
+                if candidate.get("instrument_id") == instrument_id:
                     candidate["t2_status"] = t2_status
                     candidate["t2_reason"] = t2_reason
                     candidate["valid"] = (
@@ -570,7 +567,7 @@ class DataPipeline:
             original_count = len(data.get("instruments", []))
             data["instruments"] = [
                 inst for inst in data.get("instruments", [])
-                if inst.get("epic") != instrument_id
+                if inst.get("instrument_id") != instrument_id
             ]
             removed = original_count - len(data["instruments"])
             if removed > 0:

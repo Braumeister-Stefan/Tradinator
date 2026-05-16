@@ -5,7 +5,7 @@ Secondary price-data source using the ``yfinance`` library.  Used as a
 fallback inside DataPipeline when the primary broker adapter cannot
 return price bars for an instrument.
 
-The fetcher converts IG epic strings to Yahoo Finance tickers via a
+The fetcher converts broker instrument_id strings to Yahoo Finance tickers via a
 curated look-up table, then downloads OHLCV bars in the same dict
 schema that the broker adapter returns, so DataPipeline needs no extra
 logic to consume them.
@@ -24,13 +24,13 @@ import yfinance as yf
 
 
 # ---------------------------------------------------------------------------
-# Epic → Yahoo Finance ticker mapping
+# Instrument ID → Yahoo Finance ticker mapping
 # ---------------------------------------------------------------------------
 # Covers all 32 instruments in the current universe.json.
 # Indices use the Yahoo "^" prefix; forex uses the "=X" suffix;
 # futures/commodities use the "=F" suffix for continuous front-month.
 # ---------------------------------------------------------------------------
-EPIC_TO_YH_TICKER: dict[str, str] = {
+INSTRUMENT_TO_YH_TICKER: dict[str, str] = {
     # Indices — UK
     "IX.D.FTSE.DAILY.IP":    "^FTSE",
     # Indices — US
@@ -174,14 +174,14 @@ class YHFinanceFetcher:
     """Secondary price-data source using Yahoo Finance via ``yfinance``."""
 
     def fetch_historical_prices(
-        self, epic: str, resolution: str, lookback: int
+        self, instrument_id: str, resolution: str, lookback: int
     ) -> list[dict]:
-        """Fetch OHLCV bars from Yahoo Finance for *epic*.
+        """Fetch OHLCV bars from Yahoo Finance for *instrument_id*.
 
         Parameters
         ----------
-        epic:
-            IG epic identifier (e.g. ``"IX.D.FTSE.DAILY.IP"``).
+        instrument_id:
+            Broker instrument identifier (e.g. ``"IX.D.FTSE.DAILY.IP"``).
         resolution:
             Price bar resolution string (e.g. ``"DAY"``).
         lookback:
@@ -203,12 +203,12 @@ class YHFinanceFetcher:
                     "timestamp": str,           # ISO-8601 UTC string
                 }
 
-            Returns an empty list when no ticker mapping exists for *epic*,
+            Returns an empty list when no ticker mapping exists for *instrument_id*,
             when Yahoo returns no data, or when any error occurs.
         """
-        ticker = EPIC_TO_YH_TICKER.get(epic)
+        ticker = INSTRUMENT_TO_YH_TICKER.get(instrument_id)
         if ticker is None:
-            print(f"[YHFinanceFetcher] No ticker mapping for {epic} — skipping YH Finance fallback.")
+            print(f"[YHFinanceFetcher] No ticker mapping for {instrument_id} — skipping YH Finance fallback.")
             return []
 
         interval = _RESOLUTION_TO_INTERVAL.get(resolution.upper(), "1d")
@@ -225,7 +225,7 @@ class YHFinanceFetcher:
                 multi_level_index=False,
             )
         except Exception as exc:
-            print(f"[YHFinanceFetcher] WARNING: download failed for {epic} ({ticker}) — {exc}")
+            print(f"[YHFinanceFetcher] WARNING: download failed for {instrument_id} ({ticker}) — {exc}")
             return []
 
         if df is None or df.empty:
