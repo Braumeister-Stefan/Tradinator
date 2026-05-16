@@ -10,7 +10,6 @@ guidance of any kind. Use at your own risk.
 """
 
 import argparse
-import importlib.util
 import json
 import os
 
@@ -37,7 +36,7 @@ def _load_universe(path: str) -> list[str]:
         print(f"ERROR: Universe file not found: {path}")
         print(
             "Populate data/input/universe.json manually with IBKR canonical symbols "
-            "(e.g. 'DAX', 'EURUSD') or IG epics."
+            "(e.g. 'DAX', 'EURUSD')."
         )
         raise SystemExit(1) from None
     except json.JSONDecodeError as exc:
@@ -49,13 +48,13 @@ def _load_universe(path: str) -> list[str]:
     if not instruments:
         print(
             f"WARNING: No instruments found in {path} — pipeline will run with an empty universe. "
-            "Populate data/input/universe.json manually with instrument_id strings."
+            "Populate data/input/universe.json manually with IBKR canonical symbol strings."
         )
 
     seen: set[str] = set()
     symbols: list[str] = []
     for inst in instruments:
-        iid = inst.get("instrument_id") or inst.get("epic", "")
+        iid = inst.get("instrument_id", "")
         if not iid:
             continue
         if not inst.get("valid", True):
@@ -66,27 +65,6 @@ def _load_universe(path: str) -> list[str]:
         seen.add(iid)
         symbols.append(iid)
     return symbols
-
-
-def _print_credentials_setup_error(error: RuntimeError) -> None:
-    """Print the required credential setup steps for first-time runs."""
-    print("Tradinator could not start because broker credentials are not configured.")
-    print(str(error))
-    print("Next steps:")
-    print("1. Copy secrets/.env.example to secrets/.env")
-    print("2. Fill in the required credentials for your broker — see secrets/.env.example for both IG and IBKR credential keys")
-    print("3. Run main.py again")
-
-
-def _print_ig_authentication_error(error: RuntimeError) -> None:
-    """Print actionable guidance for common IG authentication failures."""
-    print("Tradinator could not authenticate with IG.")
-    print(str(error))
-    print("Next steps:")
-    print("1. Verify IG_USERNAME is your IG login identifier, not your account number")
-    print("2. Keep IG_ACC_NUMBER as the account id, for example MERTST...")
-    print("3. Confirm the credentials belong to an IG DEMO account")
-    print("4. Confirm the API key is enabled for the same IG account")
 
 
 def _print_ibkr_connection_error(error: RuntimeError) -> None:
@@ -127,49 +105,7 @@ def _parse_args():
         default=3600,
         help="Seconds between execution cycles for decoupled mode (default: 3600)",
     )
-    parser.add_argument(
-        "--refresh-universe",
-        action="store_true",
-        default=False,
-        dest="refresh_universe",
-        help=(
-            "Run universe refresh before the main pipeline. "
-            "Discovers all SP500 and FTSE100 instruments via IG search-drilldown, "
-            "resolves Yahoo Finance tickers, performs Tier 1 broker validation, "
-            "and rewrites universe_candidates.json and universe.json. "
-            "Equivalent to setting refresh_universe=True in config. "
-            "(IG only; silently skipped when broker=ibkr)"
-        ),
-    )
     return parser.parse_args()
-
-
-def _run_refresh_universe(_config: dict) -> bool:
-    """Invoke refresh_universe.run() to discover and validate the instrument universe.
-
-    Loads ``diagnostic_tools/refresh_universe.py`` via importlib
-    (diagnostic_tools/ has no __init__.py so a normal import is not possible).
-
-    Returns True if the pipeline completed successfully, False if the broker API
-    was unavailable (503/500 after retries) and the run was skipped.  In the
-    False case the existing universe.json on disk is used unchanged.
-    Always returns False immediately when broker=ibkr; this tool is IG-only.
-    """
-    if _config.get("broker", "ig") == "ibkr":
-        print("[main] --refresh-universe is not supported for broker=ibkr — skipping.")
-        return False
-
-    refresh_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "diagnostic_tools", "refresh_universe.py",
-    )
-    spec = importlib.util.spec_from_file_location("refresh_universe", refresh_path)
-    if spec is None or spec.loader is None:
-        print(f"ERROR: cannot load refresh_universe from {refresh_path}")
-        raise SystemExit(1)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.run(_config)
 
 
 # ---------------------------------------------------------------------------
@@ -177,15 +113,14 @@ def _run_refresh_universe(_config: dict) -> bool:
 # ---------------------------------------------------------------------------
 config = {
     # Broker --------------------------------------------------------------
-    "broker": "ig",                     # "ig" or "ibkr"
+    "broker": "ibkr",                   # "ibkr" or future supported broker
 
     # Credentials --------------------------------------------------------
     "env_path": "secrets/.env",        # path to .env file with broker creds
 
     # Universe -----------------------------------------------------------
     "universe_path": UNIVERSE_PATH,     # path to universe JSON file
-    "universe": [],          # populated in __main__ after optional refresh
-    "refresh_universe": True,  # set True or use --refresh-universe to refresh universe
+    "universe": [],          # populated in __main__
 
     # Market data --------------------------------------------------------
     "resolution": "DAY",                # price bar resolution
@@ -225,19 +160,7 @@ config = {
 if __name__ == "__main__":
     args = _parse_args()
 
-    # Merge CLI --refresh-universe flag into config
-    if args.refresh_universe:
-        config["refresh_universe"] = True
-
     try:
-        # --- Universe refresh (optional, gated by config key or --refresh-universe) ---
-        if config.get("refresh_universe", False):
-            print("\n[main] refresh_universe=True -- running universe refresh...")
-            refreshed = _run_refresh_universe(config)
-            if not refreshed:
-                print("[main] Refresh skipped — broker unavailable. Using existing universe.json.\n")
-
-        # Always load universe after optional refresh (errors here if file still missing).
         config["universe"] = _load_universe(UNIVERSE_PATH)
         print(f"[main] Universe loaded: {len(config['universe'])} valid instrument(s).\n")
 
@@ -255,11 +178,7 @@ if __name__ == "__main__":
 
     except RuntimeError as error:
         msg = str(error)
-        if "Missing required IG credentials" in msg:
-            _print_credentials_setup_error(error)
-        elif "validation.pattern.invalid" in msg:
-            _print_ig_authentication_error(error)
-        elif isinstance(error, (ConnectionRefusedError, TimeoutError)) or "IBKR" in msg or "ib_insync" in msg.lower():
+        if isinstance(error, (ConnectionRefusedError, TimeoutError)) or "IBKR" in msg or "ib_insync" in msg.lower():
             _print_ibkr_connection_error(error)
         else:
             print(f"ERROR: {error}")

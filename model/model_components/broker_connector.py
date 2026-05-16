@@ -14,18 +14,8 @@ It does not constitute trading advice, investment recommendation, or financial
 guidance of any kind. Use at your own risk.
 """
 
-# Optional adapter — import succeeds only when trading-ig is installed.
-try:
-    from .ig_adapter import IGBrokerAdapter  # noqa: F401
-    _IG_AVAILABLE = True
-except ImportError:
-    _IG_AVAILABLE = False
-
-
 # Registry of supported brokers — add new adapters here.
 _ADAPTER_REGISTRY: dict = {}
-if _IG_AVAILABLE:
-    _ADAPTER_REGISTRY["ig"] = IGBrokerAdapter  # type: ignore[name-defined]
 
 # Lazy import guard for optional IBKR adapter so that ``ib_async`` is not
 # required unless the user explicitly selects the ``ibkr`` broker.
@@ -59,8 +49,8 @@ class BrokerConnector:
     # ------------------------------------------------------------------
 
     def _create_adapter(self):
-        """Instantiate the broker adapter named in config; supports ``ig`` and ``ibkr`` (default ``ig``)."""
-        broker_name = self.config.get("broker", "ig").lower()
+        """Instantiate the broker adapter named in config; supports ``ibkr`` (default)."""
+        broker_name = self.config.get("broker", "ibkr").lower()
         adapter_cls = _ADAPTER_REGISTRY.get(broker_name)
         if adapter_cls is None:
             available = ", ".join(sorted(_ADAPTER_REGISTRY))

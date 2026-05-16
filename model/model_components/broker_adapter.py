@@ -90,7 +90,7 @@ class BrokerAdapter(Protocol):
         Parameters
         ----------
         instrument_id : str
-            Broker-agnostic instrument identifier (e.g. canonical symbol for IBKR, IG epic for IG).
+            Broker-agnostic instrument identifier (e.g. IBKR canonical symbol such as ``'DAX'``, ``'EURUSD'``).
         resolution : str
             Bar resolution, e.g. ``"DAY"``.
         from_date : str

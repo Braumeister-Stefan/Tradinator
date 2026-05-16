@@ -215,9 +215,9 @@ class PerformanceMonitoring:
 
         valued = []
         for raw_id, value in aggregated.items():
-            # Use the third dot-segment of the epic as a compact label
-            # (e.g. "FTSE" from "IX.D.FTSE.DAILY.IP"), falling back to
-            # the full instrument_id when the format does not match.
+            # Use the third dot-segment as a compact label when the instrument ID
+            # uses dot notation (e.g. "FTSE" from "IX.D.FTSE.DAILY.IP"), falling
+            # back to the full instrument_id for canonical symbols (e.g. "DAX").
             parts = raw_id.split(".")
             label = parts[2] if len(parts) >= 3 else raw_id
             valued.append({"label": label, "value": value})
