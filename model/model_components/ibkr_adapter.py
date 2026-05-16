@@ -98,19 +98,39 @@ class IBKRBrokerAdapter:
             os.path.join(PROJECT_ROOT, "secrets", ".env"), override=True
         )
         host = os.environ.get("IBKR_HOST", "127.0.0.1")
-        port = os.environ.get("IBKR_PORT", str(self.PAPER_PORT))
-        client_id = os.environ.get("IBKR_CLIENT_ID", "1")
+        port_str = os.environ.get("IBKR_PORT", str(self.PAPER_PORT))
+        client_id_str = os.environ.get("IBKR_CLIENT_ID", "1")
         self._account_id = os.environ.get("IBKR_ACCOUNT_ID", "")
 
+        try:
+            port = int(port_str)
+            client_id = int(client_id_str)
+        except ValueError as exc:
+            raise RuntimeError(
+                f"IBKR_PORT and IBKR_CLIENT_ID must be integers; "
+                f"got IBKR_PORT={port_str!r}, IBKR_CLIENT_ID={client_id_str!r}."
+            ) from exc
+
         paper_only = os.environ.get("IBKR_PAPER_ONLY", "true").lower()
-        if paper_only == "true" and int(port) != self.PAPER_PORT:
+        if paper_only == "true" and port != self.PAPER_PORT:
             raise RuntimeError(
                 f"IBKR_PAPER_ONLY=true but IBKR_PORT={port}; "
                 f"paper trading requires port {self.PAPER_PORT}."
             )
 
         self._ib = IB()
-        self._ib.connect(host, int(port), clientId=int(client_id))
+        try:
+            self._ib.connect(host, port, clientId=client_id)
+        except Exception as exc:
+            msg = (
+                "Tradinator could not connect to IBKR.\n"
+                f"{exc}\n"
+                "Next steps:\n"
+                "1. Start TWS or IB Gateway and confirm it listens on port 4002 (paper trading).\n"
+                "2. Verify IBKR_HOST=127.0.0.1, IBKR_PORT=4002, IBKR_CLIENT_ID=1 in secrets/.env.\n"
+                "3. Ensure no other session is using the same IBKR_CLIENT_ID."
+            )
+            raise RuntimeError(msg) from exc
         print(f"[IBKRBrokerAdapter] Connected to {host}:{port} (clientId={client_id})")
         return {"account_id": self._account_id}
 

@@ -9,6 +9,7 @@ It does not constitute trading advice, investment recommendation, or financial
 guidance of any kind. Use at your own risk.
 """
 
+import argparse
 import threading
 import time
 
@@ -42,6 +43,10 @@ class RunLoop:
                 raise ValueError(f"Unknown mode: {self.mode}")
         except KeyboardInterrupt:
             print("[RunLoop] Shutting down.")
+        finally:
+            shutdown = getattr(self.model, "shutdown", None)
+            if callable(shutdown):
+                shutdown()
 
     def _run_once(self):
         """Execute the full pipeline once and return."""
@@ -92,3 +97,34 @@ class RunLoop:
             except Exception as exc:
                 print(f"[RunLoop] ⚠ Error in execution: {exc}")
             time.sleep(self.execution_interval)
+
+
+def parse_run_args():
+    """Parse command-line arguments for run mode and scheduling."""
+    parser = argparse.ArgumentParser(description="Tradinator paper trading engine")
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["run_once", "scheduled", "decoupled", "research_only"],
+        default="run_once",
+        help="Execution mode (default: run_once)",
+    )
+    parser.add_argument(
+        "--interval",
+        type=int,
+        default=3600,
+        help="Seconds between runs for scheduled mode (default: 3600)",
+    )
+    parser.add_argument(
+        "--research-interval",
+        type=int,
+        default=14400,
+        help="Seconds between research cycles for decoupled mode (default: 14400)",
+    )
+    parser.add_argument(
+        "--execution-interval",
+        type=int,
+        default=3600,
+        help="Seconds between execution cycles for decoupled mode (default: 3600)",
+    )
+    return parser.parse_args()

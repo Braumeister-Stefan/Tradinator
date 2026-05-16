@@ -13,6 +13,7 @@ from .portfolio_ledger import PortfolioLedger
 from .portfolio_analytics import PortfolioAnalytics
 from .performance_monitoring import PerformanceMonitoring
 from .reconciliation import Reconciliation
+from .universe_refresher import UniverseRefresher
 
 # Optional adapter — import succeeds only when ib_async is installed.
 try:

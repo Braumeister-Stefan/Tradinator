@@ -32,17 +32,59 @@ class BrokerConnector:
     def __init__(self, config: dict):
         """Store config for later use by run()."""
         self.config = config
+        self._adapter = None
+        self._connection: dict = {}
 
     def run(self) -> dict:
-        """Connect to the configured broker and return broker_state."""
-        adapter = self._create_adapter()
-        connection = adapter.connect()
+        """Connect to the configured broker (once) and return broker_state.
+
+        The adapter is cached across calls so that a single IBKR session
+        (one clientId) is reused for the lifetime of the BrokerConnector.
+        Re-creating the adapter on every call would request a second
+        connection with the same clientId and trigger IBKR error 326
+        ("client id already in use").
+        """
+        if self._adapter is None or not self._is_adapter_alive(self._adapter):
+            self._adapter = self._create_adapter()
+            self._connection = self._adapter.connect()
+        adapter = self._adapter
         account_info = adapter.get_account_info()
         positions = adapter.get_positions()
         instruments = list(self.config.get("universe", []))
         return self._build_broker_state(
-            adapter, positions, account_info, instruments, connection
+            adapter, positions, account_info, instruments, self._connection
         )
+
+    @staticmethod
+    def _is_adapter_alive(adapter) -> bool:
+        """Return True if the adapter still holds an active broker session."""
+        ib = getattr(adapter, "_ib", None)
+        if ib is None:
+            return False
+        is_connected = getattr(ib, "isConnected", None)
+        try:
+            return bool(is_connected()) if callable(is_connected) else True
+        except Exception:
+            return False
+
+    def close(self) -> None:
+        """Disconnect the cached adapter, if any. Safe to call multiple times.
+
+        Releases the IBKR clientId so the next process start can reuse it
+        without hitting error 326 during the broker's session-cleanup window.
+        """
+        adapter = self._adapter
+        if adapter is None:
+            return
+        ib = getattr(adapter, "_ib", None)
+        if ib is not None:
+            try:
+                if getattr(ib, "isConnected", lambda: False)():
+                    ib.disconnect()
+            except Exception:
+                pass
+        self._adapter = None
+        self._connection = {}
 
     # ------------------------------------------------------------------
     # Internal methods

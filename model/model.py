@@ -19,7 +19,9 @@ from .model_components import (
     PortfolioAnalytics,
     PerformanceMonitoring,
     Reconciliation,
+    UniverseRefresher,
 )
+from .model_components.data_pipeline import load_universe
 
 
 class Model:
@@ -27,6 +29,7 @@ class Model:
 
     def __init__(self, config):
         self.config = config
+        self._maybe_refresh_universe()
         self.broker_connector = BrokerConnector(config)
         self.reconciliation = Reconciliation(config)
         self.data_pipeline = DataPipeline(config)
@@ -38,6 +41,24 @@ class Model:
         self.portfolio_ledger = PortfolioLedger(config)
         self.portfolio_analytics = PortfolioAnalytics(config)
         self.performance_monitoring = PerformanceMonitoring(config)
+
+    def _maybe_refresh_universe(self):
+        if not self.config.get("refresh_universe", False):
+            return
+        print("[Model] refresh_universe=True \u2014 validating candidates against broker.")
+        bc = BrokerConnector(self.config)
+        adapter = bc._create_adapter()
+        adapter.connect()
+        try:
+            UniverseRefresher(self.config).run(adapter)
+        finally:
+            try:
+                if getattr(adapter, "_ib", None) is not None:
+                    adapter._ib.disconnect()
+            except Exception:
+                pass
+        self.config["universe"] = load_universe(self.config["universe_path"])
+        print(f"[Model] Universe reloaded: {len(self.config['universe'])} valid instrument(s).")
 
     def run_research(self):
         """Execute the research pipeline: Gather → Decide."""
@@ -94,3 +115,10 @@ class Model:
         """Execute the full pipeline: Gather → Decide → Execute → Report."""
         research_output = self.run_research()
         self.run_execution(research_output)
+
+    def shutdown(self):
+        """Release broker resources. Safe to call multiple times."""
+        try:
+            self.broker_connector.close()
+        except Exception:
+            pass

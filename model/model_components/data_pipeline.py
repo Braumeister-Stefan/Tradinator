@@ -36,10 +36,55 @@ import csv
 import json
 import os
 import time
+import zipfile
 
 import pandas as pd
 
 from .yh_finance_fetcher import INSTRUMENT_TO_YH_TICKER, YHFinanceFetcher
+
+
+def load_universe(path: str) -> list[str]:
+    """Load the instrument universe from a JSON file.
+
+    Returns a deduplicated list of broker-agnostic instrument_id strings.
+    Skips entries where valid=False.
+    """
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        print(f"ERROR: Universe file not found: {path}")
+        print(
+            "Populate data/input/universe.json manually with IBKR canonical symbols "
+            "(e.g. 'DAX', 'EURUSD')."
+        )
+        raise SystemExit(1) from None
+    except json.JSONDecodeError as exc:
+        print(f"ERROR: Universe file contains invalid JSON: {path}")
+        print(f"  {exc}")
+        raise SystemExit(1) from None
+
+    instruments = data.get("instruments", [])
+    if not instruments:
+        print(
+            f"WARNING: No instruments found in {path} — pipeline will run with an empty universe. "
+            "Populate data/input/universe.json manually with IBKR canonical symbol strings."
+        )
+
+    seen: set[str] = set()
+    symbols: list[str] = []
+    for inst in instruments:
+        iid = inst.get("instrument_id", "")
+        if not iid:
+            continue
+        if not inst.get("valid", True):
+            print(f"WARNING: universe.json contains invalid=False instrument '{iid}' — skipping.")
+            continue
+        if iid in seen:
+            continue
+        seen.add(iid)
+        symbols.append(iid)
+    return symbols
 
 
 class DataPipeline:
@@ -630,30 +675,78 @@ class DataPipeline:
         return {"mid_close": pd.DataFrame(series_dict) if series_dict else pd.DataFrame()}
 
     def _load_series_file(self, path: str) -> dict | None:
-        """Read an existing multi-sheet xlsx file into dict-of-DataFrames."""
+        """Read an existing multi-sheet xlsx file into dict-of-DataFrames.
+
+        If the file exists but is a corrupt/partial xlsx archive (typically
+        caused by a previous run being interrupted mid-save), it is quarantined
+        to ``<path>.corrupt`` and ``None`` is returned so the caller rebuilds a
+        fresh master and the next save replaces the broken file atomically.
+        """
         if not os.path.isfile(path):
             return None
-        sheets = {}
-        with pd.ExcelFile(path, engine="openpyxl") as xls:
-            for name in xls.sheet_names:
-                df = pd.read_excel(xls, sheet_name=name, index_col=0)
-                df.index = pd.to_datetime(df.index, utc=True, errors="coerce")
-                sheets[name] = df
-        return sheets
+        try:
+            sheets = {}
+            with pd.ExcelFile(path, engine="openpyxl") as xls:
+                for name in xls.sheet_names:
+                    df = pd.read_excel(xls, sheet_name=name, index_col=0)
+                    df.index = pd.to_datetime(df.index, utc=True, errors="coerce")
+                    sheets[name] = df
+            return sheets
+        except (zipfile.BadZipFile, KeyError) as exc:
+            quarantine = path + ".corrupt"
+            try:
+                if os.path.exists(quarantine):
+                    os.remove(quarantine)
+                os.rename(path, quarantine)
+            except OSError as rename_exc:
+                print(
+                    f"[DataPipeline] WARNING: master series file {path} is corrupt ({exc}); "
+                    f"failed to quarantine ({rename_exc})."
+                )
+            else:
+                print(
+                    f"[DataPipeline] WARNING: master series file {path} is corrupt ({exc}); "
+                    f"moved to {quarantine}. A fresh master will be rebuilt this run."
+                )
+            return None
 
     def _save_series_file(self, series: dict, path: str) -> None:
-        """Write dict-of-DataFrames to a multi-sheet xlsx file, sorted ascending."""
+        """Write dict-of-DataFrames to a multi-sheet xlsx file, sorted ascending.
+
+        Crash-safe: writes to ``<path>.tmp`` first, then atomically replaces the
+        target via ``os.replace``. This prevents a process interruption from
+        leaving behind a half-written archive missing ``[Content_Types].xml``.
+        """
+        # openpyxl requires at least one visible sheet; it hides any sheet
+        # with zero rows, so writing a dict of only-empty DataFrames raises
+        # "At least one sheet must be visible". Skip persistence entirely in
+        # that case (e.g. empty universe, first run before any prices fetched).
+        if not series or all(df.empty for df in series.values()):
+            return
         parent = os.path.dirname(path)
         if parent:
             os.makedirs(parent, exist_ok=True)
-        with pd.ExcelWriter(path, engine="openpyxl") as writer:
-            for name, df in series.items():
-                sorted_df = df.sort_index(ascending=True)
-                # Excel does not support timezone-aware datetimes; strip tz
-                # before writing. _load_series_file restores UTC on read.
-                if sorted_df.index.tz is not None:
-                    sorted_df.index = sorted_df.index.tz_localize(None)
-                sorted_df.to_excel(writer, sheet_name=name)
+        # Suffix must end in .xlsx so pandas' ExcelWriter accepts the openpyxl
+        # engine; it validates the file extension against the engine's
+        # supported_extensions property.
+        tmp_path = path + ".tmp.xlsx"
+        try:
+            with pd.ExcelWriter(tmp_path, engine="openpyxl") as writer:
+                for name, df in series.items():
+                    sorted_df = df.sort_index(ascending=True)
+                    # Excel does not support timezone-aware datetimes; strip tz
+                    # before writing. _load_series_file restores UTC on read.
+                    if sorted_df.index.tz is not None:
+                        sorted_df.index = sorted_df.index.tz_localize(None)
+                    sorted_df.to_excel(writer, sheet_name=name)
+            os.replace(tmp_path, path)
+        except Exception:
+            if os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass
+            raise
 
     def _validate_series_schema(self, series: dict) -> bool:
         """Check structural validity of a series dict. Return True if valid."""
