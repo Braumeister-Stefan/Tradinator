@@ -40,13 +40,13 @@ import zipfile
 
 import pandas as pd
 
-from .yh_finance_fetcher import INSTRUMENT_TO_YH_TICKER, YHFinanceFetcher
+from .yh_finance_fetcher import YHFinanceFetcher, get_yh_ticker
 
 
 def load_universe(path: str) -> list[str]:
     """Load the instrument universe from a JSON file.
 
-    Returns a deduplicated list of broker-agnostic instrument_id strings.
+    Returns a deduplicated list of broker-agnostic conId strings.
     Skips entries where valid=False.
     """
     try:
@@ -74,7 +74,7 @@ def load_universe(path: str) -> list[str]:
     seen: set[str] = set()
     symbols: list[str] = []
     for inst in instruments:
-        iid = inst.get("instrument_id", "")
+        iid = inst.get("conId", "")
         if not iid:
             continue
         if not inst.get("valid", True):
@@ -154,41 +154,41 @@ class DataPipeline:
 
         yh_fetcher = YHFinanceFetcher()
 
-        for i, instrument_id in enumerate(instruments):
+        for i, conId in enumerate(instruments):
             if i > 0:
                 time.sleep(self.RATE_LIMIT_DELAY)
 
-            last_date = self._get_last_stored_date(instrument_id, master)
+            last_date = self._get_last_stored_date(conId, master)
 
             if last_date is not None:
                 # Incremental fetch — retrieve only bars after the last stored bar.
                 print(
-                    f"[DataPipeline] Incremental fetch {instrument_id}"
+                    f"[DataPipeline] Incremental fetch {conId}"
                     f" from {last_date} ({resolution})…"
                 )
                 try:
                     bars = adapter.fetch_historical_prices_by_date_range(
-                        instrument_id, resolution, last_date
+                        conId, resolution, last_date
                     )
                 except Exception as exc:
                     print(
                         f"[DataPipeline] WARNING: incremental fetch failed for"
-                        f" {instrument_id} — {exc}. Falling back to fixed-count fetch."
+                        f" {conId} — {exc}. Falling back to fixed-count fetch."
                     )
                     try:
                         bars = adapter.fetch_historical_prices(
-                            instrument_id, resolution, lookback
+                            conId, resolution, lookback
                         )
                     except Exception as exc2:
-                        last_t2 = self._get_candidate_t2_status(instrument_id)  # P7-log
+                        last_t2 = self._get_candidate_t2_status(conId)  # P7-log
                         print(
-                            f"[DataPipeline] WARNING: skipping {instrument_id} — {exc2} (last known T2={last_t2})"
+                            f"[DataPipeline] WARNING: skipping {conId} — {exc2} (last known T2={last_t2})"
                         )
-                        self._update_t2_status(instrument_id, "NO", f"fetch exception: {exc2}")
-                        self._remove_from_universe(instrument_id)
-                        removed_instruments.append(instrument_id)
-                        broker_available[instrument_id] = False
-                        yh_available[instrument_id] = False
+                        self._update_t2_status(conId, "NO", f"fetch exception: {exc2}")
+                        self._remove_from_universe(conId)
+                        removed_instruments.append(conId)
+                        broker_available[conId] = False
+                        yh_available[conId] = False
                         continue
 
                 parsed = self._bars_to_columns(bars)
@@ -199,87 +199,87 @@ class DataPipeline:
                     # instrument from the universe.  Serve the existing stored series
                     # for this pipeline run instead of dropping the instrument.
                     print(
-                        f"[DataPipeline] {instrument_id}: 0 new bars since {last_date}"
+                        f"[DataPipeline] {conId}: 0 new bars since {last_date}"
                         " (non-trading day or no new data) — retaining stored series."
                     )
-                    parsed = self._reconstruct_from_master(instrument_id, master)
+                    parsed = self._reconstruct_from_master(conId, master)
                     if parsed is None:
                         print(
-                            f"[DataPipeline] WARNING: no stored series for {instrument_id},"
+                            f"[DataPipeline] WARNING: no stored series for {conId},"
                             " skipping this run."
                         )
-                        broker_available[instrument_id] = False
-                        yh_available[instrument_id] = False
+                        broker_available[conId] = False
+                        yh_available[conId] = False
                         continue
                 else:
                     self._update_t2_status(
-                        instrument_id, "YES", f"{len(bars)} new bar(s) fetched"
+                        conId, "YES", f"{len(bars)} new bar(s) fetched"
                     )
 
-                prices[instrument_id] = parsed
-                data_sources[instrument_id] = "broker"
-                broker_available[instrument_id] = True
-                yh_available[instrument_id] = False
+                prices[conId] = parsed
+                data_sources[conId] = "broker"
+                broker_available[conId] = True
+                yh_available[conId] = False
             else:
                 # Cold start — fetch the configured lookback window.
                 print(
-                    f"[DataPipeline] Cold-start fetch {instrument_id}"
+                    f"[DataPipeline] Cold-start fetch {conId}"
                     f" ({resolution}, {lookback} bars)…"
                 )
                 broker_ok = False
                 parsed = None
                 try:
                     bars = adapter.fetch_historical_prices(
-                        instrument_id, resolution, lookback
+                        conId, resolution, lookback
                     )
                     parsed = self._bars_to_columns(bars)
                     if parsed is not None and not self._all_none(parsed):
                         broker_ok = True
                 except Exception as exc:
-                    print(f"[DataPipeline] WARNING: broker fetch failed for {instrument_id} — {exc}")
+                    print(f"[DataPipeline] WARNING: broker fetch failed for {conId} — {exc}")
 
-                broker_available[instrument_id] = broker_ok
+                broker_available[conId] = broker_ok
 
                 if broker_ok:
                     self._update_t2_status(
-                        instrument_id, "YES", f"{len(bars)} bar(s) fetched (cold-start)"
+                        conId, "YES", f"{len(bars)} bar(s) fetched (cold-start)"
                     )
-                    prices[instrument_id] = parsed
-                    data_sources[instrument_id] = "broker"
-                    yh_available[instrument_id] = False
+                    prices[conId] = parsed
+                    data_sources[conId] = "broker"
+                    yh_available[conId] = False
                     continue
 
                 # Cold-start broker fetch failed — try YH Finance fallback.
                 print(
-                    f"[DataPipeline] Broker data unavailable for {instrument_id}, "
+                    f"[DataPipeline] Broker data unavailable for {conId}, "
                     "trying YH Finance fallback…"
                 )
-                yh_bars = yh_fetcher.fetch_historical_prices(instrument_id, resolution, lookback)
+                yh_bars = yh_fetcher.fetch_historical_prices(conId, resolution, lookback)
                 yh_parsed = self._bars_to_columns(yh_bars) if yh_bars else None
 
                 if yh_parsed is not None and not self._all_none(yh_parsed):
-                    print(f"[DataPipeline] YH Finance fallback succeeded for {instrument_id}.")
+                    print(f"[DataPipeline] YH Finance fallback succeeded for {conId}.")
                     self._update_t2_status(
-                        instrument_id, "YES",
+                        conId, "YES",
                         f"{len(yh_bars)} bar(s) fetched via YH Finance fallback (cold-start)"
                     )
-                    prices[instrument_id] = yh_parsed
-                    data_sources[instrument_id] = "yh_finance"
-                    yh_available[instrument_id] = True
+                    prices[conId] = yh_parsed
+                    data_sources[conId] = "yh_finance"
+                    yh_available[conId] = True
                 else:
                     # Both broker and YH Finance failed — remove from universe.
                     print(
-                        f"[DataPipeline] WARNING: no usable data for {instrument_id}"
+                        f"[DataPipeline] WARNING: no usable data for {conId}"
                         " (cold-start, both broker and YH Finance failed)"
                         " — removing from universe."
                     )
                     self._update_t2_status(
-                        instrument_id, "NO",
+                        conId, "NO",
                         "cold-start fetch returned no usable bars from broker or YH Finance"
                     )
-                    self._remove_from_universe(instrument_id)
-                    removed_instruments.append(instrument_id)
-                    yh_available[instrument_id] = False
+                    self._remove_from_universe(conId)
+                    removed_instruments.append(conId)
+                    yh_available[conId] = False
 
         prices = self._clean_prices(prices)
 
@@ -307,16 +307,16 @@ class DataPipeline:
 
         # --- Fetch instrument metadata with dealing rules ---
         instrument_metadata = {}
-        for i, instrument_id in enumerate(prices):
+        for i, conId in enumerate(prices):
             if i > 0:
                 time.sleep(self.RATE_LIMIT_DELAY)
             try:
-                instrument_metadata[instrument_id] = adapter.fetch_instrument_info(instrument_id)
+                instrument_metadata[conId] = adapter.fetch_instrument_info(conId)
             except Exception as exc:
-                print(f"[DataPipeline] WARNING: metadata fetch failed for {instrument_id} — {exc}")
-                instrument_metadata[instrument_id] = {
-                    "instrument_name": instrument_id,
-                    "instrument_id": instrument_id,
+                print(f"[DataPipeline] WARNING: metadata fetch failed for {conId} — {exc}")
+                instrument_metadata[conId] = {
+                    "instrument_name": conId,
+                    "conId": conId,
                     "currency": "Unknown",
                     "min_deal_size": 0.01,
                     "max_deal_size": None,
@@ -342,8 +342,8 @@ class DataPipeline:
                     cols_to_drop = [e for e in removed_instruments if e in df.columns]
                     if cols_to_drop:
                         master[sheet_name] = df.drop(columns=cols_to_drop)
-                        for instrument_id in cols_to_drop:
-                            print(f"[DataPipeline] Dropped stale series column for {instrument_id} (T2=NO).")
+                        for conId in cols_to_drop:
+                            print(f"[DataPipeline] Dropped stale series column for {conId} (T2=NO).")
             if not self._validate_series_schema(master):
                 print("[DataPipeline] WARNING: master series failed validation.")
             self._save_series_file(master, self.SERIES_FILE)
@@ -383,7 +383,7 @@ class DataPipeline:
         P3: ``bars_fetched_this_run`` replaces the old ``non_zero_data_points`` column
         (which reflected the current run's fetched bars, not the master series total).
         A new ``total_bars_in_master`` column counts the non-NaN rows stored in the
-        master series for each instrument_id, making the discrepancy explicit.
+        master series for each conId, making the discrepancy explicit.
 
         The ``validation_passed`` column is left blank here and filled in
         later by ``StrategyEval``.
@@ -392,21 +392,21 @@ class DataPipeline:
         os.makedirs(output_dir, exist_ok=True)
         report_path = os.path.join(output_dir, self.CANDIDATES_REPORT_FILENAME)
 
-        def _bars_fetched(instrument_id: str) -> int:
-            """Count non-zero close values fetched this run for instrument_id."""
-            close_vals = prices.get(instrument_id, {}).get("close", [])
+        def _bars_fetched(conId: str) -> int:
+            """Count non-zero close values fetched this run for conId."""
+            close_vals = prices.get(conId, {}).get("close", [])
             return sum(1 for v in close_vals if v is not None and v != 0)
 
-        def _bars_in_master(instrument_id: str) -> int:
-            """Count non-NaN rows in the master series for instrument_id."""
+        def _bars_in_master(conId: str) -> int:
+            """Count non-NaN rows in the master series for conId."""
             if master is None:
                 return 0
             ref_sheet = master.get(self.SHEET_NAMES[0])
             if ref_sheet is None or ref_sheet.empty:
                 return 0
-            if instrument_id not in ref_sheet.columns:
+            if conId not in ref_sheet.columns:
                 return 0
-            return int(ref_sheet[instrument_id].notna().sum())
+            return int(ref_sheet[conId].notna().sum())
 
         rows = []
         seen_instruments: set[str] = set()
@@ -414,7 +414,7 @@ class DataPipeline:
         # P2: iterate ALL candidates from universe_candidates.json first,
         # so failures are not silently dropped from the output sheet.
         for candidate in (all_candidates or []):
-            cand_id = candidate.get("instrument_id", "")
+            cand_id = candidate.get("conId", "")
             if not cand_id:
                 continue
             seen_instruments.add(cand_id)
@@ -422,8 +422,8 @@ class DataPipeline:
             t2 = candidate.get("t2_status", "")
             pre_passed = "" if (t1 == "PASS" and t2 == "YES") else "false"
             rows.append({
-                "instrument_id": cand_id,
-                "yh_ticker": INSTRUMENT_TO_YH_TICKER.get(cand_id, ""),
+                "conId": cand_id,
+                "yh_ticker": get_yh_ticker(cand_id) or "",
                 "name": candidate.get("name", ""),
                 "t1_status": t1,
                 "t2_status": t2,
@@ -436,25 +436,25 @@ class DataPipeline:
             })
 
         # Include any active-universe instruments not present in candidates.json.
-        for instrument_id in instruments:
-            if instrument_id in seen_instruments:
+        for conId in instruments:
+            if conId in seen_instruments:
                 continue
             rows.append({
-                "instrument_id": instrument_id,
-                "yh_ticker": INSTRUMENT_TO_YH_TICKER.get(instrument_id, ""),
+                "conId": conId,
+                "yh_ticker": get_yh_ticker(conId) or "",
                 "name": "",
                 "t1_status": "",
                 "t2_status": "",
-                "data_source": data_sources.get(instrument_id, "none"),
-                "bars_fetched_this_run": _bars_fetched(instrument_id),
-                "total_bars_in_master": _bars_in_master(instrument_id),
-                "broker_data_available": broker_available.get(instrument_id, False),
-                "yh_data_available": yh_available.get(instrument_id, False),
+                "data_source": data_sources.get(conId, "none"),
+                "bars_fetched_this_run": _bars_fetched(conId),
+                "total_bars_in_master": _bars_in_master(conId),
+                "broker_data_available": broker_available.get(conId, False),
+                "yh_data_available": yh_available.get(conId, False),
                 "validation_passed": "",
             })
 
         fieldnames = [
-            "instrument_id",
+            "conId",
             "yh_ticker",
             "name",
             "t1_status",
@@ -475,8 +475,8 @@ class DataPipeline:
     # Incremental fetch helpers
     # ------------------------------------------------------------------
 
-    def _get_candidate_t2_status(self, instrument_id: str) -> str:
-        """Return the last known T2 status for instrument_id from universe_candidates.json.
+    def _get_candidate_t2_status(self, conId: str) -> str:
+        """Return the last known T2 status for conId from universe_candidates.json.
 
         Used in P7-log to surface the previous T2 status alongside a skip warning,
         distinguishing a first-time failure (previously PENDING_T2) from a regression
@@ -488,28 +488,28 @@ class DataPipeline:
             with open(self.CANDIDATES_PATH) as f:
                 data = json.load(f)
             for candidate in data.get("candidates", []):
-                if candidate.get("instrument_id") == instrument_id:
+                if candidate.get("conId") == conId:
                     return candidate.get("t2_status", "UNKNOWN")
         except Exception:
             pass
         return "UNKNOWN"
 
     def _get_last_stored_date(
-        self, instrument_id: str, master: "dict | None"
+        self, conId: str, master: "dict | None"
     ) -> "str | None":
         """Return ISO-8601 UTC timestamp (last stored + 1 second) for incremental fetch.
 
         Uses the ``mid_close`` sheet as the reference.  Returns ``None`` when
-        no stored data exists for *instrument_id*, indicating a cold start.
+        no stored data exists for *conId*, indicating a cold start.
         """
         if master is None:
             return None
         ref_sheet = master.get(self.SHEET_NAMES[0])  # mid_close
         if ref_sheet is None or ref_sheet.empty:
             return None
-        if instrument_id not in ref_sheet.columns:
+        if conId not in ref_sheet.columns:
             return None
-        series = ref_sheet[instrument_id].dropna()
+        series = ref_sheet[conId].dropna()
         if series.empty:
             return None
         last_ts = series.index.max()
@@ -518,7 +518,7 @@ class DataPipeline:
         return next_ts.strftime("%Y-%m-%dT%H:%M:%S")
 
     def _reconstruct_from_master(
-        self, instrument_id: str, master: "dict | None"
+        self, conId: str, master: "dict | None"
     ) -> "dict | None":
         """Rebuild a bars-as-columns dict from stored master series for one instrument.
 
@@ -526,16 +526,16 @@ class DataPipeline:
         the pipeline can still provide the previously-stored series to downstream
         components without re-fetching.
 
-        Returns ``None`` if no stored series exists for *instrument_id*.
+        Returns ``None`` if no stored series exists for *conId*.
         """
         if master is None:
             return None
         close_sheet = master.get("mid_close")
         if close_sheet is None or close_sheet.empty:
             return None
-        if instrument_id not in close_sheet.columns:
+        if conId not in close_sheet.columns:
             return None
-        close_series = close_sheet[instrument_id].dropna()
+        close_series = close_sheet[conId].dropna()
         if close_series.empty:
             return None
         timestamps = [ts.strftime("%Y-%m-%dT%H:%M:%S") for ts in close_series.index]
@@ -548,7 +548,7 @@ class DataPipeline:
         }
 
     def _update_t2_status(
-        self, instrument_id: str, t2_status: str, t2_reason: str
+        self, conId: str, t2_status: str, t2_reason: str
     ) -> None:
         """Update T2 status for an instrument in universe_candidates.json.
 
@@ -564,9 +564,8 @@ class DataPipeline:
             now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             updated = False
             for candidate in data.get("candidates", []):
-                if candidate.get("instrument_id") == instrument_id:
+                if candidate.get("conId") == conId:
                     candidate["t2_status"] = t2_status
-                    candidate["t2_reason"] = t2_reason
                     candidate["valid"] = (
                         candidate.get("t1_status") == "PASS" and t2_status == "YES"
                     )
@@ -575,21 +574,26 @@ class DataPipeline:
                     break
 
             if updated:
+                print(f"[DataPipeline] T2 {t2_status} {conId} — {t2_reason}")
                 with open(self.CANDIDATES_PATH, "w") as f:
                     json.dump(data, f, indent=2)
                     f.write("\n")
         except Exception as exc:
             print(
                 f"[DataPipeline] WARNING: could not update T2 status"
-                f" for {instrument_id} — {exc}"
+                f" for {conId} — {exc}"
             )
 
-    def _remove_from_universe(self, instrument_id: str) -> None:
+    def _remove_from_universe(self, conId: str) -> None:
         """Remove an instrument from universe.json when T2 fails (zero bars returned).
 
+        Mutates ONLY ``UNIVERSE_PATH`` — ``universe_candidates.json`` is left
+        untouched (candidates persist across runs; their status fields are
+        updated by ``_update_t2_status``).
+
         Instruments are removed from the machine-read universe so the pipeline
-        does not continue trying to trade them.  Re-run ``discover_universe.py``
-        to re-add an instrument if data becomes available again.
+        does not continue trying to trade them.  Re-run the stock scoper to
+        re-add an instrument if data becomes available again.
 
         Silently skips if universe.json does not exist.  Failure is non-fatal.
         """
@@ -602,12 +606,12 @@ class DataPipeline:
             original_count = len(data.get("instruments", []))
             data["instruments"] = [
                 inst for inst in data.get("instruments", [])
-                if inst.get("instrument_id") != instrument_id
+                if inst.get("conId") != conId
             ]
             removed = original_count - len(data["instruments"])
             if removed > 0:
                 print(
-                    f"[DataPipeline] Removed {instrument_id} from universe.json"
+                    f"[DataPipeline] Removed {conId} from universe.json"
                     " (T2=NO, zero bars in last fetch)."
                 )
                 with open(self.UNIVERSE_PATH, "w") as f:
@@ -615,7 +619,7 @@ class DataPipeline:
                     f.write("\n")
         except Exception as exc:
             print(
-                f"[DataPipeline] WARNING: could not remove {instrument_id}"
+                f"[DataPipeline] WARNING: could not remove {conId}"
                 f" from universe.json — {exc}"
             )
 
@@ -650,11 +654,11 @@ class DataPipeline:
     def _clean_prices(self, prices: dict) -> dict:
         """Forward-fill None gaps and drop instruments that are entirely None."""
         cleaned = {}
-        for instrument_id, fields in prices.items():
+        for conId, fields in prices.items():
             if self._all_none(fields):
-                print(f"[DataPipeline] Dropping {instrument_id} — all values are None.")
+                print(f"[DataPipeline] Dropping {conId} — all values are None.")
                 continue
-            cleaned[instrument_id] = {
+            cleaned[conId] = {
                 key: (values if key == "timestamps" else self._forward_fill(values))
                 for key, values in fields.items()
             }
@@ -667,11 +671,11 @@ class DataPipeline:
     def _build_dataframes(self, prices: dict) -> dict:
         """Convert per-instrument price lists into dict of one DataFrame (mid_close)."""
         series_dict = {}
-        for instrument_id, fields in prices.items():
+        for conId, fields in prices.items():
             ts = fields.get("timestamps", [])
             vals = fields.get("close", [])
             index = pd.to_datetime(ts, utc=True, errors="coerce")
-            series_dict[instrument_id] = pd.Series(vals, index=index, dtype=float)
+            series_dict[conId] = pd.Series(vals, index=index, dtype=float)
         return {"mid_close": pd.DataFrame(series_dict) if series_dict else pd.DataFrame()}
 
     def _load_series_file(self, path: str) -> dict | None:

@@ -41,12 +41,12 @@ class OrderExecutor:
             executions.append(result)
             self._record_to_orderbook(orderbook, order, result)
             print(
-                f"[OrderExecutor] {result['direction']} {result['instrument_id']} "
+                f"[OrderExecutor] {result['direction']} {result['conId']} "
                 f"x{result['size']} → {result['status']}"
             )
             if result.get("rejection_reason"):
                 print(
-                    f"[OrderExecutor] ⚠ REJECTED {result['instrument_id']}: "
+                    f"[OrderExecutor] ⚠ REJECTED {result['conId']}: "
                     f"{result['rejection_reason']}"
                 )
             if i < len(order_list) - 1:
@@ -78,25 +78,25 @@ class OrderExecutor:
         """Send a single order via the adapter and return an execution dict."""
         reason = order.get("reason", "")
         is_close = reason in ("close", "decrease")
-        currency = metadata.get(order["instrument_id"], {}).get("currency", "GBP") if metadata else "GBP"
+        currency = metadata.get(order["conId"], {}).get("currency", "GBP") if metadata else "GBP"
 
         try:
             if is_close:
-                deal_id = self._find_deal_id(order["instrument_id"], positions)
+                deal_id = self._find_deal_id(order["conId"], positions)
                 original_direction = self._find_position_direction(
-                    order["instrument_id"], positions
+                    order["conId"], positions
                 )
                 close_direction = "SELL" if original_direction == "BUY" else "BUY"
                 resp = adapter.close_position(
                     deal_id=deal_id,
                     direction=close_direction,
-                    instrument_id=order["instrument_id"],
+                    conId=order["conId"],
                     size=order["size"],
                     order_type="MARKET",
                 )
             elif order.get("order_type") == "LIMIT":
                 resp = adapter.open_position(
-                    instrument_id=order["instrument_id"],
+                    conId=order["conId"],
                     direction=order["direction"],
                     size=order["size"],
                     order_type="LIMIT",
@@ -104,7 +104,7 @@ class OrderExecutor:
                 )
             else:
                 resp = adapter.open_position(
-                    instrument_id=order["instrument_id"],
+                    conId=order["conId"],
                     direction=order["direction"],
                     size=order["size"],
                     order_type="MARKET",
@@ -116,7 +116,7 @@ class OrderExecutor:
             status = confirmation["status"]
             rejection_reason = confirmation.get("reason", "") if status == "REJECTED" else ""
             return {
-                "instrument_id": order["instrument_id"],
+                "conId": order["conId"],
                 "direction": order["direction"],
                 "size": order["size"],
                 "status": status,
@@ -128,7 +128,7 @@ class OrderExecutor:
             }
         except Exception as exc:
             return {
-                "instrument_id": order["instrument_id"],
+                "conId": order["conId"],
                 "direction": order["direction"],
                 "size": order["size"],
                 "status": "ERROR",
@@ -191,7 +191,7 @@ class OrderExecutor:
         now = datetime.datetime.utcnow().isoformat()
         orderbook["orders"].append({
             "order_id": result.get("deal_reference") or now,
-            "instrument_id": order.get("instrument_id", ""),
+            "conId": order.get("conId", ""),
             "direction": order.get("direction", ""),
             "size": order.get("size", 0),
             "order_type": order_type,
@@ -206,17 +206,17 @@ class OrderExecutor:
         })
 
     @staticmethod
-    def _find_deal_id(instrument_id: str, positions: list) -> str:
+    def _find_deal_id(conId: str, positions: list) -> str:
         """Look up the deal_id for an instrument in the current positions list."""
         for pos in positions:
-            if pos.get("instrument_id") == instrument_id:
+            if pos.get("conId") == conId:
                 return pos["deal_id"]
-        raise ValueError(f"No open position found for instrument {instrument_id}")
+        raise ValueError(f"No open position found for instrument {conId}")
 
     @staticmethod
-    def _find_position_direction(instrument_id: str, positions: list) -> str:
+    def _find_position_direction(conId: str, positions: list) -> str:
         """Look up the direction of the existing position for an instrument."""
         for pos in positions:
-            if pos.get("instrument_id") == instrument_id:
+            if pos.get("conId") == conId:
                 return pos["direction"]
-        raise ValueError(f"No open position found for instrument {instrument_id}")
+        raise ValueError(f"No open position found for instrument {conId}")

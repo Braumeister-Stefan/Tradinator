@@ -5,10 +5,19 @@ Secondary price-data source using the ``yfinance`` library.  Used as a
 fallback inside DataPipeline when the primary broker adapter cannot
 return price bars for an instrument.
 
-The fetcher converts IBKR canonical instrument_id strings to Yahoo Finance
-tickers via a curated look-up table, then downloads OHLCV bars in the same
-dict schema that the broker adapter returns, so DataPipeline needs no extra
-logic to consume them.
+The fetcher converts IBKR ``conId`` strings to Yahoo Finance tickers via
+``INSTRUMENT_TO_YH_TICKER`` (keyed by numeric conId).  When a conId is not
+present in the conId map, the lookup falls back to
+``_LEGACY_SYMBOL_TO_YH_TICKER`` which is keyed by IBKR canonical symbol
+(e.g. ``"DAX"``).  This preserves behaviour until real conIds become
+available from a live IBKR connection.
+
+Helpers
+-------
+``get_yh_ticker(conId)`` — resolve a YH ticker for a conId, with legacy
+symbol fallback.
+``resolve_ticker_by_name(name)`` — search Yahoo Finance by company/index
+name and return the best-matching ticker (or ``None``).
 
 ``bid_close`` is always ``None`` for YH-sourced bars because Yahoo
 does not provide bid/ask decomposed prices.
@@ -19,18 +28,28 @@ guidance of any kind. Use at your own risk.
 """
 
 import math
+import re
 
 import yfinance as yf
 
 
 # ---------------------------------------------------------------------------
-# IBKR canonical instrument_id → Yahoo Finance ticker mapping
+# conId → Yahoo Finance ticker mapping (canonical).
 # ---------------------------------------------------------------------------
-# Keys match the canonical symbol strings used in IBKR adapter and universe.json.
-# Indices use the Yahoo "^" prefix; forex uses the "=X" suffix;
-# futures/commodities use the "=F" suffix for continuous front-month.
+# Keys are numeric IBKR ``conId`` strings (e.g. "416904").  Populated as
+# real conIds are discovered via reqContractDetails.  Empty by default.
 # ---------------------------------------------------------------------------
-INSTRUMENT_TO_YH_TICKER: dict[str, str] = {
+INSTRUMENT_TO_YH_TICKER: dict[str, str] = {}
+
+
+# ---------------------------------------------------------------------------
+# Legacy: IBKR symbol → Yahoo Finance ticker.
+# ---------------------------------------------------------------------------
+# Used as a fallback when ``INSTRUMENT_TO_YH_TICKER`` has no entry for a
+# given conId — the lookup retries treating the conId argument as a legacy
+# IBKR symbol.  Remove an entry once it is migrated to the conId map above.
+# ---------------------------------------------------------------------------
+_LEGACY_SYMBOL_TO_YH_TICKER: dict[str, str] = {
     # Indices — UK
     "FTSE":    "^FTSE",
     # Indices — US
@@ -109,6 +128,85 @@ INSTRUMENT_TO_YH_TICKER: dict[str, str] = {
     "UNI":     "UNI-USD",
 }
 
+
+# ---------------------------------------------------------------------------
+
+
+def get_yh_ticker(conId: str) -> str | None:
+    """Return the Yahoo Finance ticker for a conId, or ``None`` if unmapped.
+
+    Lookup order: ``INSTRUMENT_TO_YH_TICKER`` (conId-keyed) →
+    ``_LEGACY_SYMBOL_TO_YH_TICKER`` (legacy IBKR symbol fallback, treating
+    *conId* as a symbol string).
+    """
+    if not conId:
+        return None
+    ticker = INSTRUMENT_TO_YH_TICKER.get(conId)
+    if ticker is not None:
+        return ticker
+    return _LEGACY_SYMBOL_TO_YH_TICKER.get(conId)
+
+
+# ---------------------------------------------------------------------------
+# Name-based Yahoo ticker resolution (used by data/input/stock_scoper.py
+# during enrichment when no ticker is pre-mapped).
+# ---------------------------------------------------------------------------
+_OVERLAP_THRESHOLD = 0.25
+_STOPWORDS = frozenset({"the", "a", "of", "and", "for", "in", "on", "to", "by", "at"})
+_TRAILING_NOISE = re.compile(r"[\s\-]+(?:[A-Z]{2,5}[a-z]?|\(\S+\))$")
+
+
+def _clean_name(name: str) -> str:
+    """Strip trailing exchange/region suffixes from an instrument name."""
+    cleaned = _TRAILING_NOISE.sub("", name).strip()
+    cleaned = re.sub(r"\s*-\s*$", "", cleaned).strip()
+    return cleaned if cleaned else name
+
+
+def _word_tokens(text: str) -> set[str]:
+    """Return lowercase word tokens from text, excluding stopwords."""
+    return set(re.findall(r"[a-z0-9]+", text.lower())) - _STOPWORDS
+
+
+def _jaccard(a: str, b: str) -> float:
+    """Compute Jaccard similarity between the word-token sets of two strings."""
+    ta, tb = _word_tokens(a), _word_tokens(b)
+    if not ta or not tb:
+        return 0.0
+    return len(ta & tb) / len(ta | tb)
+
+
+def _search_yahoo(name: str) -> str | None:
+    """Query Yahoo Finance Search API and return the best-matching ticker symbol."""
+    try:
+        results = yf.Search(name, max_results=6, enable_fuzzy_query=True).quotes
+    except Exception as exc:
+        print(f"    [Yahoo search error] {exc}")
+        return None
+    if not results:
+        return None
+    best_symbol, best_score = None, 0.0
+    for r in results:
+        candidate_name = r.get("longname") or r.get("shortname") or ""
+        score = _jaccard(name, candidate_name)
+        if score > best_score:
+            best_score  = score
+            best_symbol = r.get("symbol")
+    if best_score < _OVERLAP_THRESHOLD:
+        return None
+    return best_symbol
+
+
+def resolve_ticker_by_name(name: str) -> str | None:
+    """Return the best-matching Yahoo Finance ticker for an instrument name.
+
+    Cleans trailing exchange/region noise from *name* before searching.
+    Returns ``None`` when no candidate exceeds the similarity threshold.
+    """
+    if not name:
+        return None
+    return _search_yahoo(_clean_name(name))
+
 # ---------------------------------------------------------------------------
 # Resolution → yfinance interval
 # ---------------------------------------------------------------------------
@@ -130,13 +228,13 @@ class YHFinanceFetcher:
     """Secondary price-data source using Yahoo Finance via ``yfinance``."""
 
     def fetch_historical_prices(
-        self, instrument_id: str, resolution: str, lookback: int
+        self, conId: str, resolution: str, lookback: int
     ) -> list[dict]:
-        """Fetch OHLCV bars from Yahoo Finance for *instrument_id*.
+        """Fetch OHLCV bars from Yahoo Finance for *conId*.
 
         Parameters
         ----------
-        instrument_id:
+        conId:
             IBKR canonical instrument identifier (e.g. ``"DAX"``, ``"EURUSD"``).
         resolution:
             Price bar resolution string (e.g. ``"DAY"``).
@@ -159,12 +257,12 @@ class YHFinanceFetcher:
                     "timestamp": str,           # ISO-8601 UTC string
                 }
 
-            Returns an empty list when no ticker mapping exists for *instrument_id*,
+            Returns an empty list when no ticker mapping exists for *conId*,
             when Yahoo returns no data, or when any error occurs.
         """
-        ticker = INSTRUMENT_TO_YH_TICKER.get(instrument_id)
+        ticker = get_yh_ticker(conId)
         if ticker is None:
-            print(f"[YHFinanceFetcher] No ticker mapping for {instrument_id} — skipping YH Finance fallback.")
+            print(f"[YHFinanceFetcher] No ticker mapping for {conId} — skipping YH Finance fallback.")
             return []
 
         interval = _RESOLUTION_TO_INTERVAL.get(resolution.upper(), "1d")
@@ -181,7 +279,7 @@ class YHFinanceFetcher:
                 multi_level_index=False,
             )
         except Exception as exc:
-            print(f"[YHFinanceFetcher] WARNING: download failed for {instrument_id} ({ticker}) — {exc}")
+            print(f"[YHFinanceFetcher] WARNING: download failed for {conId} ({ticker}) — {exc}")
             return []
 
         if df is None or df.empty:

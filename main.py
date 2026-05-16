@@ -31,6 +31,7 @@ config = {
     "universe_path": os.path.join("data", "input", "universe.json"),
     "universe_candidates_path": os.path.join("data", "input", "universe_candidates.json"),
     "refresh_universe": True,          # True = validate candidates → universe.json on startup
+    "push_candidates": True,            # True = run stock_scoper discovery + merge into universe_candidates.json on refresh
     "universe": [],                     # populated in __main__
 
     # Market data --------------------------------------------------------

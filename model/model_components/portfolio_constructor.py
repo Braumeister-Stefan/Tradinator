@@ -51,21 +51,21 @@ class PortfolioConstructor:
         signals = validated_signals.get("signals", {})
         actionable = {}
 
-        for instrument_id, signal in signals.items():
+        for conId, signal in signals.items():
             validation = signal.get("validation", {})
             if not validation.get("passed", False):
                 continue
             if signal.get("direction") not in ("BUY", "SELL"):
                 continue
-            actionable[instrument_id] = signal
+            actionable[conId] = signal
 
         return actionable
 
     def _compute_raw_weights(self, actionable_signals: dict) -> dict:
         """Compute unnormalized weights from actionable signals."""
         buy_signals = {
-            instrument_id: sig
-            for instrument_id, sig in actionable_signals.items()
+            conId: sig
+            for conId, sig in actionable_signals.items()
             if sig.get("direction") == "BUY"
         }
 
@@ -75,12 +75,12 @@ class PortfolioConstructor:
         raw_weights = {}
 
         if self.WEIGHTING_METHOD == "equal":
-            for instrument_id in buy_signals:
-                raw_weights[instrument_id] = 1.0
+            for conId in buy_signals:
+                raw_weights[conId] = 1.0
         else:
             # signal_strength: weight proportional to strength
-            for instrument_id, sig in buy_signals.items():
-                raw_weights[instrument_id] = max(sig.get("strength", 0.0), 0.0)
+            for conId, sig in buy_signals.items():
+                raw_weights[conId] = max(sig.get("strength", 0.0), 0.0)
 
         return raw_weights
 
@@ -98,12 +98,12 @@ class PortfolioConstructor:
         total_raw = sum(raw_weights.values())
 
         if total_raw == 0:
-            return {instrument_id: 0.0 for instrument_id in raw_weights}
+            return {conId: 0.0 for conId in raw_weights}
 
         # First pass: scale so sum equals investable budget.
         weights = {
-            instrument_id: (w / total_raw) * investable
-            for instrument_id, w in raw_weights.items()
+            conId: (w / total_raw) * investable
+            for conId, w in raw_weights.items()
         }
 
         # Iteratively cap at max_position_pct and redistribute excess.
@@ -112,12 +112,12 @@ class PortfolioConstructor:
             excess = 0.0
             uncapped_total = 0.0
 
-            for instrument_id, w in weights.items():
+            for conId, w in weights.items():
                 if w > max_position_pct:
-                    capped[instrument_id] = max_position_pct
+                    capped[conId] = max_position_pct
                     excess += w - max_position_pct
                 else:
-                    capped[instrument_id] = w
+                    capped[conId] = w
                     uncapped_total += w
 
             if excess == 0:
@@ -129,11 +129,11 @@ class PortfolioConstructor:
                 break
 
             weights = {}
-            for instrument_id, w in capped.items():
+            for conId, w in capped.items():
                 if w < max_position_pct:
-                    weights[instrument_id] = w + excess * (w / uncapped_total)
+                    weights[conId] = w + excess * (w / uncapped_total)
                 else:
-                    weights[instrument_id] = w
+                    weights[conId] = w
 
         return weights
 

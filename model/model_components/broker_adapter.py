@@ -51,7 +51,7 @@ class BrokerAdapter(Protocol):
             Each dict contains::
 
                 {
-                    "instrument_id": str,
+                    "conId": str,
                     "direction":     str,   # "BUY" or "SELL"
                     "size":          float,
                     "level":         float,
@@ -62,7 +62,7 @@ class BrokerAdapter(Protocol):
         ...
 
     def fetch_historical_prices(
-        self, instrument_id: str, resolution: str, lookback: int
+        self, conId: str, resolution: str, lookback: int
     ) -> list[dict]:
         """Fetch historical OHLCV price bars for a single instrument.
 
@@ -83,13 +83,13 @@ class BrokerAdapter(Protocol):
         ...
 
     def fetch_historical_prices_by_date_range(
-        self, instrument_id: str, resolution: str, from_date: str
+        self, conId: str, resolution: str, from_date: str
     ) -> list[dict]:
         """Fetch OHLCV bars from ``from_date`` (ISO-8601 UTC) to the present.
 
         Parameters
         ----------
-        instrument_id : str
+        conId : str
             Broker-agnostic instrument identifier (e.g. IBKR canonical symbol such as ``'DAX'``, ``'EURUSD'``).
         resolution : str
             Bar resolution, e.g. ``"DAY"``.
@@ -104,7 +104,7 @@ class BrokerAdapter(Protocol):
         """
         ...
 
-    def fetch_instrument_info(self, instrument_id: str) -> dict:
+    def fetch_instrument_info(self, conId: str) -> dict:
         """Fetch display name, currency, dealing rules, and order eligibility.
 
         Returns
@@ -114,7 +114,7 @@ class BrokerAdapter(Protocol):
 
                 {
                     "instrument_name":  str,
-                    "instrument_id":    str,
+                    "conId":    str,
                     "currency":         str,
                     "min_deal_size":    float,
                     "max_deal_size":    float | None,
@@ -129,7 +129,7 @@ class BrokerAdapter(Protocol):
 
     def open_position(
         self,
-        instrument_id: str,
+        conId: str,
         direction: str,
         size: float,
         order_type: str,
@@ -148,7 +148,7 @@ class BrokerAdapter(Protocol):
         self,
         deal_id: str,
         direction: str,
-        instrument_id: str,
+        conId: str,
         size: float,
         order_type: str,
     ) -> dict:
@@ -184,7 +184,7 @@ class BrokerAdapter(Protocol):
 
                 {
                     "order_id":      str,
-                    "instrument_id": str,
+                    "conId": str,
                     "direction":     str,   # "BUY" or "SELL"
                     "size":          float,
                     "order_type":    str,
