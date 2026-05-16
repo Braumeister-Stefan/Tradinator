@@ -38,10 +38,10 @@ class StrategyEval:
         passed_count = 0
         rejected_count = 0
 
-        for epic, signal in raw_signals.items():
-            close_prices = prices.get(epic, {}).get("close", [])
-            result = self._validate_signal(epic, signal, close_prices)
-            validated[epic] = result
+        for instrument_id, signal in raw_signals.items():
+            close_prices = prices.get(instrument_id, {}).get("close", [])
+            result = self._validate_signal(instrument_id, signal, close_prices)
+            validated[instrument_id] = result
 
             if result["validation"]["passed"]:
                 passed_count += 1
@@ -77,9 +77,9 @@ class StrategyEval:
         """Update the ``validation_passed`` column in ``candidates_report.csv``.
 
         Reads the existing report written by DataPipeline, sets
-        ``validation_passed`` for each epic that appears in *validated_signals*
+        ``validation_passed`` for each instrument_id that appears in *validated_signals*
         (passed = True means the signal survived ``_apply_filters``), and
-        re-writes the file.  Epics that were not evaluated (e.g. had no
+        re-writes the file.  Instruments that were not evaluated (e.g. had no
         signal generated) are left with an empty ``validation_passed`` value.
         """
         output_dir = self.config.get("output_dir", "data/output")
@@ -94,11 +94,11 @@ class StrategyEval:
             fieldnames = reader.fieldnames or []
 
         for row in rows:
-            epic = row.get("epic", "")
-            if epic in validated_signals:
+            instrument_id = row.get("instrument_id", "")
+            if instrument_id in validated_signals:
                 row["validation_passed"] = "true"
-            elif epic:
-                # Epic was in the universe but did not pass (or was not evaluated).
+            elif instrument_id:
+                # instrument_id was in the universe but did not pass (or was not evaluated).
                 row["validation_passed"] = "false"
 
         with open(report_path, "w", newline="") as csvfile:
@@ -106,7 +106,7 @@ class StrategyEval:
             writer.writeheader()
             writer.writerows(rows)
 
-    def _validate_signal(self, epic: str, signal: dict, close_prices: list) -> dict:
+    def _validate_signal(self, instrument_id: str, signal: dict, close_prices: list) -> dict:
         """Run all checks on a single signal and augment it with validation info."""
         data_quality = self._check_data_quality(close_prices)
         sharpe = self._estimate_sharpe(close_prices)
@@ -175,9 +175,9 @@ class StrategyEval:
     def _apply_filters(self, validated_signals: dict) -> dict:
         """Remove signals that did not pass validation."""
         filtered = {}
-        for epic, signal in validated_signals.items():
+        for instrument_id, signal in validated_signals.items():
             if signal["validation"]["passed"]:
-                filtered[epic] = signal
+                filtered[instrument_id] = signal
         return filtered
 
     # ------------------------------------------------------------------

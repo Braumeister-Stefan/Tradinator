@@ -42,20 +42,9 @@ class Reconciliation:
             print("[Reconciliation] ⚠ No broker adapter, skipping reconciliation.")
             return broker_state
 
-        # Access the raw broker session for working-order queries.
-        # This is IG-specific; other adapters will skip reconciliation
-        # until their adapter exposes equivalent functionality.
-        ig = getattr(adapter, "_ig", None)
-        if ig is None:
-            print("[Reconciliation] ⚠ No broker session available, skipping reconciliation.")
-            return broker_state
-
         try:
-            live_orders = ig.fetch_working_orders()
-            live_deal_ids = set()
-            for wo in live_orders.get("workingOrders", []):
-                wd = wo.get("workingOrderData", {})
-                live_deal_ids.add(wd.get("dealId", ""))
+            live_orders = adapter.fetch_working_orders()
+            live_order_ids = {o["order_id"] for o in live_orders if o.get("order_id")}
         except Exception as exc:
             print(f"[Reconciliation] ⚠ Could not fetch working orders: {exc}")
             return broker_state
@@ -77,12 +66,12 @@ class Reconciliation:
                 # Cannot reconcile without a deal_id; skip.
                 n_working += 1
                 continue
-            if deal_id in live_deal_ids:
+            if deal_id in live_order_ids:
                 n_working += 1
             else:
                 # Order disappeared from working list.  Check positions
                 # to distinguish a fill from a cancellation/expiry.
-                # Note: IG may assign a new deal_id on fill, so this
+                # Note: the broker may assign a new position ID on fill, so this
                 # check is best-effort; the fallback is CANCELLED.
                 if deal_id in position_deal_ids:
                     order["state"] = "FILLED"

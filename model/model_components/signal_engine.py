@@ -29,10 +29,10 @@ class SignalEngine:
         signals = {}
         counts = {"BUY": 0, "SELL": 0, "HOLD": 0}
 
-        for epic, fields in prices.items():
+        for instrument_id, fields in prices.items():
             close_prices = fields.get("close", [])
             signal = self._generate_signal(close_prices)
-            signals[epic] = signal
+            signals[instrument_id] = signal
             counts[signal["direction"]] += 1
 
         print(

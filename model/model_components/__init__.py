@@ -1,7 +1,11 @@
 """model_components — Exports all Tradinator pipeline components."""
 
 from .broker_adapter import BrokerAdapter
-from .ig_adapter import IGBrokerAdapter
+# Optional adapter — import succeeds only when trading-ig is installed.
+try:
+    from .ig_adapter import IGBrokerAdapter  # noqa: F401
+except ImportError:
+    pass
 from .broker_connector import BrokerConnector
 from .data_pipeline import DataPipeline
 from .yh_finance_fetcher import YHFinanceFetcher

@@ -90,7 +90,7 @@ class BrokerAdapter(Protocol):
         Parameters
         ----------
         instrument_id : str
-            Broker-specific instrument identifier (e.g. IG epic).
+            Broker-agnostic instrument identifier (e.g. canonical symbol for IBKR, IG epic for IG).
         resolution : str
             Bar resolution, e.g. ``"DAY"``.
         from_date : str
@@ -169,5 +169,25 @@ class BrokerAdapter(Protocol):
         dict
             ``{"status": str, "deal_id": str | None}``
             where *status* is ``"ACCEPTED"`` or ``"REJECTED"``.
+            For IBKR: polls trade.orderStatus until filled or timeout (10 s);
+            deal_id is str(contract.conId) on fill, None on rejection.
+        """
+        ...
+
+    def fetch_working_orders(self) -> list[dict]:
+        """Fetch all open/working (not-yet-filled) orders.
+
+        Returns
+        -------
+        list[dict]
+            Each dict contains::
+
+                {
+                    "order_id":      str,
+                    "instrument_id": str,
+                    "direction":     str,   # "BUY" or "SELL"
+                    "size":          float,
+                    "order_type":    str,
+                }
         """
         ...

@@ -27,10 +27,8 @@ UNIVERSE_PATH = os.path.join("data", "input", "universe.json")
 def _load_universe(path: str) -> list[str]:
     """Load the instrument universe from a JSON file.
 
-    Returns a deduplicated list of IG epic strings.  When both
-    ``.DAILY.IP`` and ``.IFD.IP`` (or ``.CASH.IP``) variants exist for
-    the same underlying market, only the first encountered variant is
-    kept so the pipeline does not fetch redundant price series.
+    Returns a deduplicated list of broker-agnostic instrument_id strings.
+    Skips entries where valid=False.
     """
     try:
         with open(path) as f:
@@ -38,8 +36,8 @@ def _load_universe(path: str) -> list[str]:
     except FileNotFoundError:
         print(f"ERROR: Universe file not found: {path}")
         print(
-            "Run diagnostic_tools/refresh_universe.py to populate it, "
-            "or set refresh_universe=True in the model config."
+            "Populate data/input/universe.json manually with IBKR canonical symbols "
+            "(e.g. 'DAX', 'EURUSD') or IG epics."
         )
         raise SystemExit(1) from None
     except json.JSONDecodeError as exc:
@@ -51,29 +49,23 @@ def _load_universe(path: str) -> list[str]:
     if not instruments:
         print(
             f"WARNING: No instruments found in {path} — pipeline will run with an empty universe. "
-            "Run diagnostic_tools/refresh_universe.py (or use --refresh-universe) to populate it."
+            "Populate data/input/universe.json manually with instrument_id strings."
         )
 
-    seen_bases: set[str] = set()
-    epics: list[str] = []
+    seen: set[str] = set()
+    symbols: list[str] = []
     for inst in instruments:
-        epic = inst.get("epic", "")
-        if not epic:
+        iid = inst.get("instrument_id") or inst.get("epic", "")
+        if not iid:
             continue
         if not inst.get("valid", True):
-            print(
-                f"WARNING: universe.json contains invalid instrument '{epic}' — skipping. "
-                "Run diagnostic_tools/refresh_universe.py or edit universe_candidates.json."
-            )
+            print(f"WARNING: universe.json contains invalid=False instrument '{iid}' — skipping.")
             continue
-        # Base = first three dot-segments, e.g. "IX.D.FTSE" from
-        # "IX.D.FTSE.DAILY.IP" — identical for DAILY / IFD / CASH variants.
-        base = ".".join(epic.split(".")[:3])
-        if base in seen_bases:
+        if iid in seen:
             continue
-        seen_bases.add(base)
-        epics.append(epic)
-    return epics
+        seen.add(iid)
+        symbols.append(iid)
+    return symbols
 
 
 def _print_credentials_setup_error(error: RuntimeError) -> None:
@@ -82,7 +74,7 @@ def _print_credentials_setup_error(error: RuntimeError) -> None:
     print(str(error))
     print("Next steps:")
     print("1. Copy secrets/.env.example to secrets/.env")
-    print("2. Fill in the required credentials for your broker (default: IG)")
+    print("2. Fill in the required credentials for your broker — see secrets/.env.example for both IG and IBKR credential keys")
     print("3. Run main.py again")
 
 
@@ -95,6 +87,16 @@ def _print_ig_authentication_error(error: RuntimeError) -> None:
     print("2. Keep IG_ACC_NUMBER as the account id, for example MERTST...")
     print("3. Confirm the credentials belong to an IG DEMO account")
     print("4. Confirm the API key is enabled for the same IG account")
+
+
+def _print_ibkr_connection_error(error: RuntimeError) -> None:
+    """Print IBKR-specific connection error guidance."""
+    print("Tradinator could not connect to IBKR.")
+    print(str(error))
+    print("Next steps:")
+    print("1. Start TWS or IB Gateway and confirm it listens on port 4002 (paper trading).")
+    print("2. Verify IBKR_HOST=127.0.0.1, IBKR_PORT=4002, IBKR_CLIENT_ID=1 in secrets/.env.")
+    print("3. Ensure no other session is using the same IBKR_CLIENT_ID.")
 
 
 def _parse_args():
@@ -135,7 +137,8 @@ def _parse_args():
             "Discovers all SP500 and FTSE100 instruments via IG search-drilldown, "
             "resolves Yahoo Finance tickers, performs Tier 1 broker validation, "
             "and rewrites universe_candidates.json and universe.json. "
-            "Equivalent to setting refresh_universe=True in config."
+            "Equivalent to setting refresh_universe=True in config. "
+            "(IG only; silently skipped when broker=ibkr)"
         ),
     )
     return parser.parse_args()
@@ -150,7 +153,12 @@ def _run_refresh_universe(_config: dict) -> bool:
     Returns True if the pipeline completed successfully, False if the broker API
     was unavailable (503/500 after retries) and the run was skipped.  In the
     False case the existing universe.json on disk is used unchanged.
+    Always returns False immediately when broker=ibkr; this tool is IG-only.
     """
+    if _config.get("broker", "ig") == "ibkr":
+        print("[main] --refresh-universe is not supported for broker=ibkr — skipping.")
+        return False
+
     refresh_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         "diagnostic_tools", "refresh_universe.py",
@@ -169,7 +177,7 @@ def _run_refresh_universe(_config: dict) -> bool:
 # ---------------------------------------------------------------------------
 config = {
     # Broker --------------------------------------------------------------
-    "broker": "ig",                     # "ig" or "ibkr" (ibkr is placeholder)
+    "broker": "ig",                     # "ig" or "ibkr"
 
     # Credentials --------------------------------------------------------
     "env_path": "secrets/.env",        # path to .env file with broker creds
@@ -251,6 +259,8 @@ if __name__ == "__main__":
             _print_credentials_setup_error(error)
         elif "validation.pattern.invalid" in msg:
             _print_ig_authentication_error(error)
+        elif isinstance(error, (ConnectionRefusedError, TimeoutError)) or "IBKR" in msg or "ib_insync" in msg.lower():
+            _print_ibkr_connection_error(error)
         else:
             print(f"ERROR: {error}")
         raise SystemExit(1) from None

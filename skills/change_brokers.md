@@ -2,7 +2,7 @@
 
 ## 1. Current Architecture (Good News)
 
-The codebase has a **clean adapter pattern** designed for exactly this scenario. The `BrokerAdapter` protocol (`broker_adapter.py`) defines 8 normalised methods, and all downstream pipeline components (`DataPipeline`, `OrderExecutor`, etc.) call only these methods — they never touch the raw broker client. A placeholder `IBKRBrokerAdapter` already exists with all 8 methods stubbed as `NotImplementedError`, and it's already registered in `broker_connector.py`'s `_ADAPTER_REGISTRY`.
+The codebase has a **clean adapter pattern** designed for exactly this scenario. The `BrokerAdapter` protocol (`broker_adapter.py`) defines 9 normalised methods, and all downstream pipeline components (`DataPipeline`, `OrderExecutor`, etc.) call only these methods — they never touch the raw broker client. A placeholder `IBKRBrokerAdapter` already exists with all 9 methods stubbed as `NotImplementedError`, and it's already registered in `broker_connector.py`'s `_ADAPTER_REGISTRY`.
 
 **In theory**, switching brokers is a config change (`"broker": "ibkr"`) plus implementing one file. **In practice**, there are several layers of IG-specific assumptions embedded throughout.
 
@@ -12,13 +12,14 @@ The codebase has a **clean adapter pattern** designed for exactly this scenario.
 
 | File | Change Type | Effort | Description |
 |---|---|---|---|
-| `model_components/ibkr_adapter.py` | **Rewrite** | **High** | Implement all 8 `BrokerAdapter` methods using `ib_async` (or `ib_insync`). This is the core work. |
-| `requirements.txt` | Add dependency | Trivial | Add `ib_async` (or `ib_insync>=9.81`). |
+| `model_components/ibkr_adapter.py` | **Rewrite** | **High** | Implement all 9 `BrokerAdapter` methods using `ib_async` (or `ib_insync`). This is the core work. |
+| `requirements.txt` | Replace dependency | Low | Remove `trading-ig>=0.0.23`. Add `ib_insync>=9.81` (or `ib_async`). |
 | `secrets/.env.example` | Uncomment | Trivial | IBKR env vars (`IBKR_HOST`, `IBKR_PORT`, `IBKR_CLIENT_ID`) are already stubbed but commented out. |
 | `main.py` | Config change | **Medium** | Change `"broker": "ig"` → `"broker": "ibkr"`. But `_load_universe()` has IG-specific deduplication logic (splits on `.` segments like `IX.D.FTSE`). This needs a broker-aware loader or a neutral universe format. |
 | `data/input/universe.json` | **Rewrite** | **Medium** | Currently stores IG "epics" (`IX.D.DAX.IFD.IP`, `CS.D.AAPL.CFD.IP`). IBKR uses completely different identifiers: `(symbol, exchange, secType, currency, conId)`. The entire file must be recreated with IBKR contract specifications. |
-| `data/input/discover_universe.py` | **Rewrite** | **Medium** | 100% IG-specific (uses `IGService`, IG search endpoint, IG epic validation). Needs an IBKR equivalent that resolves contracts via IBKR's contract search. |
-| `model_components/__init__.py` | No change | — | Already handles optional IBKR import with try/except. |
+| `diagnostic_tools/refresh_universe.py` | **Rewrite** | **Medium** | 100% IG-specific (~895 lines; uses `IGService`, IG search endpoint, IG epic validation). Needs an IBKR equivalent that validates contracts via `reqContractDetails`. |
+| `model_components/__init__.py` | Wrap IG import | Low | Line 4 has an unconditional `from .ig_adapter import IGBrokerAdapter` which imports `trading_ig` at startup. If `trading-ig` is removed, wrap in try/except (same pattern as the IBKR import below it). |
+| `model_components/yh_finance_fetcher.py` | **Update** | **Medium** | `EPIC_TO_YH_TICKER` dict is keyed on IG epics. `DataPipeline` uses this as a fallback price source when the broker adapter returns no data. After switching to IBKR, instrument IDs will no longer be IG epics, so the dict keys (and any lookup call sites) must be updated to match the IBKR identifier format chosen for `instrument_id`. |
 | `model_components/broker_connector.py` | No change | — | Already registers IBKR adapter conditionally. |
 
 ---
@@ -79,10 +80,10 @@ IBKR requires a **running desktop application** (TWS or IB Gateway) as a prerequ
 
 | Task | Effort | Notes |
 |---|---|---|
-| Implement `ibkr_adapter.py` (8 methods) | **3–5 days** | Hardest part: async connection management, contract resolution, order status polling, mapping IBKR responses to adapter schema |
+| Implement `ibkr_adapter.py` (9 methods) | **3–5 days** | Hardest part: async connection management, contract resolution, order status polling, mapping IBKR responses to adapter schema |
 | Design a broker-neutral `universe.json` format | **0.5 day** | Add `ibkr_conId`/`ibkr_symbol` fields alongside `epic`, or create a separate IBKR universe file |
 | Rewrite `_load_universe()` in `main.py` | **0.5 day** | Make loader broker-aware |
-| Create IBKR version of `discover_universe.py` | **1 day** | IBKR contract search + validation |
+| Create IBKR version of `refresh_universe.py` (`diagnostic_tools/refresh_universe_ibkr.py`) | **1 day** | IBKR contract validation via `reqContractDetails` |
 | Resolution/lookback mapping | **0.5 day** | Map `"DAY"` → `"1 day"`, etc., inside the adapter |
 | IBKR demo-only safety guard | **0.5 day** | Verify port `4002` (paper) and reject `4001` (live) |
 | Testing & integration | **2–3 days** | Requires IBKR paper trading account + IB Gateway running |
@@ -99,7 +100,7 @@ If you **don't** make the codebase broker-neutral now, the following debt accumu
 | **IG epic strings hardcoded as `instrument_id` everywhere** | Every JSON ledger, trade history, xlsx series file, and log will contain IG epics. When you switch, all historical data becomes unreadable or requires a migration script. | **High** |
 | **`universe.json` is IG-only** | No place to store IBKR contract specs. You'll need a format migration or parallel file. | **Medium** |
 | **`_load_universe()` deduplication is IG-specific** | The 3-dot-segment base extraction (`IX.D.FTSE`) is meaningless for IBKR. Any new universe loader will break the old one. | **Medium** |
-| **`discover_universe.py` is throwaway** | 192 lines of IG-only code that can't be reused. | **Low** |
+| **`diagnostic_tools/refresh_universe.py` is throwaway** | ~895 lines of IG-only code that can't be reused. | **Low** |
 | **`deal_reference` / `deal_id` / `confirm_deal` pattern** | Shaped around IG's confirmation flow. IBKR has a fundamentally different async order lifecycle. The protocol itself may need extending. | **Medium** |
 | **Existing `universe_series.xlsx` with IG epic columns** | Historical data columns are named by IG epic. After switching, new IBKR data will have different column names, making time series discontinuous. | **High** |
 | **Ledger/trades JSON files (`data/output/`)** | All recorded positions and trades reference IG epics and deal IDs. No way to reconcile post-migration. | **Medium** |

@@ -1,4 +1,4 @@
 {
-  "description": "Tradinator instrument universe \u2014 IG Demo epics that have passed Tier 1 validation (broker recognition + dealing enabled). Tier 2 (data availability) is validated continuously by DataPipeline. Last T1 validation: 2026-05-15T20:19:13Z.",
+  "description": "Tradinator instrument universe. Each entry has an instrument_id field (IBKR canonical symbol or IG epic), name, and valid flag. T1-validated entries have valid=true. Repopulate with diagnostic_tools/refresh_universe_ibkr.py (IBKR) or refresh_universe.py (IG).",
   "instruments": []
 }
