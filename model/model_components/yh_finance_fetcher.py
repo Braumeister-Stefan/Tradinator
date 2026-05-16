@@ -46,7 +46,7 @@ INSTRUMENT_TO_YH_TICKER: dict[str, str] = {
     "IBEX":    "^IBEX",
     "SMI":     "^SSMI",
     "FTSEMIB": "FTSEMIB.MI",
-    "OMX":     "^OMX",     # OMX Stockholm 30
+    "OMX":     "^OMX",     # OMX Stockholm 30 (^OMX on Yahoo Finance = OMXS30)
     # Indices — APAC
     "NIKKEI":  "^N225",
     "ASX200":  "^AXJO",

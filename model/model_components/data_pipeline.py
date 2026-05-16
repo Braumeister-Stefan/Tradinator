@@ -369,6 +369,10 @@ class DataPipeline:
         # P2: iterate ALL candidates from universe_candidates.json first,
         # so failures are not silently dropped from the output sheet.
         for candidate in (all_candidates or []):
+            # Prefer instrument_id (IBKR canonical symbol). Fall back to the legacy
+            # "epic" key for backward compatibility with IG-era universe_candidates.json
+            # files. Remove the epic fallback once universe_candidates.json is
+            # regenerated with IBKR instrument_id fields.
             cand_id = candidate.get("instrument_id") or candidate.get("epic", "")
             if not cand_id:
                 continue

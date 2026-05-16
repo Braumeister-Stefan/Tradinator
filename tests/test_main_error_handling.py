@@ -26,7 +26,12 @@ class TestIBKRErrorHandling(unittest.TestCase):
         )
 
     def _assert_runtime_error_handled_cleanly(self, error_msg: str):
-        """Run main.py with a mocked Model that raises RuntimeError; assert no raw traceback."""
+        """Run main.py with a mocked Model that raises RuntimeError; assert no raw traceback.
+
+        Patches ``model.Model`` to raise ``RuntimeError(error_msg)`` before the pipeline
+        runs, then executes ``main.py`` in a subprocess.  Asserts that stdout/stderr
+        does NOT contain ``'Traceback'`` (i.e. the error is caught and handled cleanly).
+        """
         script = (
             "import sys; sys.argv = ['main.py']; "
             "from unittest.mock import patch; "
