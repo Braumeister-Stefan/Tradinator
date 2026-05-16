@@ -46,6 +46,8 @@ def _build_contract_map() -> dict:
         return {}
     return {
         # --- Indices (IND) ---
+        # FTSE 100 is not directly available as secType='IND' on IBKR;
+        # the nearest liquid proxy is the LIFFE futures contract 'Z' on ICEEUSOFT.
         "FTSE":   Contract(symbol="Z",      secType="FUT", exchange="ICEEUSOFT", currency="GBP"),
         "DAX":    Contract(symbol="DAX",    secType="IND", exchange="EUREX",     currency="EUR"),
         "CAC":    Contract(symbol="CAC40",  secType="IND", exchange="MONEP",     currency="EUR"),
@@ -152,6 +154,8 @@ class IBKRBrokerAdapter:
         ib = self._require_session()
         contract = self._resolve_contract(instrument_id)
         bar_size = _RESOLUTION_MAP.get(resolution.upper(), "1 day")
+        # Multiply by 2 to account for non-trading days (weekends, holidays)
+        # so that at least `lookback` trading bars are returned.
         duration = f"{lookback * 2} D"
         bars = ib.reqHistoricalData(
             contract,
@@ -288,6 +292,8 @@ class IBKRBrokerAdapter:
             if trade.orderStatus.status not in ("Submitted", "PreSubmitted"):
                 continue
             working.append({
+                # permId is the exchange-assigned permanent ID (stable across
+                # sessions); orderId is session-local and used for deal_reference.
                 "order_id":      str(trade.order.permId),
                 "instrument_id": trade.contract.symbol,
                 "direction":     trade.order.action,
