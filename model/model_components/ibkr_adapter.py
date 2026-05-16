@@ -158,7 +158,7 @@ class IBKRBrokerAdapter:
             if self._account_id and pos.account != self._account_id:
                 continue
             positions.append({
-                "instrument_id": pos.contract.symbol,
+                "conId": pos.contract.symbol,
                 "direction":     "BUY" if pos.position > 0 else "SELL",
                 "size":          abs(float(pos.position)),
                 "level":         float(pos.averageCost),
@@ -168,11 +168,11 @@ class IBKRBrokerAdapter:
         return positions
 
     def fetch_historical_prices(
-        self, instrument_id: str, resolution: str, lookback: int
+        self, conId: str, resolution: str, lookback: int
     ) -> list[dict]:
         """Fetch historical OHLCV bars for a given lookback window."""
         ib = self._require_session()
-        contract = self._resolve_contract(instrument_id)
+        contract = self._resolve_contract(conId)
         bar_size = _RESOLUTION_MAP.get(resolution.upper(), "1 day")
         # Multiply by 2 to account for non-trading days (weekends, holidays)
         # so that at least `lookback` trading bars are returned.
@@ -188,11 +188,11 @@ class IBKRBrokerAdapter:
         return [_bar_to_dict(b) for b in bars]
 
     def fetch_historical_prices_by_date_range(
-        self, instrument_id: str, resolution: str, from_date: str
+        self, conId: str, resolution: str, from_date: str
     ) -> list[dict]:
         """Fetch historical OHLCV bars from from_date to now."""
         ib = self._require_session()
-        contract = self._resolve_contract(instrument_id)
+        contract = self._resolve_contract(conId)
         bar_size = _RESOLUTION_MAP.get(resolution.upper(), "1 day")
         # Parse from_date; pad duration by 5 days to avoid off-by-one at boundaries.
         parsed = datetime.fromisoformat(from_date.rstrip("Z").split(".")[0])
@@ -208,18 +208,18 @@ class IBKRBrokerAdapter:
         )
         return [_bar_to_dict(b) for b in bars]
 
-    def fetch_instrument_info(self, instrument_id: str) -> dict:
+    def fetch_instrument_info(self, conId: str) -> dict:
         """Fetch contract details and map to the standard instrument-info schema."""
         ib = self._require_session()
-        contract = self._resolve_contract(instrument_id)
+        contract = self._resolve_contract(conId)
         details_list = ib.reqContractDetails(contract)
         dealing_enabled = bool(details_list)
         if details_list:
             det = details_list[0]
             cd = det.contract
             return {
-                "instrument_name":    det.longName or instrument_id,
-                "instrument_id":      instrument_id,
+                "instrument_name":    det.longName or conId,
+                "conId":      str(cd.conId),
                 "currency":           cd.currency or "Unknown",
                 "min_deal_size":      float(det.minSize or 1.0),
                 "max_deal_size":      None,
@@ -231,8 +231,8 @@ class IBKRBrokerAdapter:
             }
         # Fallback when no details returned.
         return {
-            "instrument_name":    instrument_id,
-            "instrument_id":      instrument_id,
+            "instrument_name":    conId,
+            "conId":      conId,
             "currency":           "Unknown",
             "min_deal_size":      1.0,
             "max_deal_size":      None,
@@ -245,7 +245,7 @@ class IBKRBrokerAdapter:
 
     def open_position(
         self,
-        instrument_id: str,
+        conId: str,
         direction: str,
         size: float,
         order_type: str,
@@ -253,7 +253,7 @@ class IBKRBrokerAdapter:
     ) -> dict:
         """Place a market order to open a position."""
         ib = self._require_session()
-        contract = self._resolve_contract(instrument_id)
+        contract = self._resolve_contract(conId)
         order = MarketOrder(direction.upper(), size)
         trade = ib.placeOrder(contract, order)
         self._pending_trades[str(trade.order.orderId)] = trade
@@ -263,7 +263,7 @@ class IBKRBrokerAdapter:
         self,
         deal_id: str,
         direction: str,
-        instrument_id: str,
+        conId: str,
         size: float,
         order_type: str,
     ) -> dict:
@@ -315,7 +315,7 @@ class IBKRBrokerAdapter:
                 # permId is the exchange-assigned permanent ID (stable across
                 # sessions); orderId is session-local and used for deal_reference.
                 "order_id":      str(trade.order.permId),
-                "instrument_id": trade.contract.symbol,
+                "conId": trade.contract.symbol,
                 "direction":     trade.order.action,
                 "size":          float(trade.order.totalQuantity),
                 "order_type":    trade.order.orderType,
@@ -334,17 +334,17 @@ class IBKRBrokerAdapter:
             )
         return self._ib
 
-    def _resolve_contract(self, instrument_id: str) -> "Contract":
+    def _resolve_contract(self, conId: str) -> "Contract":
         """Map a canonical instrument symbol to an ib_insync Contract.
 
         Checks the hard-coded lookup table first; falls back to a generic
         US equity Contract when the symbol is not found.
         """
-        if instrument_id in self._contract_map:
-            return self._contract_map[instrument_id]
+        if conId in self._contract_map:
+            return self._contract_map[conId]
         # Default: treat unknown symbols as US equities on SMART routing.
         return Contract(
-            symbol=instrument_id,
+            symbol=conId,
             secType="STK",
             exchange="SMART",
             currency="USD",

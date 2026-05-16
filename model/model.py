@@ -50,6 +50,10 @@ class Model:
         adapter = bc._create_adapter()
         adapter.connect()
         try:
+            if self.config.get("push_candidates", False):
+                # Discover + merge new candidates first (shares the adapter).
+                from data.input import stock_scoper
+                stock_scoper.run(self.config, adapter)
             UniverseRefresher(self.config).run(adapter)
         finally:
             try:

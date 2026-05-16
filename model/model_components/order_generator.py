@@ -35,10 +35,10 @@ class OrderGenerator:
 
         latest_prices = {}
         if market_data:
-            for instrument_id, fields in market_data.get("prices", {}).items():
+            for conId, fields in market_data.get("prices", {}).items():
                 closes = fields.get("close", [])
                 if closes and closes[-1] is not None:
-                    latest_prices[instrument_id] = closes[-1]
+                    latest_prices[conId] = closes[-1]
 
         current_holdings = self._get_current_holdings(positions)
         target_sizes = self._compute_target_sizes(weights, total_value, latest_prices, metadata)
@@ -71,15 +71,15 @@ class OrderGenerator:
     # ------------------------------------------------------------------
 
     def _get_current_holdings(self, positions: list) -> dict:
-        """Convert the positions list into {instrument_id: signed_size}; BUY=positive, SELL=negative."""
+        """Convert the positions list into {conId: signed_size}; BUY=positive, SELL=negative."""
         holdings = {}
         for pos in positions:
-            instrument_id = pos.get("instrument_id")
+            conId = pos.get("conId")
             size = float(pos.get("size", 0))
             direction = pos.get("direction")
             signed = size if direction == "BUY" else -size
             # Accumulate in case multiple positions share an instrument.
-            holdings[instrument_id] = holdings.get(instrument_id, 0.0) + signed
+            holdings[conId] = holdings.get(conId, 0.0) + signed
         return holdings
 
     def _compute_target_sizes(
@@ -97,15 +97,15 @@ class OrderGenerator:
         if metadata is None:
             metadata = {}
         target_sizes = {}
-        for instrument_id, weight in weights.items():
+        for conId, weight in weights.items():
             notional = weight * total_value
-            price = latest_prices.get(instrument_id)
-            scaling = metadata.get(instrument_id, {}).get("scaling_factor", 1)
+            price = latest_prices.get(conId)
+            scaling = metadata.get(conId, {}).get("scaling_factor", 1)
             effective_price = price * scaling if price and price > 0 else 0
             if effective_price > 0:
-                target_sizes[instrument_id] = notional / effective_price
+                target_sizes[conId] = notional / effective_price
             else:
-                target_sizes[instrument_id] = notional
+                target_sizes[conId] = notional
         return target_sizes
 
     def _compute_deltas(self, target_sizes: dict, current_holdings: dict) -> dict:
@@ -118,10 +118,10 @@ class OrderGenerator:
         """
         all_instruments = set(target_sizes) | set(current_holdings)
         deltas = {}
-        for instrument_id in all_instruments:
-            target = target_sizes.get(instrument_id, 0.0)
-            current = current_holdings.get(instrument_id, 0.0)
-            deltas[instrument_id] = target - current
+        for conId in all_instruments:
+            target = target_sizes.get(conId, 0.0)
+            current = current_holdings.get(conId, 0.0)
+            deltas[conId] = target - current
         return deltas
 
     def _generate_orders(self, deltas: dict, current_holdings: dict, metadata=None, latest_prices=None) -> tuple:
@@ -132,15 +132,15 @@ class OrderGenerator:
             latest_prices = {}
         skipped = []
         orders = []
-        for instrument_id, delta in deltas.items():
-            if instrument_id not in latest_prices:
-                skipped.append({"instrument_id": instrument_id, "reason": "no price data"})
-                print(f"[OrderGenerator] ⚠ Skipped {instrument_id}: no price data")
+        for conId, delta in deltas.items():
+            if conId not in latest_prices:
+                skipped.append({"conId": conId, "reason": "no price data"})
+                print(f"[OrderGenerator] ⚠ Skipped {conId}: no price data")
                 continue
 
             abs_delta = abs(delta)
 
-            instrument_meta = metadata.get(instrument_id, {})
+            instrument_meta = metadata.get(conId, {})
             min_deal_size = instrument_meta.get("min_deal_size", self.MIN_ORDER_SIZE)
 
             increment = instrument_meta.get("min_size_increment", 1.0) or 1.0
@@ -152,22 +152,22 @@ class OrderGenerator:
                 size = min(size, max_deal_size)
 
             if size == 0:
-                skipped.append({"instrument_id": instrument_id, "reason": "rounds to zero"})
-                print(f"[OrderGenerator] ⚠ Skipped {instrument_id}: rounds to zero")
+                skipped.append({"conId": conId, "reason": "rounds to zero"})
+                print(f"[OrderGenerator] ⚠ Skipped {conId}: rounds to zero")
                 continue
 
             if size < min_deal_size:
-                skipped.append({"instrument_id": instrument_id, "reason": "below min size"})
-                print(f"[OrderGenerator] ⚠ Skipped {instrument_id}: below min size")
+                skipped.append({"conId": conId, "reason": "below min size"})
+                print(f"[OrderGenerator] ⚠ Skipped {conId}: below min size")
                 continue
 
             direction = "BUY" if delta > 0 else "SELL"
-            current = current_holdings.get(instrument_id, 0.0)
+            current = current_holdings.get(conId, 0.0)
             reason = self._classify_reason(current, delta)
 
             orders.append(
                 {
-                    "instrument_id": instrument_id,
+                    "conId": conId,
                     "direction": direction,
                     "size": size,
                     "order_type": "MARKET",

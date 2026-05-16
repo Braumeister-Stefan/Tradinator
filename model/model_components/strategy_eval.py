@@ -38,10 +38,10 @@ class StrategyEval:
         passed_count = 0
         rejected_count = 0
 
-        for instrument_id, signal in raw_signals.items():
-            close_prices = prices.get(instrument_id, {}).get("close", [])
-            result = self._validate_signal(instrument_id, signal, close_prices)
-            validated[instrument_id] = result
+        for conId, signal in raw_signals.items():
+            close_prices = prices.get(conId, {}).get("close", [])
+            result = self._validate_signal(conId, signal, close_prices)
+            validated[conId] = result
 
             if result["validation"]["passed"]:
                 passed_count += 1
@@ -77,7 +77,7 @@ class StrategyEval:
         """Update the ``validation_passed`` column in ``candidates_report.csv``.
 
         Reads the existing report written by DataPipeline, sets
-        ``validation_passed`` for each instrument_id that appears in *validated_signals*
+        ``validation_passed`` for each conId that appears in *validated_signals*
         (passed = True means the signal survived ``_apply_filters``), and
         re-writes the file.  Instruments that were not evaluated (e.g. had no
         signal generated) are left with an empty ``validation_passed`` value.
@@ -94,11 +94,11 @@ class StrategyEval:
             fieldnames = reader.fieldnames or []
 
         for row in rows:
-            instrument_id = row.get("instrument_id", "")
-            if instrument_id in validated_signals:
+            conId = row.get("conId", "")
+            if conId in validated_signals:
                 row["validation_passed"] = "true"
-            elif instrument_id:
-                # instrument_id was in the universe but did not pass (or was not evaluated).
+            elif conId:
+                # conId was in the universe but did not pass (or was not evaluated).
                 row["validation_passed"] = "false"
 
         with open(report_path, "w", newline="") as csvfile:
@@ -106,7 +106,7 @@ class StrategyEval:
             writer.writeheader()
             writer.writerows(rows)
 
-    def _validate_signal(self, instrument_id: str, signal: dict, close_prices: list) -> dict:
+    def _validate_signal(self, conId: str, signal: dict, close_prices: list) -> dict:
         """Run all checks on a single signal and augment it with validation info."""
         data_quality = self._check_data_quality(close_prices)
         sharpe = self._estimate_sharpe(close_prices)
@@ -175,9 +175,9 @@ class StrategyEval:
     def _apply_filters(self, validated_signals: dict) -> dict:
         """Remove signals that did not pass validation."""
         filtered = {}
-        for instrument_id, signal in validated_signals.items():
+        for conId, signal in validated_signals.items():
             if signal["validation"]["passed"]:
-                filtered[instrument_id] = signal
+                filtered[conId] = signal
         return filtered
 
     # ------------------------------------------------------------------

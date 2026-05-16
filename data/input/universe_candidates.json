@@ -1,5 +1,5 @@
 {
-  "description": "Tradinator universe candidate registry. Contains all candidate instruments with two-tier validation metadata. Populate using instrument_id (IBKR canonical symbol) for each candidate.",
+  "description": "Tradinator universe candidate registry. Contains all candidate instruments with two-tier validation metadata. Populate using conId (IBKR numeric contract identifier as a string) for each candidate.",
   "last_discover_run": "2026-05-16T15:20:02.701086Z",
   "candidates": []
 }
