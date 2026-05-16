@@ -314,16 +314,6 @@ class DataPipeline:
             "data_sources": data_sources,
         }
 
-    def ingest_historic(self) -> None:
-        """Standalone entry point to load, ingest historic files, validate, and save."""
-        master = self._load_series_file(self.SERIES_FILE)
-        if master is None:
-            master = {name: pd.DataFrame() for name in self.SHEET_NAMES}
-        master = self._ingest_historic_files(master, self.HISTORIC_DIR)
-        if not self._validate_series_schema(master):
-            print("[DataPipeline] WARNING: master series failed validation after ingest.")
-        self._save_series_file(master, self.SERIES_FILE)
-
     # ------------------------------------------------------------------
     # Candidates report
     # ------------------------------------------------------------------
