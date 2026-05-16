@@ -1,4 +1,4 @@
 {
-  "description": "Tradinator instrument universe. Each entry has an instrument_id field (IBKR canonical symbol or IG epic), name, and valid flag. T1-validated entries have valid=true. Repopulate with diagnostic_tools/refresh_universe_ibkr.py (IBKR) or refresh_universe.py (IG).",
+  "description": "Tradinator instrument universe. Each entry has an instrument_id field (IBKR canonical symbol), name, and valid flag. T1-validated entries have valid=true. Populate manually with IBKR canonical symbols (e.g. 'DAX', 'EURUSD', 'CL').",
   "instruments": []
 }

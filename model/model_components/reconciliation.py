@@ -1,7 +1,7 @@
 """
 Tradinator — Reconciliation.
 
-Synchronises the local order book with the IG broker's working orders,
+Synchronises the local order book with the broker's working orders,
 updating states and reflecting fills, cancellations, and expirations.
 
 DISCLAIMER: Tradinator is a personal experimentation tool for paper trading.

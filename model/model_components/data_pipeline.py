@@ -314,16 +314,6 @@ class DataPipeline:
             "data_sources": data_sources,
         }
 
-    def ingest_historic(self) -> None:
-        """Standalone entry point to load, ingest historic files, validate, and save."""
-        master = self._load_series_file(self.SERIES_FILE)
-        if master is None:
-            master = {name: pd.DataFrame() for name in self.SHEET_NAMES}
-        master = self._ingest_historic_files(master, self.HISTORIC_DIR)
-        if not self._validate_series_schema(master):
-            print("[DataPipeline] WARNING: master series failed validation after ingest.")
-        self._save_series_file(master, self.SERIES_FILE)
-
     # ------------------------------------------------------------------
     # Candidates report
     # ------------------------------------------------------------------
@@ -379,24 +369,24 @@ class DataPipeline:
         # P2: iterate ALL candidates from universe_candidates.json first,
         # so failures are not silently dropped from the output sheet.
         for candidate in (all_candidates or []):
-            cand_epic = candidate.get("epic", "")
-            if not cand_epic:
+            cand_id = candidate.get("instrument_id", "")
+            if not cand_id:
                 continue
-            seen_instruments.add(cand_epic)
+            seen_instruments.add(cand_id)
             t1 = candidate.get("t1_status", "")
             t2 = candidate.get("t2_status", "")
             pre_passed = "" if (t1 == "PASS" and t2 == "YES") else "false"
             rows.append({
-                "instrument_id": cand_epic,
-                "yh_ticker": INSTRUMENT_TO_YH_TICKER.get(cand_epic, ""),
+                "instrument_id": cand_id,
+                "yh_ticker": INSTRUMENT_TO_YH_TICKER.get(cand_id, ""),
                 "name": candidate.get("name", ""),
                 "t1_status": t1,
                 "t2_status": t2,
-                "data_source": data_sources.get(cand_epic, "none"),
-                "bars_fetched_this_run": _bars_fetched(cand_epic),
-                "total_bars_in_master": _bars_in_master(cand_epic),
-                "broker_data_available": broker_available.get(cand_epic, False),
-                "yh_data_available": yh_available.get(cand_epic, False),
+                "data_source": data_sources.get(cand_id, "none"),
+                "bars_fetched_this_run": _bars_fetched(cand_id),
+                "total_bars_in_master": _bars_in_master(cand_id),
+                "broker_data_available": broker_available.get(cand_id, False),
+                "yh_data_available": yh_available.get(cand_id, False),
                 "validation_passed": pre_passed,
             })
 
