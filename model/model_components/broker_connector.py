@@ -48,8 +48,12 @@ class BrokerConnector:
             self._adapter = self._create_adapter()
             self._connection = self._adapter.connect()
         adapter = self._adapter
+        print("[BrokerConnector][DIAG] calling get_account_info()...")
         account_info = adapter.get_account_info()
+        print(f"[BrokerConnector][DIAG] get_account_info() returned: {account_info}")
+        print("[BrokerConnector][DIAG] calling get_positions()...")
         positions = adapter.get_positions()
+        print(f"[BrokerConnector][DIAG] get_positions() returned {len(positions)} position(s)")
         instruments = list(self.config.get("universe", []))
         return self._build_broker_state(
             adapter, positions, account_info, instruments, self._connection

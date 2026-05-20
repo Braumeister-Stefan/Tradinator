@@ -4,9 +4,8 @@ Tradinator — data/input/stock_scoper.py
 
 Phase 1+2+3 universe discovery for IBKR:
   Phase 1 — Load    : Read ``universe_candidates.json`` (or seed list).
-  Phase 2 — Enrich  : Resolve Yahoo Finance ticker for each instrument.
-  Phase 3 — T1      : Call reqContractDetails per candidate, capture conId.
-  Phase 4 — Persist : When ``push_candidates`` is True, merge the enriched
+  Phase 2 — T1      : Call reqContractDetails per candidate, capture conId.
+  Phase 3 — Persist : When ``push_candidates`` is True, merge the enriched
                        candidates into ``universe_candidates.json`` by conId
                        (append new, update existing — never remove entries).
                        When False, no file write happens.
@@ -38,14 +37,10 @@ try:
 except ImportError:
     _IB_AVAILABLE = False
 
-from model.model_components.yh_finance_fetcher import (  # noqa: E402
-    _LEGACY_SYMBOL_TO_YH_TICKER,
-    get_yh_ticker,
-    resolve_ticker_by_name,
-)
 from model.model_components.universe_refresher import (  # noqa: E402
     T1_API_ERROR, T1_FAIL, T1_PASS, T2_PENDING,
 )
+from data.input import registry_io  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -62,7 +57,7 @@ IBKR_PAPER_PORT = 4002  # IB Gateway / TWS paper-trading port
 # ---------------------------------------------------------------------------
 # Output paths
 # ---------------------------------------------------------------------------
-CANDIDATES_PATH = os.path.join(PROJECT_ROOT, "data", "input", "universe_candidates.json")
+CANDIDATES_PATH = os.path.join(PROJECT_ROOT, "data", "input", "universe_candidates.csv")
 
 # ---------------------------------------------------------------------------
 # Phase 1 — Seed instruments (used when universe_candidates.json is empty).
@@ -95,21 +90,6 @@ SEED_INSTRUMENTS = [
 ]
 
 _SEARCH_DELAY_S = 0.35
-
-
-# ---------------------------------------------------------------------------
-# Enrichment helpers
-# ---------------------------------------------------------------------------
-
-def _find_ticker(symbol: str, name: str) -> tuple[str | None, bool]:
-    """Return (ticker_or_None, did_search) for an IBKR symbol + name.
-
-    Priority: legacy symbol → YH map → Yahoo search by name.
-    """
-    mapped = _LEGACY_SYMBOL_TO_YH_TICKER.get(symbol)
-    if mapped is not None:
-        return mapped, False
-    return resolve_ticker_by_name(name), True
 
 
 # ---------------------------------------------------------------------------
@@ -167,26 +147,24 @@ def _validate_tier1_adapter(adapter, candidate: dict) -> tuple[str, str, str]:
 # Phase 1 — Load candidates from universe_candidates.json
 # ---------------------------------------------------------------------------
 
-def _load_candidates() -> tuple[list[dict], dict]:
-    """Return (working_candidates, existing_doc).
+def _load_candidates() -> tuple[list[dict], list[dict]]:
+    """Return (working_candidates, existing_rows).
 
-    ``working_candidates`` is the list to enrich+validate.  ``existing_doc`` is
-    the on-disk JSON so we can merge into it later without losing fields.
+    ``working_candidates`` is the list to enrich+validate.  ``existing_rows`` is
+    the on-disk CSV row list so we can merge into it later without losing fields.
     """
     if os.path.isfile(CANDIDATES_PATH):
         try:
-            with open(CANDIDATES_PATH, encoding="utf-8") as f:
-                doc = json.load(f)
-            cands = doc.get("candidates", [])
-            if cands:
-                print(f"[Phase 1] Loaded {len(cands)} candidates from {CANDIDATES_PATH}")
-                return [dict(c) for c in cands], doc
-            return [dict(c) for c in SEED_INSTRUMENTS], doc
+            rows = registry_io.load_candidate_rows(CANDIDATES_PATH)
+            if rows:
+                print(f"[Phase 1] Loaded {len(rows)} candidates from {CANDIDATES_PATH}")
+                return [dict(c) for c in rows], rows
+            return [dict(c) for c in SEED_INSTRUMENTS], rows
         except Exception as exc:
             print(f"[Phase 1] WARNING: could not read {CANDIDATES_PATH}: {exc}")
 
     print(f"[Phase 1] No existing candidates found — using {len(SEED_INSTRUMENTS)} seed instruments.")
-    return [dict(c) for c in SEED_INSTRUMENTS], {"candidates": []}
+    return [dict(c) for c in SEED_INSTRUMENTS], []
 
 
 # ---------------------------------------------------------------------------
@@ -230,12 +208,12 @@ def _connect() -> "IB":
 
 
 # ---------------------------------------------------------------------------
-# Phase 4 — Merge enriched candidates into universe_candidates.json
+# Phase 3 — Merge enriched candidates into universe_candidates.json
 # ---------------------------------------------------------------------------
 
-# Allowed enrichment fields on every candidate entry (8 enrichment + 4 status).
+# Allowed enrichment fields on every candidate entry (7 enrichment + 4 status).
 _ENRICHMENT_FIELDS = ("conId", "name", "sec_type", "exchange", "currency",
-                      "yh_ticker", "asset_class", "region")
+                      "asset_class", "region")
 _STATUS_FIELDS     = ("t1_status", "t2_status", "valid", "last_validated")
 _CANDIDATE_FIELDS  = _ENRICHMENT_FIELDS + _STATUS_FIELDS
 
@@ -243,12 +221,11 @@ _CANDIDATE_FIELDS  = _ENRICHMENT_FIELDS + _STATUS_FIELDS
 def _build_candidate_entry(
     src: dict,
     conId: str,
-    yh_ticker: str | None,
     t1_status: str,
     t2_status: str,
     now_utc: str,
 ) -> dict:
-    """Project a working candidate dict to the canonical 12-field entry."""
+    """Project a working candidate dict to the canonical 11-field entry."""
     sec_type = src.get("sec_type", "")
     asset_class = "index" if sec_type == "IND" else (sec_type.lower() if sec_type else "unknown")
     return {
@@ -257,7 +234,6 @@ def _build_candidate_entry(
         "sec_type":       sec_type,
         "exchange":       src.get("exchange", ""),
         "currency":       src.get("currency", ""),
-        "yh_ticker":      yh_ticker,
         "asset_class":    src.get("asset_class", asset_class),
         "region":         src.get("region", "unknown"),
         "t1_status":      t1_status,
@@ -267,15 +243,15 @@ def _build_candidate_entry(
     }
 
 
-def _merge_into_doc(
-    existing_doc: dict, new_entries: list[dict], now_utc: str,
-) -> dict:
-    """Merge *new_entries* into *existing_doc* by conId (append-or-update).
+def _merge_rows(
+    existing_rows: list[dict], new_entries: list[dict],
+) -> list[dict]:
+    """Merge *new_entries* into *existing_rows* by conId (append-or-update).
 
     Existing conIds are never removed; their fields are updated from the
-    incoming entry.  ``last_discover_run`` is bumped to *now_utc*.
+    incoming entry.
     """
-    existing = existing_doc.get("candidates", []) or []
+    existing = existing_rows or []
     by_id: dict[str, dict] = {}
     order: list[str] = []
     for c in existing:
@@ -299,27 +275,24 @@ def _merge_into_doc(
     merged = [by_id[cid] for cid in order]
     if len(merged) < len(existing):
         raise RuntimeError(
-            f"_merge_into_doc shrank candidates list: "
+            f"_merge_rows shrank candidates list: "
             f"existing={len(existing)} merged={len(merged)}"
         )
-    out = dict(existing_doc)
-    out["description"] = (
-        "Tradinator universe candidate registry (IBKR). "
-        "Contains all candidate instruments with T1 validation metadata. "
-        "Generated by data/input/stock_scoper.py."
-    )
-    out["last_discover_run"] = now_utc
-    out["candidates"]        = merged
-    return out
+    return merged
 
 
-def _write_candidates(doc: dict) -> None:
-    """Atomically write the merged candidates document."""
-    os.makedirs(os.path.dirname(CANDIDATES_PATH), exist_ok=True)
-    with open(CANDIDATES_PATH, "w", encoding="utf-8") as f:
-        json.dump(doc, f, indent=2)
-        f.write("\n")
-    print(f"  Saved {len(doc.get('candidates', []))} candidates → {CANDIDATES_PATH}")
+def _write_candidates(merged_rows: list[dict], now_utc: str) -> None:
+    """Atomically write the merged candidate rows + update sidecar metadata."""
+    registry_io.save_candidate_rows(merged_rows, CANDIDATES_PATH)
+    registry_io.update_candidate_meta({
+        "last_discover_run": now_utc,
+        "description": (
+            "Tradinator universe candidate registry (IBKR). "
+            "Contains all candidate instruments with T1 validation metadata. "
+            "Generated by data/input/stock_scoper.py."
+        ),
+    })
+    print(f"  Saved {len(merged_rows)} candidates → {CANDIDATES_PATH}")
 
 
 # ---------------------------------------------------------------------------
@@ -344,7 +317,7 @@ def run(config: dict | None = None, adapter=None) -> bool:
 
     # --- Phase 1 ---
     print("=== Phase 1: Load candidates ===")
-    working, existing_doc = _load_candidates()
+    working, existing_rows = _load_candidates()
 
     # --- Connect (only if no adapter was supplied) ---
     ib = None
@@ -361,27 +334,8 @@ def run(config: dict | None = None, adapter=None) -> bool:
     now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
     try:
-        # --- Phase 2: Enrich Yahoo tickers ---
-        print("\n=== Phase 2: Enrich (Yahoo Finance tickers) ===")
-        ticker_map: dict[int, str | None] = {}
-        for idx, c in enumerate(working):
-            sym = c.get("symbol") or c.get("conId", "")
-            name = c.get("name", sym)
-            pre_mapped = c.get("yh_ticker")
-            if pre_mapped:
-                ticker_map[idx] = pre_mapped
-                continue
-            ticker, did_search = _find_ticker(sym, name)
-            ticker_map[idx] = ticker
-            if did_search:
-                if ticker:
-                    print(f"  {sym:<20} → {ticker}")
-                time.sleep(_SEARCH_DELAY_S)
-        matched = sum(1 for v in ticker_map.values() if v)
-        print(f"Phase 2 complete: {matched}/{len(working)} tickers resolved.")
-
-        # --- Phase 3: T1 validation ---
-        print("\n=== Phase 3: T1 Validation (reqContractDetails) ===")
+        # --- Phase 2: T1 validation ---
+        print("\n=== Phase 2: T1 Validation (reqContractDetails) ===")
         new_entries: list[dict] = []
         pass_count = 0
         total = len(working)
@@ -400,7 +354,6 @@ def run(config: dict | None = None, adapter=None) -> bool:
             entry = _build_candidate_entry(
                 c,
                 conId=conId,
-                yh_ticker=ticker_map.get(i - 1),
                 t1_status=t1_status,
                 t2_status=T2_PENDING,
                 now_utc=now_utc,
@@ -408,15 +361,15 @@ def run(config: dict | None = None, adapter=None) -> bool:
             new_entries.append(entry)
             if not use_adapter:
                 time.sleep(0.1)
-        print(f"Phase 3 complete: {pass_count}/{total} T1-pass.")
+        print(f"Phase 2 complete: {pass_count}/{total} T1-pass.")
 
-        # --- Phase 4: Merge + write (only when push_candidates=True) ---
+        # --- Phase 3: Merge + write (only when push_candidates=True) ---
         if push_candidates:
-            print("\n=== Phase 4: Merge candidates ===")
-            merged_doc = _merge_into_doc(existing_doc, new_entries, now_utc)
-            _write_candidates(merged_doc)
+            print("\n=== Phase 3: Merge candidates ===")
+            merged_rows = _merge_rows(existing_rows, new_entries)
+            _write_candidates(merged_rows, now_utc)
         else:
-            print("\n=== Phase 4: SKIPPED (push_candidates=False) — no files written ===")
+            print("\n=== Phase 3: SKIPPED (push_candidates=False) — no files written ===")
     finally:
         if ib is not None:
             try:

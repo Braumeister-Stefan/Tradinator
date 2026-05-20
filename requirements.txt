@@ -1,7 +1,6 @@
 trading-ig>=0.0.23
-ib_insync>=0.9.86
+ib_async>=2.1.0
+ib_insync>=0.9.86  # legacy fallback; ibkr_adapter prefers ib_async
 python-dotenv>=1.0.0
 pandas>=2.0
 Jinja2>=3.1
-openpyxl>=3.1.0
-yfinance>=0.2.0

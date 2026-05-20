@@ -3,28 +3,24 @@ Tradinator — Data Pipeline.
 
 Downloads historical market data for each instrument via the broker adapter
 and performs basic cleaning (forward-fill).  Persists consolidated series to
-an xlsx master file as a side effect.
+a master csv file as a side effect.
 
 Two-tier validation integration
 --------------------------------
 T2 (data availability) validation status for each instrument is continuously
 maintained in ``universe_candidates.json``:
 
-- On a **cold-start** (no stored series for the instrument): fetches the last
-  ``lookback`` bars via the fixed-count API.  This matches the intention that
-  every first run retrieves the configured window of history.
+- On a **cold-start** (no stored series for the instrument): broker-only with
+  2 retries (2s backoff) via the fixed-count API.  If all attempts return
+  zero bars or raise, the instrument is marked T2=NO and removed from the
+  universe.
 - On a **subsequent run** (stored series exists): fetches only bars after the
   last stored timestamp using the date-range API, so the master file grows
   incrementally — one or more new bars per run rather than re-fetching the
   same window repeatedly.
 
-If the most-recent cold-start fetch returns zero bars, a YH Finance fallback
-is attempted before marking the instrument as T2=NO.  When the broker adapter
-cannot return usable data for an instrument, a secondary fetch via
-``YHFinanceFetcher`` (Yahoo Finance) is attempted.  If both sources fail, the
-instrument is skipped.  A per-run ``candidates_report.csv`` is written to
-``data/output/`` recording the data-source outcome for every universe
-instrument.
+A per-run ``candidates_report.csv`` is written to ``data/output/`` recording
+the data-source outcome for every universe instrument.
 
 DISCLAIMER: Tradinator is a personal experimentation tool for paper trading.
 It does not constitute trading advice, investment recommendation, or financial
@@ -33,58 +29,198 @@ guidance of any kind. Use at your own risk.
 
 
 import csv
+import datetime
 import json
 import os
 import time
-import zipfile
 
 import pandas as pd
 
-from .yh_finance_fetcher import YHFinanceFetcher, get_yh_ticker
+from data.input import registry_io
 
 
 def load_universe(path: str) -> list[str]:
-    """Load the instrument universe from a JSON file.
+    """Load the instrument universe from a CSV file.
 
     Returns a deduplicated list of broker-agnostic conId strings.
     Skips entries where valid=False.
     """
-    try:
-        with open(path) as f:
-            data = json.load(f)
-    except FileNotFoundError:
+    if not os.path.isfile(path):
         print(f"ERROR: Universe file not found: {path}")
         print(
-            "Populate data/input/universe.json manually with IBKR canonical symbols "
+            "Populate data/input/universe.csv manually with IBKR canonical symbols "
             "(e.g. 'DAX', 'EURUSD')."
         )
         raise SystemExit(1) from None
-    except json.JSONDecodeError as exc:
-        print(f"ERROR: Universe file contains invalid JSON: {path}")
-        print(f"  {exc}")
-        raise SystemExit(1) from None
 
-    instruments = data.get("instruments", [])
-    if not instruments:
+    rows = registry_io.load_universe_rows(path)
+    if not rows:
         print(
             f"WARNING: No instruments found in {path} — pipeline will run with an empty universe. "
-            "Populate data/input/universe.json manually with IBKR canonical symbol strings."
+            "Populate data/input/universe.csv manually with IBKR canonical symbol strings."
         )
 
     seen: set[str] = set()
     symbols: list[str] = []
-    for inst in instruments:
+    n_excluded = 0
+    n_invalid = 0
+    for inst in rows:
         iid = inst.get("conId", "")
         if not iid:
             continue
+        if inst.get("overwrite_exclusion", False):
+            n_excluded += 1
+            continue
         if not inst.get("valid", True):
-            print(f"WARNING: universe.json contains invalid=False instrument '{iid}' — skipping.")
+            n_invalid += 1
             continue
         if iid in seen:
             continue
         seen.add(iid)
         symbols.append(iid)
+
+    total_rows = len(rows)
+    print(f"[Universe] Loaded: {total_rows} instrument(s) from universe.csv.")
+    if n_excluded > 0:
+        print(f"[Universe] Manually excluded: {n_excluded} (overwrite_exclusion=True).")
+    if n_invalid > 0:
+        print(f"[Universe] Invalid rows skipped: {n_invalid} (valid=False).")
     return symbols
+
+
+def filter_by_history(universe: list[str], config: dict) -> list[str]:
+    """Drop conIds whose stored history is shorter than ``min_history_years``.
+
+    Reads ``oldest_bar_date`` per conId from ``candidates_report.csv``
+    (written by DataPipeline and the backfill diagnostic tool). conIds with
+    missing/empty ``oldest_bar_date`` are kept (no information to filter on).
+    The underlying ``universe.csv`` is NOT modified — only the in-memory
+    active list is filtered.
+    """
+    min_years = float(config.get("min_history_years", 0) or 0)
+    if min_years <= 0:
+        return list(universe)
+
+    output_dir = config.get("output_dir", "data/output")
+    report_path = os.path.join(output_dir, "candidates_report.csv")
+    if not os.path.isfile(report_path):
+        print(
+            f"[Universe] WARNING: {report_path} not found — "
+            "cannot enforce min_history_years; keeping full universe."
+        )
+        return list(universe)
+
+    oldest_by_id: dict[str, str] = {}
+    with open(report_path, "r", newline="") as fh:
+        for row in csv.DictReader(fh):
+            cid = row.get("conId", "")
+            if cid:
+                oldest_by_id[cid] = (row.get("oldest_bar_date") or "").strip()
+
+    threshold = datetime.date.today() - datetime.timedelta(days=int(min_years * 365))
+    kept: list[str] = []
+    n_dropped = 0
+    n_missing = 0
+    for cid in universe:
+        raw = oldest_by_id.get(cid, "")
+        if not raw:
+            n_missing += 1
+            kept.append(cid)
+            continue
+        try:
+            oldest = datetime.date.fromisoformat(raw[:10])
+        except ValueError:
+            n_missing += 1
+            kept.append(cid)
+            continue
+        if oldest > threshold:
+            n_dropped += 1
+            continue
+        kept.append(cid)
+
+    if n_missing == len(universe) and len(universe) > 0:
+        print(
+            "[Universe] WARNING: oldest_bar_date is missing for every active"
+            " conId — history filter is a no-op. Run the pipeline once or run"
+            " diagnostic_tools/backfill_universe before relying on this filter."
+        )
+    print(
+        f"[Universe] History filter (>={min_years}y):"
+        f" dropped {n_dropped}, kept {len(kept)} of {len(universe)}"
+        f" (no-info-kept {n_missing})."
+    )
+    return kept
+
+
+def filter_by_gaps(universe: list[str], config: dict) -> list[str]:
+    """Drop conIds whose timeseries contains a gap larger than ``gap_tolerance``.
+
+    A gap is a consecutive run of NaN values in the stored master series.
+    Only the active in-memory list is filtered; ``universe.csv`` is not modified.
+
+    Parameters
+    ----------
+    gap_resolution:
+        ``"drop_gap"`` (default) removes assets that exceed the tolerance.
+        ``"flat_fill"`` is a placeholder; not yet implemented; returns full list.
+    gap_tolerance:
+        Maximum acceptable consecutive-NaN run length.  Default ``0`` means any
+        single missing bar causes the asset to be dropped.
+    """
+    gap_resolution = config.get("gap_resolution", "drop_gap")
+    if gap_resolution != "drop_gap":
+        print(
+            f"[Universe] gap_resolution='{gap_resolution}' is not yet "
+            "implemented — skipping gap filter."
+        )
+        return list(universe)
+
+    gap_tolerance = int(config.get("gap_tolerance", 0) or 0)
+
+    series_path = "data/input/universe_series.csv"
+    if not os.path.isfile(series_path):
+        print(
+            f"[Universe] WARNING: {series_path} not found — "
+            "cannot enforce gap_tolerance; keeping full universe."
+        )
+        return list(universe)
+
+    try:
+        df = pd.read_csv(series_path, index_col=0)
+    except Exception as exc:  # noqa: BLE001
+        print(
+            f"[Universe] WARNING: could not read {series_path} ({exc}) — "
+            "keeping full universe."
+        )
+        return list(universe)
+
+    kept: list[str] = []
+    n_dropped = 0
+    n_missing = 0
+    for cid in universe:
+        if cid not in df.columns:
+            n_missing += 1
+            kept.append(cid)
+            continue
+        col = df[cid]
+        nan_mask = col.isna()
+        if not nan_mask.any():
+            kept.append(cid)
+            continue
+        # Longest consecutive NaN run via cumsum-group trick.
+        groups = nan_mask.ne(nan_mask.shift()).cumsum()
+        max_gap = int(nan_mask.groupby(groups).sum().max())
+        if max_gap > gap_tolerance:
+            n_dropped += 1
+        else:
+            kept.append(cid)
+
+    print(
+        f"[Universe] Gap filter (max consecutive NaN={gap_tolerance}):"
+        f" dropped {n_dropped}, kept {len(kept)} of {len(universe)}"
+        f" (no-series-kept {n_missing})."
+    )
+    return kept
 
 
 class DataPipeline:
@@ -94,34 +230,55 @@ class DataPipeline:
     DEFAULT_LOOKBACK = 50
     FILL_METHOD = "ffill"  # forward-fill for missing values
     RATE_LIMIT_DELAY = 1.0  # seconds between API calls
-    SERIES_FILE = "data/input/universe_series.xlsx"  # master file path
+    SERIES_FILE = "data/input/universe_series.csv"  # master file path
     HISTORIC_DIR = "data/input/historic_series"  # historic ingest folder
     SHEET_NAMES = ("mid_close",)  # only mid-price close is stored
-    CANDIDATES_PATH = "data/input/universe_candidates.json"
-    UNIVERSE_PATH = "data/input/universe.json"
+    CANDIDATES_PATH = "data/input/universe_candidates.csv"
+    UNIVERSE_PATH = "data/input/universe.csv"
     CANDIDATES_REPORT_FILENAME = "candidates_report.csv"  # written to output_dir
+    METADATA_CACHE_FILE = "data/input/instrument_metadata_cache.json"
+    CHECKPOINT_INTERVAL = 50  # flush master series to disk every N instruments
 
     def __init__(self, config: dict):
         """Store config for later use by run()."""
         self.config = config
 
-    def run(self, broker_state: dict) -> dict:
+    def run(self, broker_state: dict, revalidate: bool = False) -> dict:
         """Download prices for each instrument, clean them, and return market_data.
+
+        Parameters
+        ----------
+        broker_state:
+            Output dict from BrokerConnector / Reconciliation.
+        revalidate:
+            When ``False`` (default) only instruments that already have stored
+            series data are fetched (incremental update only).  Instruments
+            with no stored data are silently skipped — they are NOT removed
+            from the universe and will be cold-started on the next run where
+            ``revalidate=True`` is passed.
+            When ``True`` the full cold-start + T2-validation path runs for
+            every instrument without stored data.
 
         Fetch strategy
         --------------
         1. Load the existing master series file **before** the fetch loop so the
            last stored timestamp can be determined per instrument.
-        2. For instruments with no stored data (cold start): call the fixed-count
-           API (``fetch_historical_prices``) with the configured ``lookback``.
-           If the broker returns zero bars, YH Finance is tried as a fallback
-           before marking the instrument as T2=NO.
+        2. For instruments with no stored data (cold start): if ``revalidate``
+           is ``True``, call the fixed-count API (``fetch_historical_prices``)
+           with the configured ``lookback``, retrying up to 2 additional times
+           with 2-second backoff if the broker returns zero bars or raises.
+           If all attempts fail, the instrument is marked T2=NO and removed
+           from the universe.  If ``revalidate`` is ``False``, the instrument
+           is skipped.
         3. For instruments with existing stored data: call the date-range API
            (``fetch_historical_prices_by_date_range``) from the last stored
            timestamp + 1 second, retrieving only genuinely new bars.
         4. After each fetch, update the T2 status in ``universe_candidates.json``
            and — if the fetch returned zero bars — remove the instrument from
            ``universe.json``.
+        5. Every ``CHECKPOINT_INTERVAL`` instruments the accumulated prices are
+           merged into master and flushed to disk so partial progress survives
+           a process interruption during long revalidation runs.
         """
         adapter = broker_state["adapter"]
         instruments = broker_state["instruments"]
@@ -129,16 +286,14 @@ class DataPipeline:
         lookback = self.config.get("lookback", self.DEFAULT_LOOKBACK)
 
         # Load master series before the fetch loop (needed for last-date lookup).
-        master = self._load_series_file(self.SERIES_FILE)
+        master = self._load_master_series(self.SERIES_FILE)
 
         # P1-log/P2: load all candidates once for reporting and logging.
         all_candidates: list = []
         candidates_total = 0
         try:
             if os.path.isfile(self.CANDIDATES_PATH):
-                with open(self.CANDIDATES_PATH) as f:
-                    _cdata = json.load(f)
-                all_candidates = _cdata.get("candidates", [])
+                all_candidates = registry_io.load_candidate_rows(self.CANDIDATES_PATH)
                 candidates_total = len(all_candidates)
         except Exception as _exc:
             print(f"[DataPipeline] WARNING: could not load candidates file — {_exc}")
@@ -146,22 +301,72 @@ class DataPipeline:
         prices = {}
         # Track the data source used for each instrument.
         data_sources: dict[str, str] = {}
-        # Track whether broker / YH succeeded per instrument for the report.
+        # Track whether broker succeeded per instrument for the report.
         broker_available: dict[str, bool] = {}
-        yh_available: dict[str, bool] = {}
         # P10: track instruments removed from universe this run (for series cleanup).
         removed_instruments: list[str] = []
+        # Count instruments served from cache (weekend / already-current).
+        cache_served = 0
 
-        yh_fetcher = YHFinanceFetcher()
+        today_utc = datetime.datetime.now(datetime.timezone.utc).date()
 
+        n_instruments = len(instruments)
+        _last_pct_milestone = -1
+        did_fetch = False
         for i, conId in enumerate(instruments):
-            if i > 0:
+            if n_instruments > 0:
+                pct = int((i + 1) / n_instruments * 100)
+                milestone = pct - (pct % 5)
+                if milestone > _last_pct_milestone:
+                    _last_pct_milestone = milestone
+                    print(
+                        f"\r[DataPipeline] Retrieving recent prices: {milestone}%"
+                        f" ({i + 1}/{n_instruments})",
+                        end="",
+                        flush=True,
+                    )
+            if did_fetch:
                 time.sleep(self.RATE_LIMIT_DELAY)
+            did_fetch = False
+
+            # Checkpoint: flush accumulated prices to disk every N instruments
+            # so partial progress is preserved during long revalidation runs.
+            if i > 0 and i % self.CHECKPOINT_INTERVAL == 0:
+                master = self._flush_to_master(prices, master)
 
             last_date = self._get_last_stored_date(conId, master)
 
+            # Intra-day skip guard (DAY resolution only):
+            # Skip the broker call and serve the cached series when either:
+            #   (a) today's bar is already stored (days_since == 0), or
+            #   (b) today is a weekend day and the last bar is from this week
+            #       (days_since <= 3) — no new bar can have closed on a Saturday
+            #       or Sunday regardless of how many times the loop runs.
+            if resolution == "DAY" and last_date is not None:
+                last_ts = self._get_last_stored_ts(conId, master)
+                if last_ts is not None:
+                    days_since = (today_utc - last_ts.date()).days
+                    is_today = days_since == 0
+                    is_weekend_no_new_bar = today_utc.weekday() >= 5 and days_since <= 3
+                    if is_today or is_weekend_no_new_bar:
+                        parsed = self._reconstruct_from_master(conId, master)
+                        if parsed is not None:
+                            if is_today:
+                                reason = f"last bar is today ({today_utc})"
+                            else:
+                                reason = (
+                                    f"weekend — last bar {last_ts.date()},"
+                                    f" no new DAY bar on {today_utc}"
+                                )
+                            prices[conId] = parsed
+                            data_sources[conId] = "master_cache"
+                            broker_available[conId] = True
+                            cache_served += 1
+                            continue
+
             if last_date is not None:
                 # Incremental fetch — retrieve only bars after the last stored bar.
+                did_fetch = True
                 print(
                     f"[DataPipeline] Incremental fetch {conId}"
                     f" from {last_date} ({resolution})…"
@@ -184,11 +389,11 @@ class DataPipeline:
                         print(
                             f"[DataPipeline] WARNING: skipping {conId} — {exc2} (last known T2={last_t2})"
                         )
-                        self._update_t2_status(conId, "NO", f"fetch exception: {exc2}")
-                        self._remove_from_universe(conId)
-                        removed_instruments.append(conId)
+                        if revalidate:
+                            self._update_t2_status(conId, "NO", f"fetch exception: {exc2}")
+                            self._remove_from_universe(conId)
+                            removed_instruments.append(conId)
                         broker_available[conId] = False
-                        yh_available[conId] = False
                         continue
 
                 parsed = self._bars_to_columns(bars)
@@ -209,9 +414,8 @@ class DataPipeline:
                             " skipping this run."
                         )
                         broker_available[conId] = False
-                        yh_available[conId] = False
                         continue
-                else:
+                elif revalidate:
                     self._update_t2_status(
                         conId, "YES", f"{len(bars)} new bar(s) fetched"
                     )
@@ -219,24 +423,46 @@ class DataPipeline:
                 prices[conId] = parsed
                 data_sources[conId] = "broker"
                 broker_available[conId] = True
-                yh_available[conId] = False
             else:
-                # Cold start — fetch the configured lookback window.
+                # No stored data for this instrument.
+                if not revalidate:
+                    # No stored data on a non-revalidation run: remove from universe.
+                    # The instrument will be cold-started if re-added via revalidation.
+                    self._remove_from_universe(conId)
+                    removed_instruments.append(conId)
+                    continue
+
+                # Cold start — fetch the configured lookback window with up to
+                # 2 retries (2s backoff) before declaring T2=NO.
+                did_fetch = True
                 print(
                     f"[DataPipeline] Cold-start fetch {conId}"
                     f" ({resolution}, {lookback} bars)…"
                 )
                 broker_ok = False
                 parsed = None
-                try:
-                    bars = adapter.fetch_historical_prices(
-                        conId, resolution, lookback
-                    )
-                    parsed = self._bars_to_columns(bars)
-                    if parsed is not None and not self._all_none(parsed):
-                        broker_ok = True
-                except Exception as exc:
-                    print(f"[DataPipeline] WARNING: broker fetch failed for {conId} — {exc}")
+                bars: list = []
+                attempts = 3  # initial + 2 retries
+                for attempt in range(1, attempts + 1):
+                    try:
+                        bars = adapter.fetch_historical_prices(
+                            conId, resolution, lookback
+                        )
+                        parsed = self._bars_to_columns(bars)
+                        if parsed is not None and not self._all_none(parsed):
+                            broker_ok = True
+                            break
+                        print(
+                            f"[DataPipeline] Cold-start {conId}: attempt {attempt}/{attempts}"
+                            " returned no usable bars."
+                        )
+                    except Exception as exc:
+                        print(
+                            f"[DataPipeline] Cold-start {conId}: attempt {attempt}/{attempts}"
+                            f" raised — {exc}"
+                        )
+                    if attempt < attempts:
+                        time.sleep(2.0)
 
                 broker_available[conId] = broker_ok
 
@@ -246,74 +472,131 @@ class DataPipeline:
                     )
                     prices[conId] = parsed
                     data_sources[conId] = "broker"
-                    yh_available[conId] = False
                     continue
 
-                # Cold-start broker fetch failed — try YH Finance fallback.
+                # All cold-start attempts failed — remove from universe.
                 print(
-                    f"[DataPipeline] Broker data unavailable for {conId}, "
-                    "trying YH Finance fallback…"
+                    f"[DataPipeline] WARNING: no usable data for {conId}"
+                    " (cold-start, broker returned nothing after 3 attempts)"
+                    " — removing from universe."
                 )
-                yh_bars = yh_fetcher.fetch_historical_prices(conId, resolution, lookback)
-                yh_parsed = self._bars_to_columns(yh_bars) if yh_bars else None
-
-                if yh_parsed is not None and not self._all_none(yh_parsed):
-                    print(f"[DataPipeline] YH Finance fallback succeeded for {conId}.")
-                    self._update_t2_status(
-                        conId, "YES",
-                        f"{len(yh_bars)} bar(s) fetched via YH Finance fallback (cold-start)"
-                    )
-                    prices[conId] = yh_parsed
-                    data_sources[conId] = "yh_finance"
-                    yh_available[conId] = True
-                else:
-                    # Both broker and YH Finance failed — remove from universe.
-                    print(
-                        f"[DataPipeline] WARNING: no usable data for {conId}"
-                        " (cold-start, both broker and YH Finance failed)"
-                        " — removing from universe."
-                    )
-                    self._update_t2_status(
-                        conId, "NO",
-                        "cold-start fetch returned no usable bars from broker or YH Finance"
-                    )
-                    self._remove_from_universe(conId)
-                    removed_instruments.append(conId)
-                    yh_available[conId] = False
+                self._update_t2_status(
+                    conId, "NO",
+                    "cold-start fetch returned no usable bars from broker after 3 attempts"
+                )
+                self._remove_from_universe(conId)
+                removed_instruments.append(conId)
 
         prices = self._clean_prices(prices)
 
-        # --- Investable universe log (P1) ---
+        # Finalise the progress line before any post-loop output.
+        if n_instruments > 0:
+            print()
+
+        # --- Cache-served summary (printed once per run) ---
         universe_size = len(instruments)
-        investable_size = len(prices)
-        pct_active = (investable_size / universe_size * 100) if universe_size > 0 else 0.0
+        if cache_served > 0 and universe_size > 0:
+            pct_cache = cache_served / universe_size * 100
+            print(
+                f"[DataPipeline] {cache_served}/{universe_size} instruments"
+                f" ({pct_cache:.1f}%) served from cache"
+                " (no new DAY bar — weekend or already current)."
+            )
+
+        # --- Active universe log (P1) ---
+        universe_size = len(instruments)
+        active_size = len(prices)
+        pct_active = (active_size / universe_size * 100) if universe_size > 0 else 0.0
         log_msg = (
-            f"[DataPipeline] Investable universe: {investable_size}/{universe_size} active"
+            f"[DataPipeline] Active universe: {active_size}/{universe_size} priced"
             f" ({pct_active:.1f}%)"
         )
         if candidates_total > 0:
-            pct_total = investable_size / candidates_total * 100
-            log_msg += f", {investable_size}/{candidates_total} across all candidates ({pct_total:.1f}%)"
+            pct_total = active_size / candidates_total * 100
+            log_msg += f"; {active_size}/{candidates_total} of all candidates ({pct_total:.1f}%)"
+        log_msg += "."
         print(log_msg)
 
         # --- Candidates report (non-blocking side effect) ---
         try:
             self._write_candidates_report(
-                instruments, prices, data_sources, broker_available, yh_available,
+                instruments, prices, data_sources, broker_available,
                 master=master, all_candidates=all_candidates,
             )
         except Exception as exc:
             print(f"[DataPipeline] WARNING: candidates report write failed — {exc}")
 
         # --- Fetch instrument metadata with dealing rules ---
-        instrument_metadata = {}
-        for i, conId in enumerate(prices):
-            if i > 0:
-                time.sleep(self.RATE_LIMIT_DELAY)
-            try:
-                instrument_metadata[conId] = adapter.fetch_instrument_info(conId)
-            except Exception as exc:
-                print(f"[DataPipeline] WARNING: metadata fetch failed for {conId} — {exc}")
+        metadata_cache = self._load_metadata_cache()
+        instrument_metadata: dict = {}
+        did_metadata_fetch = False
+        skipped_metadata = 0
+        fetched_ok = 0
+        metadata_failed_ids: list[str] = []
+        total_metadata = len(prices)
+        # Snapshot keys: under revalidate=True the loop may flag instruments
+        # for removal, which mutates ``prices`` after the loop. Iterating a
+        # snapshot avoids "dictionary changed size during iteration".
+        for conId in list(prices):
+            # Metadata skip guard.
+            # revalidate=False  → use any existing cache entry regardless of age;
+            #                     fetch only for instruments not yet in cache.
+            # revalidate=True   → always fetch fresh data (cache is bypassed).
+            cached = metadata_cache.get(conId)
+            if not revalidate and cached:
+                try:
+                    if "fetched_date" in cached:
+                        instrument_metadata[conId] = {
+                            k: v for k, v in cached.items() if k != "fetched_date"
+                        }
+                        skipped_metadata += 1
+                        continue
+                except (TypeError, AttributeError):
+                    pass  # malformed cache entry — fall through to live fetch
+
+            # Live fetch with retries. Under revalidate=True a persistent
+            # failure causes exclusion from the universe (no fallback dict);
+            # under revalidate=False the existing fallback dict is used so a
+            # transient broker hiccup does not silently shrink the universe
+            # on a routine run.
+            attempts = 3 if revalidate else 1
+            info = None
+            last_exc: "Exception | None" = None
+            for attempt in range(1, attempts + 1):
+                if did_metadata_fetch:
+                    time.sleep(self.RATE_LIMIT_DELAY)
+                did_metadata_fetch = True
+                try:
+                    info = adapter.fetch_instrument_info(conId)
+                    break
+                except Exception as exc:  # noqa: BLE001
+                    last_exc = exc
+                    if attempt < attempts:
+                        print(
+                            f"[DataPipeline] Metadata fetch {conId}:"
+                            f" attempt {attempt}/{attempts} failed — {exc}"
+                        )
+                        time.sleep(2.0)
+
+            if info is not None:
+                instrument_metadata[conId] = info
+                metadata_cache[conId] = {**info, "fetched_date": today_utc.isoformat()}
+                fetched_ok += 1
+                continue
+
+            # All attempts failed.
+            if revalidate:
+                print(
+                    f"[DataPipeline] WARNING: metadata fetch failed for {conId}"
+                    f" after {attempts} attempt(s) — {last_exc}."
+                    " Removing from universe (revalidate run)."
+                )
+                metadata_failed_ids.append(conId)
+            else:
+                print(
+                    f"[DataPipeline] WARNING: metadata fetch failed for {conId}"
+                    f" — {last_exc}. Using fallback metadata."
+                )
                 instrument_metadata[conId] = {
                     "instrument_name": conId,
                     "conId": conId,
@@ -326,6 +609,29 @@ class DataPipeline:
                     "buy_allowed": True,
                     "sell_allowed": True,
                 }
+
+        # --- Apply batched exclusions from metadata failures (revalidate only) ---
+        # Persist the cache first so any successfully fetched entries are not
+        # lost if a subsequent disk write fails mid-cleanup.
+        try:
+            self._save_metadata_cache(metadata_cache)
+        except Exception as exc:
+            print(f"[DataPipeline] WARNING: metadata cache save failed — {exc}")
+
+        for conId in metadata_failed_ids:
+            prices.pop(conId, None)
+            data_sources.pop(conId, None)
+            broker_available.pop(conId, None)
+            instrument_metadata.pop(conId, None)
+            self._remove_from_universe(conId)
+            removed_instruments.append(conId)
+
+        # --- Summary log ---
+        print(
+            f"[DataPipeline] Metadata: fetched {fetched_ok},"
+            f" cached {skipped_metadata},"
+            f" excluded {len(metadata_failed_ids)} of {total_metadata} instrument(s)."
+        )
 
         # --- Persistence side effect ---
         try:
@@ -369,7 +675,6 @@ class DataPipeline:
         prices: dict,
         data_sources: dict,
         broker_available: dict,
-        yh_available: dict,
         master: "dict | None" = None,
         all_candidates: "list | None" = None,
     ) -> None:
@@ -408,8 +713,57 @@ class DataPipeline:
                 return 0
             return int(ref_sheet[conId].notna().sum())
 
+        def _oldest_bar_date(conId: str) -> str:
+            """Return ISO date of the oldest non-NaN bar in master, or ''."""
+            if master is None:
+                return ""
+            ref_sheet = master.get(self.SHEET_NAMES[0])
+            if ref_sheet is None or ref_sheet.empty or conId not in ref_sheet.columns:
+                return ""
+            col = ref_sheet[conId].dropna()
+            if col.empty:
+                return ""
+            return col.index.min().date().isoformat()
+
         rows = []
         seen_instruments: set[str] = set()
+
+        # Preserve three backfill-related columns from the existing on-disk
+        # report (written by diagnostic_tools/backfill_universe), so the live
+        # pipeline does not blow them away.  Best effort: missing/unreadable
+        # file is ignored silently.
+        preserved_by_id: dict[str, dict] = {}
+        _preserved_cols = (
+            "total_bars_in_master_backfill",
+            "oldest_bar_date",
+            "most_recent_bar_date",
+        )
+        if os.path.isfile(report_path):
+            try:
+                with open(report_path, "r", newline="") as _existing:
+                    _reader = csv.DictReader(_existing)
+                    for _row in _reader:
+                        _cid = _row.get("conId", "")
+                        if not _cid:
+                            continue
+                        preserved_by_id[_cid] = {
+                            _k: _row.get(_k, "") for _k in _preserved_cols if _k in _row
+                        }
+            except Exception:
+                preserved_by_id = {}
+
+        def _merge_preserved(row: dict) -> dict:
+            extras = preserved_by_id.get(row["conId"], {})
+            for k in _preserved_cols:
+                if k in extras:
+                    row[k] = extras[k]
+            # Live oldest_bar_date from master overrides preserved value when
+            # master actually has data for this conId; otherwise the preserved
+            # value (written by backfill) wins.
+            live_oldest = _oldest_bar_date(row["conId"])
+            if live_oldest:
+                row["oldest_bar_date"] = live_oldest
+            return row
 
         # P2: iterate ALL candidates from universe_candidates.json first,
         # so failures are not silently dropped from the output sheet.
@@ -421,9 +775,8 @@ class DataPipeline:
             t1 = candidate.get("t1_status", "")
             t2 = candidate.get("t2_status", "")
             pre_passed = "" if (t1 == "PASS" and t2 == "YES") else "false"
-            rows.append({
+            rows.append(_merge_preserved({
                 "conId": cand_id,
-                "yh_ticker": get_yh_ticker(cand_id) or "",
                 "name": candidate.get("name", ""),
                 "t1_status": t1,
                 "t2_status": t2,
@@ -431,17 +784,15 @@ class DataPipeline:
                 "bars_fetched_this_run": _bars_fetched(cand_id),
                 "total_bars_in_master": _bars_in_master(cand_id),
                 "broker_data_available": broker_available.get(cand_id, False),
-                "yh_data_available": yh_available.get(cand_id, False),
                 "validation_passed": pre_passed,
-            })
+            }))
 
         # Include any active-universe instruments not present in candidates.json.
         for conId in instruments:
             if conId in seen_instruments:
                 continue
-            rows.append({
+            rows.append(_merge_preserved({
                 "conId": conId,
-                "yh_ticker": get_yh_ticker(conId) or "",
                 "name": "",
                 "t1_status": "",
                 "t2_status": "",
@@ -449,13 +800,11 @@ class DataPipeline:
                 "bars_fetched_this_run": _bars_fetched(conId),
                 "total_bars_in_master": _bars_in_master(conId),
                 "broker_data_available": broker_available.get(conId, False),
-                "yh_data_available": yh_available.get(conId, False),
                 "validation_passed": "",
-            })
+            }))
 
         fieldnames = [
             "conId",
-            "yh_ticker",
             "name",
             "t1_status",
             "t2_status",
@@ -463,17 +812,41 @@ class DataPipeline:
             "bars_fetched_this_run",
             "total_bars_in_master",
             "broker_data_available",
-            "yh_data_available",
             "validation_passed",
+            "total_bars_in_master_backfill",
+            "oldest_bar_date",
+            "most_recent_bar_date",
         ]
         with open(report_path, "w", newline="") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction="ignore")
             writer.writeheader()
             writer.writerows(rows)
 
     # ------------------------------------------------------------------
     # Incremental fetch helpers
     # ------------------------------------------------------------------
+
+    def _load_metadata_cache(self) -> dict:
+        """Load the persisted instrument metadata cache from disk."""
+        if not os.path.isfile(self.METADATA_CACHE_FILE):
+            print(
+                f"[DataPipeline] Metadata cache not found ({self.METADATA_CACHE_FILE})"
+                " — regenerating from broker. This takes ~1s per instrument."
+            )
+            return {}
+        try:
+            with open(self.METADATA_CACHE_FILE, "r", encoding="utf-8") as fh:
+                return json.load(fh)
+        except (json.JSONDecodeError, OSError):
+            return {}
+
+    def _save_metadata_cache(self, cache: dict) -> None:
+        """Persist the instrument metadata cache to disk atomically."""
+        os.makedirs(os.path.dirname(self.METADATA_CACHE_FILE) or ".", exist_ok=True)
+        tmp = self.METADATA_CACHE_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(cache, fh, indent=2)
+        os.replace(tmp, self.METADATA_CACHE_FILE)
 
     def _get_candidate_t2_status(self, conId: str) -> str:
         """Return the last known T2 status for conId from universe_candidates.json.
@@ -485,9 +858,8 @@ class DataPipeline:
         if not os.path.isfile(self.CANDIDATES_PATH):
             return "UNKNOWN"
         try:
-            with open(self.CANDIDATES_PATH) as f:
-                data = json.load(f)
-            for candidate in data.get("candidates", []):
+            rows = registry_io.load_candidate_rows(self.CANDIDATES_PATH)
+            for candidate in rows:
                 if candidate.get("conId") == conId:
                     return candidate.get("t2_status", "UNKNOWN")
         except Exception:
@@ -516,6 +888,27 @@ class DataPipeline:
         # Add 1 second so the last stored bar is not re-fetched.
         next_ts = last_ts + pd.Timedelta(seconds=1)
         return next_ts.strftime("%Y-%m-%dT%H:%M:%S")
+
+    def _get_last_stored_ts(
+        self, conId: str, master: "dict | None"
+    ) -> "pd.Timestamp | None":
+        """Return the raw last stored UTC Timestamp for *conId* (no +1s offset).
+
+        Used by the intra-day skip guard to compare bar dates without the
+        offset that ``_get_last_stored_date`` applies for broker fetch calls.
+        Returns ``None`` when no stored data exists for *conId*.
+        """
+        if master is None:
+            return None
+        ref_sheet = master.get(self.SHEET_NAMES[0])  # mid_close
+        if ref_sheet is None or ref_sheet.empty:
+            return None
+        if conId not in ref_sheet.columns:
+            return None
+        series = ref_sheet[conId].dropna()
+        if series.empty:
+            return None
+        return series.index.max()
 
     def _reconstruct_from_master(
         self, conId: str, master: "dict | None"
@@ -558,12 +951,11 @@ class DataPipeline:
         if not os.path.isfile(self.CANDIDATES_PATH):
             return
         try:
-            with open(self.CANDIDATES_PATH) as f:
-                data = json.load(f)
+            rows = registry_io.load_candidate_rows(self.CANDIDATES_PATH)
 
             now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             updated = False
-            for candidate in data.get("candidates", []):
+            for candidate in rows:
                 if candidate.get("conId") == conId:
                     candidate["t2_status"] = t2_status
                     candidate["valid"] = (
@@ -575,9 +967,7 @@ class DataPipeline:
 
             if updated:
                 print(f"[DataPipeline] T2 {t2_status} {conId} — {t2_reason}")
-                with open(self.CANDIDATES_PATH, "w") as f:
-                    json.dump(data, f, indent=2)
-                    f.write("\n")
+                registry_io.save_candidate_rows(rows, self.CANDIDATES_PATH)
         except Exception as exc:
             print(
                 f"[DataPipeline] WARNING: could not update T2 status"
@@ -600,27 +990,21 @@ class DataPipeline:
         if not os.path.isfile(self.UNIVERSE_PATH):
             return
         try:
-            with open(self.UNIVERSE_PATH) as f:
-                data = json.load(f)
+            rows = registry_io.load_universe_rows(self.UNIVERSE_PATH)
 
-            original_count = len(data.get("instruments", []))
-            data["instruments"] = [
-                inst for inst in data.get("instruments", [])
-                if inst.get("conId") != conId
-            ]
-            removed = original_count - len(data["instruments"])
+            original_count = len(rows)
+            rows = [inst for inst in rows if inst.get("conId") != conId]
+            removed = original_count - len(rows)
             if removed > 0:
                 print(
-                    f"[DataPipeline] Removed {conId} from universe.json"
+                    f"[DataPipeline] Removed {conId} from universe.csv"
                     " (T2=NO, zero bars in last fetch)."
                 )
-                with open(self.UNIVERSE_PATH, "w") as f:
-                    json.dump(data, f, indent=2)
-                    f.write("\n")
+                registry_io.save_universe_rows(rows, self.UNIVERSE_PATH)
         except Exception as exc:
             print(
                 f"[DataPipeline] WARNING: could not remove {conId}"
-                f" from universe.json — {exc}"
+                f" from universe.csv — {exc}"
             )
 
     # ------------------------------------------------------------------
@@ -665,7 +1049,7 @@ class DataPipeline:
         return cleaned
 
     # ------------------------------------------------------------------
-    # DataFrame / xlsx methods
+    # DataFrame / csv methods
     # ------------------------------------------------------------------
 
     def _build_dataframes(self, prices: dict) -> dict:
@@ -678,25 +1062,30 @@ class DataPipeline:
             series_dict[conId] = pd.Series(vals, index=index, dtype=float)
         return {"mid_close": pd.DataFrame(series_dict) if series_dict else pd.DataFrame()}
 
-    def _load_series_file(self, path: str) -> dict | None:
-        """Read an existing multi-sheet xlsx file into dict-of-DataFrames.
+    @staticmethod
+    def _read_csv_series(path: str) -> "pd.DataFrame":
+        """Read a single-column-index csv into a UTC-indexed DataFrame.
 
-        If the file exists but is a corrupt/partial xlsx archive (typically
-        caused by a previous run being interrupted mid-save), it is quarantined
-        to ``<path>.corrupt`` and ``None`` is returned so the caller rebuilds a
-        fresh master and the next save replaces the broken file atomically.
+        Raises pandas' parser exceptions on a malformed file; callers decide
+        whether to quarantine or merely warn.
+        """
+        df = pd.read_csv(path, index_col=0)
+        df.index = pd.to_datetime(df.index, utc=True, errors="coerce")
+        return df
+
+    def _load_master_series(self, path: str) -> "dict | None":
+        """Read the master series csv into ``{"mid_close": DataFrame}``.
+
+        On a corrupt or unreadable file the file is quarantined to
+        ``<path>.corrupt`` and ``None`` is returned so the caller rebuilds a
+        fresh master.  The next save replaces the broken file atomically.
         """
         if not os.path.isfile(path):
             return None
         try:
-            sheets = {}
-            with pd.ExcelFile(path, engine="openpyxl") as xls:
-                for name in xls.sheet_names:
-                    df = pd.read_excel(xls, sheet_name=name, index_col=0)
-                    df.index = pd.to_datetime(df.index, utc=True, errors="coerce")
-                    sheets[name] = df
-            return sheets
-        except (zipfile.BadZipFile, KeyError) as exc:
+            df = self._read_csv_series(path)
+            return {"mid_close": df}
+        except Exception as exc:  # noqa: BLE001 — quarantine on any read failure
             quarantine = path + ".corrupt"
             try:
                 if os.path.exists(quarantine):
@@ -714,35 +1103,65 @@ class DataPipeline:
                 )
             return None
 
-    def _save_series_file(self, series: dict, path: str) -> None:
-        """Write dict-of-DataFrames to a multi-sheet xlsx file, sorted ascending.
+    def _load_historic_series(self, path: str) -> "dict | None":
+        """Read a user-supplied historic csv.  Warn on error; never quarantine."""
+        if not os.path.isfile(path):
+            return None
+        try:
+            df = self._read_csv_series(path)
+            return {"mid_close": df}
+        except Exception as exc:  # noqa: BLE001 — user file, just warn
+            print(
+                f"[DataPipeline] WARNING: could not load historic file {path}"
+                f" ({exc}); skipping."
+            )
+            return None
 
-        Crash-safe: writes to ``<path>.tmp`` first, then atomically replaces the
-        target via ``os.replace``. This prevents a process interruption from
-        leaving behind a half-written archive missing ``[Content_Types].xml``.
+    # Backwards-compatible shim — kept for any external callers; uses the
+    # master loader (quarantines on failure).
+    def _load_series_file(self, path: str) -> "dict | None":
+        return self._load_master_series(path)
+
+    def _flush_to_master(self, prices: dict, master: "dict | None") -> "dict":
+        """Merge current prices into master and save to disk.
+
+        Called periodically during the fetch loop to checkpoint progress.
+        Returns the updated master dict so subsequent loop iterations can
+        use it for ``_get_last_stored_date`` lookups.
         """
-        # openpyxl requires at least one visible sheet; it hides any sheet
-        # with zero rows, so writing a dict of only-empty DataFrames raises
-        # "At least one sheet must be visible". Skip persistence entirely in
-        # that case (e.g. empty universe, first run before any prices fetched).
-        if not series or all(df.empty for df in series.values()):
+        if not prices:
+            return master or {name: pd.DataFrame() for name in self.SHEET_NAMES}
+        frames = self._build_dataframes(prices)
+        if master is None:
+            master = {name: pd.DataFrame() for name in self.SHEET_NAMES}
+        master = self._merge_series(frames, master)
+        try:
+            self._save_series_file(master, self.SERIES_FILE)
+        except Exception as exc:
+            print(f"[DataPipeline] WARNING: checkpoint save failed — {exc}")
+        return master
+
+    def _save_series_file(self, series: dict, path: str) -> None:
+        """Write the mid_close DataFrame to csv, sorted ascending.
+
+        Crash-safe: writes to ``<path>.tmp`` first, then atomically replaces
+        the target via ``os.replace``.  Skips persistence entirely when the
+        series is empty (e.g. first run before any prices fetched).
+        """
+        if not series:
+            return
+        df = series.get("mid_close")
+        if df is None or df.empty:
             return
         parent = os.path.dirname(path)
         if parent:
             os.makedirs(parent, exist_ok=True)
-        # Suffix must end in .xlsx so pandas' ExcelWriter accepts the openpyxl
-        # engine; it validates the file extension against the engine's
-        # supported_extensions property.
-        tmp_path = path + ".tmp.xlsx"
+        tmp_path = path + ".tmp"
         try:
-            with pd.ExcelWriter(tmp_path, engine="openpyxl") as writer:
-                for name, df in series.items():
-                    sorted_df = df.sort_index(ascending=True)
-                    # Excel does not support timezone-aware datetimes; strip tz
-                    # before writing. _load_series_file restores UTC on read.
-                    if sorted_df.index.tz is not None:
-                        sorted_df.index = sorted_df.index.tz_localize(None)
-                    sorted_df.to_excel(writer, sheet_name=name)
+            sorted_df = df.sort_index(ascending=True)
+            if sorted_df.index.tz is None:
+                sorted_df.index = pd.to_datetime(sorted_df.index, utc=True)
+            sorted_df.to_csv(tmp_path, index=True)
             os.replace(tmp_path, path)
         except Exception:
             if os.path.exists(tmp_path):
@@ -805,17 +1224,16 @@ class DataPipeline:
         return merged
 
     def _ingest_historic_files(self, master: dict, folder_path: str) -> dict:
-        """Scan folder for xlsx files and merge each into master."""
+        """Scan folder for csv files and merge each into master."""
         if not os.path.isdir(folder_path):
             return master
         for filename in sorted(os.listdir(folder_path)):
-            if not filename.endswith(".xlsx"):
+            if not filename.endswith(".csv"):
                 continue
             filepath = os.path.join(folder_path, filename)
             print(f"[DataPipeline] Ingesting historic file: {filename}")
-            loaded = self._load_series_file(filepath)
+            loaded = self._load_historic_series(filepath)
             if loaded is None:
-                print(f"[DataPipeline] WARNING: could not load '{filename}', skipping.")
                 continue
             if not self._validate_series_schema(loaded):
                 print(f"[DataPipeline] WARNING: '{filename}' failed validation, skipping.")

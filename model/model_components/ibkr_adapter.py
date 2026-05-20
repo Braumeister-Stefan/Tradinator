@@ -10,10 +10,41 @@ It does not constitute trading advice, investment recommendation, or financial
 guidance of any kind. Use at your own risk.
 """
 
+import logging
 import os
 from datetime import datetime
 
 from dotenv import load_dotenv
+
+# Suppress known-benign ib_insync connect-time log noise.
+#
+# Root cause of the previous failure: Python's logging.Filter on a logger only
+# filters records emitted *directly* by that logger.  Records that propagate up
+# from child loggers are NOT re-filtered by the parent — only by the parent's
+# *handlers*.  Attaching the filter to "ib_insync" therefore had no effect on
+# records from "ib_insync.wrapper" or "ib_insync.ib".
+#
+# Fix: attach to the exact child loggers that emit the unwanted records.
+#   ib_insync.wrapper — Error 321 "Group name cannot be null"
+#                       (non-FA paper account, fired by reqAccountSummary("All"))
+#   ib_insync.ib      — "positions request timed out" /
+#                       "account updates request timed out"
+#                       (startup subscriptions that never complete on paper)
+class _SuppressIbConnectNoise(logging.Filter):
+    _SUPPRESSED = (
+        "Error 321,",
+        "positions request timed out",
+        "account updates request timed out",
+    )
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        return not any(s in msg for s in self._SUPPRESSED)
+
+
+_noise_filter = _SuppressIbConnectNoise()
+logging.getLogger("ib_insync.wrapper").addFilter(_noise_filter)
+logging.getLogger("ib_insync.ib").addFilter(_noise_filter)
 
 # Guard: import cleanly even when ib_insync is absent.
 try:
@@ -46,14 +77,17 @@ def _build_contract_map() -> dict:
         return {}
     return {
         # --- Indices (IND) ---
-        # FTSE 100 is not directly available as secType='IND' on IBKR;
-        # the nearest liquid proxy is the LIFFE futures contract 'Z' on ICEEUSOFT.
-        "FTSE":   Contract(symbol="Z",      secType="FUT", exchange="ICEEUSOFT", currency="GBP"),
+        "SPX":    Contract(symbol="SPX",    secType="IND", exchange="CBOE",      currency="USD"),
+        "NDX":    Contract(symbol="NDX",    secType="IND", exchange="NASDAQ",    currency="USD"),
+        "RUT":    Contract(symbol="RUT",    secType="IND", exchange="RUSSELL",   currency="USD"),
+        # FTSE 100 futures trade on ICE Futures Europe (exchange code ICEEU).
+        # No expiry is set; _resolve_contract qualifies this stub to the front-month.
+        "FTSE":   Contract(symbol="Z",      secType="FUT", exchange="ICEEU",     currency="GBP"),
         "DAX":    Contract(symbol="DAX",    secType="IND", exchange="EUREX",     currency="EUR"),
         "CAC":    Contract(symbol="CAC40",  secType="IND", exchange="MONEP",     currency="EUR"),
         "IBEX":   Contract(symbol="IBEX35", secType="IND", exchange="MEFFRV",    currency="EUR"),
         "AEX":    Contract(symbol="EOE",    secType="IND", exchange="FTA",       currency="EUR"),
-        "SMI":    Contract(symbol="SMI",    secType="IND", exchange="SOFFEX",    currency="CHF"),
+        "SMI":    Contract(symbol="SMI",    secType="IND", exchange="EBS",       currency="CHF"),
         "OMX":    Contract(symbol="OMX",    secType="IND", exchange="OMS",       currency="SEK"),
         "NIKKEI": Contract(symbol="N225",   secType="IND", exchange="OSE.JPN",   currency="JPY"),
         "HSI":    Contract(symbol="HSI",    secType="IND", exchange="HKFE",      currency="HKD"),
@@ -83,6 +117,9 @@ class IBKRBrokerAdapter:
         self._account_id: str = ""
         self._pending_trades: "dict[str, Trade]" = {}
         self._contract_map: dict = _build_contract_map()
+        # Session-level cache for named-contract qualification.
+        # Values: qualified Contract on success, None when IBKR returned no definition.
+        self._qualified_named: "dict[str, Contract | None]" = {}
 
     # ------------------------------------------------------------------
     # BrokerAdapter interface
@@ -131,19 +168,55 @@ class IBKRBrokerAdapter:
                 "3. Ensure no other session is using the same IBKR_CLIENT_ID."
             )
             raise RuntimeError(msg) from exc
+        # Cap all blocking req* calls so they cannot hang indefinitely.
+        self._ib.RequestTimeout = 30
+        # If no account ID was configured, derive it from the managed accounts
+        # list that IBKR sends at connect time.
+        if not self._account_id:
+            managed = self._ib.managedAccounts()
+            if managed:
+                self._account_id = managed[0]
+        # Poll until the accountValues cache is populated or until the deadline.
+        # On paper accounts the startup reqAccountUpdates subscription often
+        # times out — the log noise is suppressed — leaving the cache empty if
+        # we simply sleep a fixed 5 s.  Polling detects population reliably.
+        _ACCOUNT_READY_TIMEOUT = 30  # seconds
+        _deadline = _ACCOUNT_READY_TIMEOUT
+        while _deadline > 0:
+            if self._ib.accountValues(self._account_id):
+                break
+            self._ib.sleep(1)
+            _deadline -= 1
+        else:
+            print(
+                "[IBKRBrokerAdapter][WARN] accountValues cache still empty after "
+                f"{_ACCOUNT_READY_TIMEOUT}s; account info will read as 0."
+            )
         print(f"[IBKRBrokerAdapter] Connected to {host}:{port} (clientId={client_id})")
         return {"account_id": self._account_id}
 
     def get_account_info(self) -> dict:
-        """Fetch TotalCashValue and NetLiquidation from the IB account summary."""
+        """Fetch TotalCashValue and NetLiquidation from the IB account values cache."""
         ib = self._require_session()
-        summary = ib.accountSummary(self._account_id)
-        values: dict[str, float] = {}
-        for item in summary:
+        # accountValues() is a non-blocking cache read (populated by the
+        # reqAccountUpdates subscription started during connect).
+        # accountSummary() is blocking on first call and hangs on paper accounts.
+        account_vals = ib.accountValues(self._account_id)
+        # Prefer the BASE-currency aggregate; fall back to any currency so that
+        # a non-BASE paper account (e.g. USD-denominated with no BASE tag) still
+        # returns real data instead of silently yielding 0.0.
+        base_vals: dict[str, float] = {}
+        any_vals: dict[str, float] = {}
+        for item in account_vals:
             if item.tag == "TotalCashValue":
-                values["cash"] = float(item.value)
+                any_vals.setdefault("cash", float(item.value))
+                if item.currency == "BASE":
+                    base_vals["cash"] = float(item.value)
             elif item.tag == "NetLiquidation":
-                values["balance"] = float(item.value)
+                any_vals.setdefault("balance", float(item.value))
+                if item.currency == "BASE":
+                    base_vals["balance"] = float(item.value)
+        values = base_vals if base_vals else any_vals
         return {
             "cash": values.get("cash", 0.0),
             "balance": values.get("balance", 0.0),
@@ -182,7 +255,7 @@ class IBKRBrokerAdapter:
             endDateTime="",
             durationStr=duration,
             barSizeSetting=bar_size,
-            whatToShow="MIDPOINT",
+            whatToShow=_what_to_show(contract),
             useRTH=True,
         )
         return [_bar_to_dict(b) for b in bars]
@@ -196,14 +269,21 @@ class IBKRBrokerAdapter:
         bar_size = _RESOLUTION_MAP.get(resolution.upper(), "1 day")
         # Parse from_date; pad duration by 5 days to avoid off-by-one at boundaries.
         parsed = datetime.fromisoformat(from_date.rstrip("Z").split(".")[0])
-        days_back = (datetime.now() - parsed).days + 5
-        duration = f"{max(days_back, 1)} D"
+        days_back = max((datetime.now() - parsed).days + 5, 1)
+        # IBKR reqHistoricalData rejects durationStr in days when the span
+        # exceeds 365 days (error 321 — "must be made in years"). Switch to
+        # the Y unit, rounding up so the requested window is fully covered.
+        if days_back > 365:
+            years = (days_back + 364) // 365
+            duration = f"{years} Y"
+        else:
+            duration = f"{days_back} D"
         bars = ib.reqHistoricalData(
             contract,
             endDateTime="",
             durationStr=duration,
             barSizeSetting=bar_size,
-            whatToShow="MIDPOINT",
+            whatToShow=_what_to_show(contract),
             useRTH=True,
         )
         return [_bar_to_dict(b) for b in bars]
@@ -214,16 +294,30 @@ class IBKRBrokerAdapter:
         contract = self._resolve_contract(conId)
         details_list = ib.reqContractDetails(contract)
         dealing_enabled = bool(details_list)
+        # Fractional-share trading via the API requires the IBKR account to be
+        # explicitly enabled for it. When not enabled (the default), submitting a
+        # non-integer share quantity for STK returns error 10243 and the order
+        # is cancelled. Force the size increment / min deal size to whole shares
+        # so OrderGenerator's rounding produces integer quantities.
+        allow_fractional = bool(self.config.get("allow_fractional_shares", False))
         if details_list:
             det = details_list[0]
             cd = det.contract
+            raw_increment = float(det.sizeIncrement or 1.0)
+            raw_min_size = float(det.minSize or 1.0)
+            if cd.secType == "STK" and not allow_fractional:
+                size_increment = max(raw_increment, 1.0)
+                min_deal_size = max(raw_min_size, 1.0)
+            else:
+                size_increment = raw_increment
+                min_deal_size = raw_min_size
             return {
                 "instrument_name":    det.longName or conId,
                 "conId":      str(cd.conId),
                 "currency":           cd.currency or "Unknown",
-                "min_deal_size":      float(det.minSize or 1.0),
+                "min_deal_size":      min_deal_size,
                 "max_deal_size":      None,
-                "min_size_increment": float(det.sizeIncrement or 1.0),
+                "min_size_increment": size_increment,
                 "scaling_factor":     1.0,
                 "dealing_enabled":    dealing_enabled,
                 "buy_allowed":        True,
@@ -254,7 +348,7 @@ class IBKRBrokerAdapter:
         """Place a market order to open a position."""
         ib = self._require_session()
         contract = self._resolve_contract(conId)
-        order = MarketOrder(direction.upper(), size)
+        order = MarketOrder(direction.upper(), size, tif=self.config.get("tif", "DAY"))
         trade = ib.placeOrder(contract, order)
         self._pending_trades[str(trade.order.orderId)] = trade
         return {"deal_reference": str(trade.order.orderId)}
@@ -271,17 +365,23 @@ class IBKRBrokerAdapter:
         ib = self._require_session()
         # deal_id is conId string; build a minimal Contract for the close order.
         contract = Contract(conId=int(deal_id), exchange="SMART")
-        order = MarketOrder(direction.upper(), size)
+        order = MarketOrder(direction.upper(), size, tif=self.config.get("tif", "DAY"))
         trade = ib.placeOrder(contract, order)
         self._pending_trades[str(trade.order.orderId)] = trade
         return {"deal_reference": str(trade.order.orderId)}
 
     def confirm_deal(self, deal_reference: str) -> dict:
-        """Poll a pending trade for up to 10 s and return its final status."""
+        """Poll a pending trade for up to 10 s and return its final status.
+
+        Only orders that have reached the exchange (Submitted) or filled are
+        treated as ACCEPTED. PreSubmitted at timeout means the order is still
+        held by IB (e.g. market closed) and has not been routed — reporting
+        it as ACCEPTED would record a phantom position, so it is REJECTED.
+        """
         ib = self._require_session()
         trade = self._pending_trades.get(deal_reference)
         if trade is None:
-            return {"status": "REJECTED", "deal_id": None}
+            return {"status": "REJECTED", "deal_id": None, "reason": "unknown deal_reference"}
 
         # Poll until done or timeout.
         for _ in range(10):
@@ -290,18 +390,26 @@ class IBKRBrokerAdapter:
             ib.sleep(1.0)
 
         status_str = trade.orderStatus.status
-        if status_str in ("Filled", "Submitted", "PreSubmitted"):
-            mapped = "ACCEPTED"
-        elif status_str in ("Cancelled", "Inactive", "ApiCancelled"):
-            mapped = "REJECTED"
-        else:
-            # Still working after timeout — treat as accepted working order.
-            mapped = "ACCEPTED"
-
-        deal_id = (
-            str(trade.contract.conId) if mapped == "ACCEPTED" else None
-        )
-        return {"status": mapped, "deal_id": deal_id}
+        if status_str in ("Filled", "Submitted"):
+            return {
+                "status": "ACCEPTED",
+                "deal_id": str(trade.contract.conId),
+                "reason": "",
+            }
+        if status_str in ("Cancelled", "Inactive", "ApiCancelled"):
+            last_msg = trade.log[-1].message if trade.log else ""
+            return {
+                "status": "REJECTED",
+                "deal_id": None,
+                "reason": last_msg or f"order {status_str.lower()} by broker",
+            }
+        # PreSubmitted or any other non-terminal state after timeout: order is
+        # not live at the exchange. Do not record a position.
+        return {
+            "status": "REJECTED",
+            "deal_id": None,
+            "reason": f"order not routed (status={status_str}); market likely closed",
+        }
 
     def fetch_working_orders(self) -> list[dict]:
         """Return all Submitted/PreSubmitted orders currently open at IB."""
@@ -335,14 +443,55 @@ class IBKRBrokerAdapter:
         return self._ib
 
     def _resolve_contract(self, conId: str) -> "Contract":
-        """Map a canonical instrument symbol to an ib_insync Contract.
+        """Map a canonical instrument identifier to an ib_insync Contract.
 
-        Checks the hard-coded lookup table first; falls back to a generic
-        US equity Contract when the symbol is not found.
+        Resolution order:
+        1. Hard-coded lookup table (named symbols like "SPX", "DAX", "EURUSD").
+           All named contracts are validated once per session via
+           ``reqContractDetails``.  FUT stubs without an expiry are qualified
+           to the front-month.  If IBKR returns no security definition a
+           ``ValueError`` is raised so the pipeline removes the instrument.
+        2. Numeric strings are treated as IBKR contract IDs and resolved via
+           ``ib.qualifyContracts(Contract(conId=..., exchange="SMART"))``.
+        3. Otherwise fall back to a generic US-equity ticker on SMART routing.
         """
         if conId in self._contract_map:
-            return self._contract_map[conId]
-        # Default: treat unknown symbols as US equities on SMART routing.
+            # Return cached result from a prior qualify call this session.
+            if conId in self._qualified_named:
+                cached = self._qualified_named[conId]
+                if cached is None:
+                    raise ValueError(
+                        f"No security definition for '{conId}' (cached from earlier failure)"
+                    )
+                return cached
+            # First use: validate via reqContractDetails.
+            stub = self._contract_map[conId]
+            ib = self._require_session()
+            try:
+                details = ib.reqContractDetails(stub)
+            except Exception as exc:
+                self._qualified_named[conId] = None
+                raise ValueError(
+                    f"reqContractDetails failed for '{conId}': {exc}"
+                ) from exc
+            if not details:
+                self._qualified_named[conId] = None
+                raise ValueError(
+                    f"No security definition found for '{conId}' "
+                    f"({stub.secType}@{stub.exchange}) — "
+                    "instrument removed from universe."
+                )
+            qualified = details[0].contract
+            self._qualified_named[conId] = qualified
+            return qualified
+        if conId.isdigit():
+            stub = Contract(conId=int(conId), exchange="SMART")
+            ib = self._require_session()
+            qualified = ib.qualifyContracts(stub)
+            if qualified:
+                return qualified[0]
+            return stub
+        # Default: treat unknown non-numeric identifiers as US-equity tickers.
         return Contract(
             symbol=conId,
             secType="STK",
@@ -354,6 +503,17 @@ class IBKRBrokerAdapter:
 # ------------------------------------------------------------------
 # Module-level helpers
 # ------------------------------------------------------------------
+
+def _what_to_show(contract) -> str:
+    """Return the correct IBKR ``whatToShow`` value for a contract type.
+
+    IBKR only supports MIDPOINT for CASH (forex) contracts.  All other
+    security types (IND, STK, FUT, ETF) require TRADES.
+    """
+    if getattr(contract, "secType", "") == "CASH":
+        return "MIDPOINT"
+    return "TRADES"
+
 
 def _bar_to_dict(bar) -> dict:
     """Convert an ib_insync BarData object to the standard OHLCV dict."""

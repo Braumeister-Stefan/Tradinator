@@ -21,7 +21,7 @@ from .model_components import (
     Reconciliation,
     UniverseRefresher,
 )
-from .model_components.data_pipeline import load_universe
+from .model_components.data_pipeline import filter_by_gaps, filter_by_history, load_universe
 
 
 class Model:
@@ -62,14 +62,17 @@ class Model:
             except Exception:
                 pass
         self.config["universe"] = load_universe(self.config["universe_path"])
-        print(f"[Model] Universe reloaded: {len(self.config['universe'])} valid instrument(s).")
+        self.config["universe"] = filter_by_history(self.config["universe"], self.config)
+        self.config["universe"] = filter_by_gaps(self.config["universe"], self.config)
+        print(f"[Universe] Eligible for pricing: {len(self.config['universe'])} instrument(s).")
 
     def run_research(self):
         """Execute the research pipeline: Gather → Decide."""
         # Phase 1: GATHER
         broker_state = self.broker_connector.run()
         broker_state = self.reconciliation.run(broker_state)
-        market_data = self.data_pipeline.run(broker_state)
+        revalidate = self.config.get("revalidate", False)
+        market_data = self.data_pipeline.run(broker_state, revalidate=revalidate)
 
         # Phase 2: DECIDE
         signals = self.signal_engine.run(market_data)

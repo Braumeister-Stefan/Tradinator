@@ -37,7 +37,20 @@ class OrderExecutor:
 
         executions = []
         for i, order in enumerate(order_list):
-            result = self._execute_order(adapter, order, positions, metadata)
+            if self._is_duplicate_order(order, orderbook):
+                result = {
+                    "conId": order["conId"],
+                    "direction": order["direction"],
+                    "size": order["size"],
+                    "status": "REJECTED",
+                    "deal_reference": None,
+                    "deal_id": None,
+                    "reason": "duplicate: same-day order already accepted",
+                    "rejection_reason": "duplicate: same-day order already accepted",
+                    "timestamp": datetime.datetime.utcnow().isoformat(),
+                }
+            else:
+                result = self._execute_order(adapter, order, positions, metadata)
             executions.append(result)
             self._record_to_orderbook(orderbook, order, result)
             print(
@@ -204,6 +217,28 @@ class OrderExecutor:
             "created_at": now,
             "updated_at": now,
         })
+
+    def _is_duplicate_order(self, order: dict, orderbook: dict) -> bool:
+        """Return True if an identical open order was already accepted today (UTC).
+
+        Only applies to open orders.  Close/decrease orders are gated by
+        position existence and cannot trivially duplicate.
+        """
+        reason = order.get("reason", "")
+        if reason in ("close", "decrease"):
+            return False
+        conId = order["conId"]
+        direction = order["direction"]
+        today_utc = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
+        for existing in orderbook.get("orders", []):
+            if (
+                existing.get("conId") == conId
+                and existing.get("direction") == direction
+                and existing.get("state") in ("WORKING", "FILLED")
+                and existing.get("created_at", "")[:10] == today_utc
+            ):
+                return True
+        return False
 
     @staticmethod
     def _find_deal_id(conId: str, positions: list) -> str:

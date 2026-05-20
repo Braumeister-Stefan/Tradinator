@@ -1,4 +1,0 @@
-{
-  "description": "Tradinator instrument universe. Each entry has a conId field (IBKR numeric contract identifier as a string), name, and valid flag. T1-validated entries have valid=true. Rewritten by UniverseRefresher on each refresh.",
-  "instruments": []
-}

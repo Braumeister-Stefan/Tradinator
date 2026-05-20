@@ -98,8 +98,8 @@ Tradinator/
 │   ├── input/
 │   │   ├── universe.json             # Instrument universe (epic list + metadata)
 │   │   ├── discover_universe.py      # Validates epics against IG API
-│   │   ├── universe_series.xlsx      # Master time series (auto-generated)
-│   │   └── historic_series/          # Drop-in folder for historic xlsx files
+│   │   ├── universe_series.csv       # Master time series (auto-generated)
+│   │   └── historic_series/          # Drop-in folder for historic csv files
 │   └── output/                       # Ledger, trades, orderbook, reports
 ├── secrets/
 │   └── .env.example                  # Credential template (IG + IBKR stubs)
@@ -110,7 +110,7 @@ Tradinator/
 ## 3. Setup
 
 ```bash
-# 1. Install dependencies (includes yfinance for the YH Finance fallback data source)
+# 1. Install dependencies
 pip install -r requirements.txt
 
 # 2. Configure broker credentials (default: IG demo)
@@ -205,13 +205,7 @@ Epic status is set by running `data/input/discover_universe.py`, which validates
 
 ### 5.2 Time Series Data
 
-`data/input/universe_series.xlsx` is the master price series, written by `DataPipeline` on every run. The current file holds **13 epics** over **125 rows** (2026-02-18 to 2026-05-01).
-
-| Sheet | Content |
-|---|---|
-| `mid_close` | Mid-price close — (bid + ask) / 2 |
-
-The single sheet maintains the same 13 epic columns and 125-row datetime index structure.
+`data/input/universe_series.csv` is the master price series, written by `DataPipeline` on every run. The file uses a single datetime index column plus one column per instrument (mid-price close — (bid + ask) / 2). It is consumed and produced by `DataPipeline` and may also be extended backwards by the standalone tool at `diagnostic_tools/backfill_universe/backfill_universe.py`.
 
 All 5 verified epics are present in the series. Of the remaining 8 stored epics, 4 are actual universe candidates and 4 are not present in `universe.json` at all:
 
@@ -222,11 +216,11 @@ The 21 remaining universe instruments — all candidates — have no stored seri
 
 On merge, live data takes precedence over existing master values at the same timestamp — stored rows are overwritten by freshly fetched bars. Historic-file data has the lowest precedence: existing master values win over historic-file values on overlap. Precedence order (highest to lowest): live fetched data > existing master values > historic file data.
 
-**YH Finance fallback:** When the broker adapter cannot return usable price data for an instrument, `DataPipeline` automatically retries via `YHFinanceFetcher` (Yahoo Finance). If the fallback succeeds the bars are stored identically to broker-sourced data, except that `bid_close` is always `None` (Yahoo does not provide bid/ask decomposition). This keeps instruments in the investable universe even when the broker API has gaps. A `data/output/candidates_report.csv` file is written on every run recording the data-source outcome (`broker`, `yh_finance`, or `none`) and `validation_passed` result for every universe instrument.
+**Broker-only data source:** All price data is fetched exclusively through the configured broker adapter. On a cold-start fetch `DataPipeline` retries the broker up to two additional times with 2-second backoff if the first attempt returns no usable bars; if all three attempts fail, the instrument is marked T2=NO and removed from the universe. A `data/output/candidates_report.csv` file is written on every run recording the data-source outcome (`broker`, `master_cache`, or `none`) and `validation_passed` result for every universe instrument.
 
 ### 5.2.1 Historic series files
 
-`data/input/historic_series/` accepts `.xlsx` files with a `mid_close` sheet to backfill the master series. The folder is currently empty. Files are validated on load; any file that fails a schema check is skipped with a warning. Ingestion runs automatically on every pipeline run.
+`data/input/historic_series/` accepts `.csv` files with the same schema as the master series (single datetime index column, one numeric column per instrument). Files are validated on load; any file that fails a schema check is skipped with a warning. Ingestion runs automatically on every pipeline run.
 
 ## 6. Components
 
@@ -234,8 +228,7 @@ On merge, live data takes precedence over existing master values at the same tim
 |---|---|
 | **BrokerConnector** | Selects adapter, connects, builds broker_state |
 | **Reconciliation** | Syncs local orderbook against broker working orders; detects fills, cancellations, and expirations |
-| **DataPipeline** | Fetches historical OHLCV prices via adapter, cleans with forward/back-fill, persists a master xlsx time series, and can ingest historic data files |
-| **YHFinanceFetcher** | Secondary price source via Yahoo Finance (`yfinance`); fallback when the broker adapter returns no data for an instrument |
+| **DataPipeline** | Fetches historical OHLCV prices via adapter, cleans with forward/back-fill, persists a master csv time series, and can ingest historic data files |
 | **SignalEngine** | Dual moving-average crossover → BUY / SELL / HOLD signals |
 | **StrategyEval** | Pre-trade quality gate: data quality, Sharpe estimate, volatility stubs |
 | **PortfolioConstructor** | Converts validated BUY signals into target weights with position caps |
@@ -253,15 +246,17 @@ Served on port 8742, the dashboard auto-opens in the browser on the first run an
 
 ## 8. Universe Series
 
-`DataPipeline` writes `data/input/universe_series.xlsx` as a non-blocking side effect — a write failure will not interrupt the pipeline.
+`DataPipeline` writes `data/input/universe_series.csv` as a non-blocking side effect — a write failure will not interrupt the pipeline.
 
 ### 8.1 File layout
 
-Each sheet has a datetime index (rows sorted ascending, oldest at top) and one column per instrument in the universe.
+The file has a single datetime index column (rows sorted ascending, oldest at top) and one numeric column per instrument in the universe.
 
 ### 8.2 Historic data ingestion
 
-To backfill or supplement the master file with external data, place `.xlsx` files in `data/input/historic_series/`. Each file must follow the same schema: a `mid_close` sheet, datetime index, numeric values, one column per instrument.
+To backfill or supplement the master file with external data, place `.csv` files in `data/input/historic_series/`. Each file must follow the same schema: a single datetime index column and one numeric column per instrument.
+
+To extend the master series **backwards** in time per instrument, run the standalone tool `diagnostic_tools/backfill_universe/backfill_universe.py` (see `python diagnostic_tools/backfill_universe/backfill_universe.py --help`).
 
 Historic ingestion can also be triggered standalone:
 

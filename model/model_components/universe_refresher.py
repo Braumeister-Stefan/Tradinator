@@ -2,17 +2,17 @@
 Tradinator — Universe Refresher.
 
 Re-runs the Tier-1 contract-resolution check against the broker adapter for
-every candidate in ``universe_candidates.json`` and rewrites
-``universe.json`` with only the candidates that currently pass T1.
+every candidate in ``universe_candidates.csv`` and rewrites
+``universe.csv`` with only the candidates that currently pass T1.
 
 T2 (data availability) is *not* re-validated here — that is owned by
 ``DataPipeline``.
 
 Invariants
 ----------
-* ``universe_candidates.json`` is *never* shrunk: only the per-candidate
+* ``universe_candidates.csv`` is *never* shrunk: only the per-candidate
   ``t1_status`` / ``last_validated`` fields are mutated.
-* ``universe.json`` is fully replaced and may shrink.
+* ``universe.csv`` is fully replaced and may shrink.
 
 DISCLAIMER: Tradinator is a personal experimentation tool for paper trading.
 It does not constitute trading advice, investment recommendation, or financial
@@ -21,9 +21,10 @@ guidance of any kind. Use at your own risk.
 
 from __future__ import annotations
 
-import json
 import os
 import time
+
+from data.input import registry_io
 
 
 # ---------------------------------------------------------------------------
@@ -36,31 +37,44 @@ T2_PENDING    = "PENDING_T2"
 
 
 class UniverseRefresher:
-    """Re-validate every candidate against the broker and rewrite universe.json."""
+    """Re-validate every candidate against the broker and rewrite universe.csv."""
 
     def __init__(self, config: dict):
         """Store config; paths are taken from it with safe defaults."""
         self.config = config
         self.candidates_path = config.get(
             "universe_candidates_path",
-            os.path.join("data", "input", "universe_candidates.json"),
+            os.path.join("data", "input", "universe_candidates.csv"),
         )
         self.universe_path = config.get(
             "universe_path",
-            os.path.join("data", "input", "universe.json"),
+            os.path.join("data", "input", "universe.csv"),
         )
 
     def run(self, adapter) -> None:
-        """Re-run T1 for every candidate and rewrite universe.json.
+        """Re-run T1 for every candidate and rewrite universe.csv.
 
         ``adapter`` must be a connected ``BrokerAdapter``.  Only the
         ``t1_status`` / ``last_validated`` fields on each
         candidate are updated; the candidate list itself is preserved
         (never shrunk).
         """
-        candidates_doc = self._load_candidates_doc()
-        candidates = candidates_doc.get("candidates", [])
+        candidates = registry_io.load_candidate_rows(self.candidates_path)
         original_count = len(candidates)
+
+        # Sync user-managed overwrite_exclusion flags from the existing
+        # universe.csv onto the candidate rows. Candidates are the durable
+        # store for the flag, so it survives T1 failures (when a conId is
+        # temporarily dropped from universe.csv).
+        existing_universe = registry_io.load_universe_rows(self.universe_path)
+        universe_exclusion: dict[str, bool] = {
+            str(r.get("conId", "") or ""): bool(r.get("overwrite_exclusion", False))
+            for r in existing_universe
+        }
+        for cand in candidates:
+            cid = str(cand.get("conId", "") or "")
+            if cid in universe_exclusion:
+                cand["overwrite_exclusion"] = universe_exclusion[cid]
 
         now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
@@ -73,36 +87,40 @@ class UniverseRefresher:
             print(f"[UniverseRefresher] T1 {t1_status} {cid or cand.get('name','')} — {t1_reason}")
             if t1_status == T1_PASS:
                 passing.append({
-                    "conId":       cid,
-                    "name":        cand.get("name", ""),
-                    "sec_type":    cand.get("sec_type", ""),
-                    "exchange":    cand.get("exchange", ""),
-                    "currency":    cand.get("currency", ""),
-                    "yh_ticker":   cand.get("yh_ticker"),
-                    "asset_class": cand.get("asset_class", ""),
-                    "region":      cand.get("region", ""),
-                    "valid":       True,
+                    "conId":               cid,
+                    "name":                cand.get("name", ""),
+                    "sec_type":            cand.get("sec_type", ""),
+                    "exchange":            cand.get("exchange", ""),
+                    "currency":            cand.get("currency", ""),
+                    "asset_class":         cand.get("asset_class", ""),
+                    "region":              cand.get("region", ""),
+                    "valid":               True,
+                    "overwrite_exclusion": bool(cand.get("overwrite_exclusion", False)),
                 })
+            elif bool(cand.get("overwrite_exclusion", False)):
+                print(
+                    f"[UniverseRefresher] NOTE: user-excluded conId '{cid}' "
+                    f"failed T1 ({t1_status}); exclusion flag retained on "
+                    f"candidate and will be reapplied if T1 passes again."
+                )
 
         # Guard: never shrink the candidates list.
         if len(candidates) != original_count:
             raise RuntimeError(
-                "UniverseRefresher must not shrink universe_candidates.json"
+                "UniverseRefresher must not shrink universe_candidates.csv"
             )
 
-        candidates_doc["candidates"]     = candidates
-        candidates_doc["last_t1_run"]    = now_utc
-        self._write_json(self.candidates_path, candidates_doc)
+        registry_io.save_candidate_rows(candidates, self.candidates_path)
+        registry_io.update_candidate_meta({"last_t1_run": now_utc})
 
-        universe_doc = {
+        registry_io.save_universe_rows(passing, self.universe_path)
+        registry_io.write_universe_meta({
             "description": (
                 "Tradinator instrument universe — IBKR contracts that have "
                 "passed Tier 1 validation (reqContractDetails resolves). "
                 f"Last T1 run: {now_utc}."
-            ),
-            "instruments": passing,
-        }
-        self._write_json(self.universe_path, universe_doc)
+            )
+        })
         print(
             f"[UniverseRefresher] T1: {len(passing)}/{original_count} pass — "
             f"wrote {self.universe_path}"
@@ -111,23 +129,6 @@ class UniverseRefresher:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-
-    def _load_candidates_doc(self) -> dict:
-        """Read universe_candidates.json; return a doc with at least 'candidates'."""
-        if not os.path.isfile(self.candidates_path):
-            return {"candidates": []}
-        try:
-            with open(self.candidates_path, encoding="utf-8") as f:
-                doc = json.load(f)
-        except Exception as exc:
-            print(
-                f"[UniverseRefresher] WARNING: could not read "
-                f"{self.candidates_path} — {exc}"
-            )
-            return {"candidates": []}
-        if "candidates" not in doc:
-            doc["candidates"] = []
-        return doc
 
     @staticmethod
     def _validate_tier1(adapter, candidate: dict) -> tuple[str, str]:
@@ -144,11 +145,3 @@ class UniverseRefresher:
         if not info:
             return T1_FAIL, "adapter returned empty instrument info"
         return T1_PASS, "contract resolved via adapter"
-
-    @staticmethod
-    def _write_json(path: str, doc: dict) -> None:
-        """Write *doc* to *path* as indented JSON with a trailing newline."""
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(doc, f, indent=2)
-            f.write("\n")
